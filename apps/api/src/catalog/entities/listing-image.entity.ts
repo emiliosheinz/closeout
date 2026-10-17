@@ -6,6 +6,7 @@ import {
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
+  Unique,
 } from "typeorm";
 import { Store } from "@/stores/entities/store.entity";
 import { Listing } from "./listing.entity";
@@ -16,6 +17,10 @@ import { Listing } from "./listing.entity";
  */
 @Entity({ name: "listing_images" })
 @Index("listing_images_listing_idx", ["listingId", "position"])
+// Deferred so a reorder can swap positions inside one transaction.
+@Unique("listing_images_listing_position_uq", ["listingId", "position"], {
+  deferrable: "INITIALLY DEFERRED",
+})
 export class ListingImage {
   @PrimaryGeneratedColumn("uuid")
   declare id: string;

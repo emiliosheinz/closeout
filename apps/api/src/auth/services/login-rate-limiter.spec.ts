@@ -27,10 +27,20 @@ describe("LoginRateLimiter", () => {
     expect(limiter.isBlocked("a@x.com", "10.9.9.9", 0)).toBe(true);
   });
 
-  it("clears the client counter on reset", () => {
+  it("clears the client counter after a successful login", () => {
     const limiter = new LoginRateLimiter();
-    for (let i = 0; i < 10; i++) limiter.recordFailure("a@x.com", "ip", 0);
-    limiter.reset("a@x.com", "ip");
+    for (let i = 0; i < 9; i++) limiter.recordFailure("a@x.com", "ip", 0);
+    limiter.recordFailure("a@x.com", "ip", 0);
+    limiter.forgiveSuccess("a@x.com", "ip", 0);
     expect(limiter.isBlocked("a@x.com", "ip", 0)).toBe(false);
+  });
+
+  it("does not count successful logins against the email budget", () => {
+    const limiter = new LoginRateLimiter();
+    for (let i = 0; i < 30; i++) {
+      limiter.recordFailure("a@x.com", `10.0.0.${i}`, 0);
+      limiter.forgiveSuccess("a@x.com", `10.0.0.${i}`, 0);
+    }
+    expect(limiter.isBlocked("a@x.com", "10.9.9.9", 0)).toBe(false);
   });
 });

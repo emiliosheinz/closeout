@@ -2,7 +2,6 @@ import { randomBytes } from "node:crypto";
 import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { Client } from "pg";
 import { DataSource } from "typeorm";
 
 /**
@@ -12,10 +11,7 @@ import { DataSource } from "typeorm";
  */
 export default async function globalSetup(): Promise<void> {
   const database = `closeout_test_${randomBytes(4).toString("hex")}`;
-  const admin = new Client(connection(process.env.POSTGRES_DB));
-  await admin.connect();
-  await admin.query(`CREATE DATABASE "${database}"`);
-  await admin.end();
+  await runOnServer(`CREATE DATABASE "${database}"`);
 
   process.env.POSTGRES_DB = database;
   process.env.CLOSEOUT_TEST_DATABASE = database;
@@ -40,9 +36,22 @@ export function connection(database: string | undefined) {
   return {
     host: process.env.POSTGRES_HOST,
     port: Number(process.env.POSTGRES_PORT),
-    user: process.env.POSTGRES_USER,
     username: process.env.POSTGRES_USER,
     password: process.env.POSTGRES_PASSWORD,
     database,
   };
+}
+
+/** Run one statement against the server's maintenance database. */
+export async function runOnServer(sql: string): Promise<void> {
+  const dataSource = new DataSource({
+    type: "postgres",
+    ...connection("postgres"),
+  });
+  await dataSource.initialize();
+  try {
+    await dataSource.query(sql);
+  } finally {
+    await dataSource.destroy();
+  }
 }

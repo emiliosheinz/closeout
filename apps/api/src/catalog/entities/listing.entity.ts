@@ -19,7 +19,7 @@ import type {
   Condition,
   ListingAttribute,
   Publication,
-} from "../listing-status";
+} from "../listing-types";
 import { ListingImage } from "./listing-image.entity";
 
 /**
@@ -48,6 +48,10 @@ import { ListingImage } from "./listing-image.entity";
 @Check(
   "listings_publication_valid",
   `"publication" IN ('draft', 'published', 'archived')`,
+)
+@Check(
+  "listings_published_has_date",
+  `"publication" <> 'published' OR "published_at" IS NOT NULL`,
 )
 @Check(
   "listings_price_non_negative",

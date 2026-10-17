@@ -18,5 +18,6 @@ describe("passwords", () => {
   it("rejects malformed stored hashes instead of throwing", async () => {
     expect(await verifyPassword("x", "")).toBe(false);
     expect(await verifyPassword("x", "bcrypt$1$2$3")).toBe(false);
+    expect(await verifyPassword("x", "scrypt$x$8$1$c2FsdA==$a2V5")).toBe(false);
   });
 });

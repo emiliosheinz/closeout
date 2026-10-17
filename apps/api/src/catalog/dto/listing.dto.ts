@@ -20,7 +20,7 @@ import {
   type Condition,
   PUBLICATIONS,
   type Publication,
-} from "../listing-status";
+} from "../listing-types";
 
 const TRIM = ({ value }: { value: unknown }) =>
   typeof value === "string" ? value.trim() : value;

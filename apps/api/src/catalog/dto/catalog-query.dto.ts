@@ -8,7 +8,7 @@ import {
   Min,
   ValidateIf,
 } from "class-validator";
-import { CONDITIONS, type Condition } from "../listing-status";
+import { CONDITIONS, type Condition } from "../listing-types";
 
 const isDefined = (_: unknown, value: unknown) => value !== undefined;
 

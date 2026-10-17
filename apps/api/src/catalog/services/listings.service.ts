@@ -17,7 +17,7 @@ import type {
   Condition,
   ListingAttribute,
   Publication,
-} from "../listing-status";
+} from "../listing-types";
 import { type PublicListingDetail, toPublicDetail } from "../public-mappers";
 import { listingSlug } from "../slug";
 import { escapeLike } from "../sql";

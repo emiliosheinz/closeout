@@ -25,14 +25,28 @@ export class LoginRateLimiter {
     );
   }
 
+  /**
+   * Count an attempt as failed before the password is checked, so a burst
+   * of concurrent requests cannot all slip past {@link isBlocked} while the
+   * slow hash comparison runs. {@link forgiveSuccess} undoes it.
+   */
   recordFailure(email: string, ip: string, now = Date.now()): void {
+    this.sweep(now);
     for (const key of [clientKey(email, ip), emailKey(email)]) {
       this.failures.set(key, [...this.recent(key, now), now]);
     }
   }
 
-  reset(email: string, ip: string): void {
+  /** A successful login clears the client's counter and returns its attempt. */
+  forgiveSuccess(email: string, ip: string, now = Date.now()): void {
     this.failures.delete(clientKey(email, ip));
+    const remaining = this.recent(emailKey(email), now).slice(0, -1);
+    if (remaining.length > 0) this.failures.set(emailKey(email), remaining);
+    else this.failures.delete(emailKey(email));
+  }
+
+  private sweep(now: number): void {
+    for (const key of this.failures.keys()) this.recent(key, now);
   }
 
   private recent(key: string, now: number): number[] {

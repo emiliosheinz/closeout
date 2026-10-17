@@ -1,4 +1,4 @@
-import type { Availability, Publication } from "./listing-status";
+import type { Availability, Publication } from "./listing-types";
 
 interface ListingState {
   publication: Publication;

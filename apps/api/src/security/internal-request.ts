@@ -22,10 +22,11 @@ export function isInternalRequest(headers: Headers): boolean {
   return timingSafeEqual(digest(provided), digest(expected));
 }
 
-export function trustedClientIp(headers: Headers): string {
+/** The visitor IP forwarded by apps/web, or null when absent or untrusted. */
+export function trustedClientIp(headers: Headers): string | null {
   const ip = headers[CLIENT_IP_HEADER];
   if (isInternalRequest(headers) && typeof ip === "string" && ip) return ip;
-  return "unknown";
+  return null;
 }
 
 function digest(value: string): Buffer {

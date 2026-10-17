@@ -6,7 +6,7 @@ import type {
   Availability,
   Condition,
   ListingAttribute,
-} from "./listing-status";
+} from "./listing-types";
 
 /*
  * Public payloads are assembled field by field from an allow-list. Entities

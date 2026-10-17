@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   ForbiddenException,
@@ -39,10 +40,14 @@ export class AuthController {
     @Body() body: LoginDto,
   ): Promise<{ sessionToken: string; expiresAt: string }> {
     if (!isInternalRequest(req.headers)) throw new ForbiddenException();
+    // Without the visitor's IP every attempt would share one rate-limit
+    // bucket, letting anyone lock the admins out.
+    const clientIp = trustedClientIp(req.headers);
+    if (!clientIp) throw new BadRequestException("Missing client IP");
     const { sessionToken, expiresAt } = await this.auth.login(
       body.email,
       body.password,
-      trustedClientIp(req.headers),
+      clientIp,
     );
     return { sessionToken, expiresAt: expiresAt.toISOString() };
   }

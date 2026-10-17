@@ -55,17 +55,18 @@ export async function verifyPassword(
 ): Promise<boolean> {
   const [scheme, cost, blockSize, parallelization, salt, key] =
     stored.split("$");
-  if (scheme !== "scrypt" || !cost || !blockSize || !parallelization) {
+  const params = [cost, blockSize, parallelization].map(Number);
+  if (scheme !== "scrypt" || !salt || !key) return false;
+  if (!params.every((value) => Number.isInteger(value) && value > 0)) {
     return false;
   }
-  if (!salt || !key) return false;
   const expected = Buffer.from(key, "base64");
   const actual = await derive(
     password,
     Buffer.from(salt, "base64"),
-    Number(cost),
-    Number(blockSize),
-    Number(parallelization),
+    params[0] as number,
+    params[1] as number,
+    params[2] as number,
   );
   return actual.length === expected.length && timingSafeEqual(actual, expected);
 }

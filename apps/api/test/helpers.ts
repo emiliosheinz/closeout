@@ -86,6 +86,7 @@ export async function login(
   const res = await request(app.getHttpServer())
     .post("/auth/login")
     .set("x-internal-secret", INTERNAL_SECRET)
+    .set("x-client-ip", "192.0.2.10")
     .send({ email, password })
     .expect(200);
   return `closeout_session=${res.body.sessionToken}`;

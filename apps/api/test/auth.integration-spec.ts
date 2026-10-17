@@ -67,6 +67,27 @@ describe("admin authentication", () => {
     await attempt("limite@example.com", PASSWORD, "198.51.100.1").expect(200);
   });
 
+  it("requires the forwarded client IP on internal login calls", async () => {
+    await createStoreWithAdmin(ctx, "loja-a");
+    await request(server())
+      .post("/auth/login")
+      .set("x-internal-secret", INTERNAL_SECRET)
+      .send({ email: "loja-a@example.com", password: PASSWORD })
+      .expect(400);
+  });
+
+  it("does not let a burst of concurrent guesses exceed the limit", async () => {
+    await createStoreWithAdmin(ctx, "rajada");
+    const results = await Promise.all(
+      Array.from({ length: 15 }, () =>
+        attempt("rajada@example.com", "wrong", "203.0.113.99"),
+      ),
+    );
+    const statuses = results.map((res) => res.status);
+    expect(statuses.filter((status) => status === 401)).toHaveLength(10);
+    expect(statuses.filter((status) => status === 429)).toHaveLength(5);
+  });
+
   it("rejects admin endpoints without a valid session", async () => {
     const admin = await createStoreWithAdmin(ctx, "loja-a");
     await request(server()).get("/me").expect(401);

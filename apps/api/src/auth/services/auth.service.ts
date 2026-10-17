@@ -42,18 +42,18 @@ export class AuthService {
       throw new HttpException(TOO_MANY_ATTEMPTS, HttpStatus.TOO_MANY_REQUESTS);
     }
 
+    this.limiter.recordFailure(email, clientIp);
     const user = await this.users.findOne({ where: { email } });
     const valid = await verifyPassword(
       password,
       user?.passwordHash ?? (await getDummyHash()),
     );
     if (!user || !valid) {
-      this.limiter.recordFailure(email, clientIp);
       this.logger.warn(`Failed login from ${clientIp}`);
       throw new UnauthorizedException(INVALID_CREDENTIALS);
     }
 
-    this.limiter.reset(email, clientIp);
+    this.limiter.forgiveSuccess(email, clientIp);
     const { rawToken, expiresAt } = await this.sessions.mint(user.id);
     return { sessionToken: rawToken, expiresAt };
   }
