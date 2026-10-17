@@ -1,0 +1,105 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/*
+ * Design tokens. The storefront is a moving-day yard sale: cool daylight
+ * paper, deep ink, and the round yellow price stickers people stick on
+ * things they sell. The sticker is the one loud element; everything else
+ * stays quiet.
+ */
+@theme inline {
+  --font-sans: var(--font-bricolage);
+  --font-marker: var(--font-marker-face);
+
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-sticker: var(--sticker);
+  --color-sticker-ink: var(--sticker-ink);
+  --color-tape: var(--tape);
+  --color-go: var(--go);
+  --color-go-strong: var(--go-strong);
+  --color-stamp: var(--stamp);
+  --color-hold: var(--hold);
+  --color-focus: var(--focus);
+
+  /* shadcn primitives map onto the same palette */
+  --color-background: var(--paper);
+  --color-foreground: var(--ink);
+  --color-border: var(--line);
+  --color-input: var(--line);
+  --color-ring: var(--focus);
+  --color-primary: var(--ink);
+  --color-primary-foreground: var(--surface);
+  --color-muted-foreground: var(--muted);
+  --color-destructive: var(--stamp);
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+}
+
+:root {
+  --paper: #eef1f3;
+  --surface: #ffffff;
+  --ink: #17202b;
+  --ink-soft: #2f3a48;
+  --muted: #5b6573;
+  --line: #d5dbe1;
+  /* Borders of form controls: 3:1 against white for non-text contrast. */
+  --line-strong: #8a94a0;
+  --sticker: #ffd43b;
+  --sticker-ink: #1a1405;
+  --tape: #b98b4e;
+  --go: #1e7f55;
+  --go-strong: #166443;
+  --stamp: #c2412d;
+  --hold: #1f5fa8;
+  --focus: #1f5fa8;
+}
+
+@layer base {
+  * {
+    @apply border-line;
+  }
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-paper text-ink font-sans antialiased;
+    font-optical-sizing: auto;
+  }
+  :focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      /* biome-ignore lint/complexity/noImportantStyles: the reduced-motion override must beat every component style */
+      animation-duration: 0.01ms !important;
+      /* biome-ignore lint/complexity/noImportantStyles: same as above */
+      transition-duration: 0.01ms !important;
+      /* biome-ignore lint/complexity/noImportantStyles: same as above */
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@utility pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+@utility scrollbar-none {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}

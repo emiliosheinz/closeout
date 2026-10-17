@@ -1,0 +1,23 @@
+{
+  "name": "@closeout/config",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Shared configuration for the closeout monorepo",
+  "license": "MIT",
+  "scripts": {
+    "build": "tsup"
+  },
+  "exports": {
+    "./biome": "./dist/biome.json",
+    "./typescript": "./dist/tsconfig.json",
+    "./jest": {
+      "types": "./dist/jest.config.d.ts",
+      "import": "./dist/jest.config.mjs",
+      "require": "./dist/jest.config.js"
+    }
+  },
+  "devDependencies": {
+    "jest": "catalog:",
+    "tsup": "8.5.1"
+  }
+}

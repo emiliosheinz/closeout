@@ -1,0 +1,22 @@
+{
+  "extends": "@closeout/config/typescript",
+  "compilerOptions": {
+    "declaration": true,
+    "removeComments": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "resolvePackageJsonExports": true,
+    "allowSyntheticDefaultImports": true,
+    "target": "ES2023",
+    "sourceMap": true,
+    "incremental": true,
+    "baseUrl": ".",
+    "rootDir": ".",
+    "outDir": "./dist",
+    "paths": { "@/*": ["./src/*"] },
+    "types": ["node", "jest", "multer"]
+  },
+  "exclude": ["dist", "scripts"]
+}
