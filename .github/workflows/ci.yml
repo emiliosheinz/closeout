@@ -101,7 +101,8 @@ jobs:
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           status=0
-          for sha in $(git rev-list --no-merges "$BASE..$HEAD_SHA"); do
+          shas=$(git rev-list --no-merges "$BASE..$HEAD_SHA")
+          for sha in $shas; do
             if ! git log -1 --format=%B "$sha" | pnpm --silent commitlint; then
               echo "::error::Commit $(git rev-parse --short "$sha") violates the commit message rules"
               status=1
@@ -118,7 +119,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - run: docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.12 -color
+      - run: docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.12@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667 -color
 
   image:
     name: image-${{ matrix.app }}
@@ -154,12 +155,13 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      # No --rm, so the runner container's log survives for the diagnostics.
       # Shorter than the job limit, so a hang fails this step and the
       # diagnostics below still run.
       - name: Run Playwright against the e2e stack
         timeout-minutes: 30
         run: >-
-          docker compose run --rm --build -e PLAYWRIGHT_HTML_OPEN=never
+          docker compose run --build -e PLAYWRIGHT_HTML_OPEN=never
           web-e2e pnpm --filter web test:e2e --reporter=list,html
       - name: Collect service logs
         if: failure() || cancelled()
