@@ -13,7 +13,7 @@ export function StoreHeader({ store }: { store: StoreInfo }) {
   return (
     <header className="mx-auto max-w-6xl px-4 pt-8 pb-6 sm:px-6 sm:pt-14 lg:px-8">
       <p className="text-base font-semibold text-ink-soft">{store.name}</p>
-      <h1 className="mt-3 max-w-[18ch] text-[2.35rem] leading-[1.02] font-extrabold tracking-[-0.02em] text-balance sm:text-6xl">
+      <h1 className="mt-3 max-w-[18ch] text-[2.35rem] leading-[1.02] font-extrabold tracking-[-0.02em] text-balance break-words sm:text-6xl">
         {store.headline || store.name}
       </h1>
       {store.intro && (
@@ -37,7 +37,7 @@ export function StoreHeader({ store }: { store: StoreInfo }) {
                   href={seller.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex h-10 items-center gap-2 rounded-full border border-line bg-surface pr-4 pl-1.5 text-sm font-medium hover:border-go/50"
+                  className="inline-flex h-11 items-center gap-2 rounded-full border border-line bg-surface pr-4 pl-1.5 text-sm font-medium hover:border-go/50"
                 >
                   {seller.avatarUrl ? (
                     // biome-ignore lint/performance/noImgElement: small pre-sized avatar variant.

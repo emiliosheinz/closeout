@@ -17,6 +17,7 @@
   --color-ink-soft: var(--ink-soft);
   --color-muted: var(--muted);
   --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
   --color-sticker: var(--sticker);
   --color-sticker-ink: var(--sticker-ink);
   --color-tape: var(--tape);
@@ -50,6 +51,8 @@
   --ink-soft: #2f3a48;
   --muted: #5b6573;
   --line: #d5dbe1;
+  /* Borders of form controls: 3:1 against white for non-text contrast. */
+  --line-strong: #8a94a0;
   --sticker: #ffd43b;
   --sticker-ink: #1a1405;
   --tape: #b98b4e;

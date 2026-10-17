@@ -1,5 +1,9 @@
 import type { ListingDetail } from "@/lib/catalog/types";
-import { CONDITION_LABELS, formatPrice } from "@/lib/format";
+import {
+  AVAILABILITY_LABELS,
+  CONDITION_LABELS,
+  formatPrice,
+} from "@/lib/format";
 import { absoluteUrl, listingPath } from "@/lib/site";
 import { listingContactUrl } from "@/lib/whatsapp";
 import { ContactButton } from "./contact-button";
@@ -45,12 +49,13 @@ export function ListingView({ listing }: { listing: ListingDetail }) {
               priceCents={listing.priceCents}
               size="lg"
               className="mt-1"
+              decorative
             />
             <div className="min-w-0">
               <p className="text-sm font-medium text-muted">
                 {listing.category.name}
               </p>
-              <h1 className="mt-1 text-3xl leading-tight font-extrabold tracking-[-0.015em] text-balance sm:text-4xl">
+              <h1 className="mt-1 text-3xl leading-tight font-extrabold tracking-[-0.015em] text-balance break-words sm:text-4xl">
                 {listing.title}
               </h1>
               <p className="mt-2 text-lg font-semibold">
@@ -67,6 +72,12 @@ export function ListingView({ listing }: { listing: ListingDetail }) {
               </dd>
             </div>
             <div className="bg-surface px-4 py-3">
+              <dt className="text-muted">Disponibilidade</dt>
+              <dd className="mt-0.5 font-semibold">
+                {AVAILABILITY_LABELS[listing.availability]}
+              </dd>
+            </div>
+            <div className="bg-surface px-4 py-3">
               <dt className="text-muted">Quem vende</dt>
               <dd className="mt-0.5 font-semibold">{listing.seller.name}</dd>
             </div>
@@ -79,7 +90,7 @@ export function ListingView({ listing }: { listing: ListingDetail }) {
                 <dd className="mt-0.5 font-semibold">{attribute.value}</dd>
               </div>
             ))}
-            {listing.attributes.length % 2 === 1 && (
+            {listing.attributes.length % 2 === 0 && (
               <div className="bg-surface" aria-hidden="true" />
             )}
           </dl>
@@ -108,7 +119,7 @@ export function ListingView({ listing }: { listing: ListingDetail }) {
           <h2 id="related-heading" className="text-2xl font-extrabold">
             {sold
               ? "Esse já foi, mas ainda temos estes"
-              : "Também está à venda"}
+              : "Outros itens à venda"}
           </h2>
           <ul className="mt-6 grid grid-cols-2 gap-x-4 gap-y-12 sm:grid-cols-4 sm:gap-x-6">
             {listing.related.map((related) => (
@@ -138,7 +149,7 @@ function Contact({
 }) {
   if (listing.availability === "sold") {
     return (
-      <p className="rounded-lg bg-stamp/10 px-4 py-3 text-sm font-medium text-stamp">
+      <p className="rounded-lg border border-stamp/40 bg-surface px-4 py-3 text-sm font-semibold text-stamp">
         Este item já foi vendido.
       </p>
     );
@@ -146,7 +157,7 @@ function Contact({
   if (!contactUrl) {
     return (
       <p className="rounded-lg bg-ink/5 px-4 py-3 text-sm text-ink-soft">
-        Contato indisponível no momento. Fale com quem te enviou este link.
+        Contato indisponível no momento.
       </p>
     );
   }

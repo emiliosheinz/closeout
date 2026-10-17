@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { CategoryChips } from "@/components/storefront/category-chips";
 import { EmptyState } from "@/components/storefront/empty-state";
 import { FilterForm } from "@/components/storefront/filter-form";
@@ -11,6 +11,8 @@ import { StoreHeader } from "@/components/storefront/store-header";
 import { getListings, getStore, PAGE_SIZE } from "@/lib/catalog/api";
 import {
   activeFilterCount,
+  catalogHref,
+  DEFAULT_FILTERS,
   hasActiveFilters,
   parseCatalogParams,
 } from "@/lib/catalog/params";
@@ -25,7 +27,8 @@ export async function generateMetadata({
 }: PageProps): Promise<Metadata> {
   const store = await getStore();
   if (!store) return {};
-  const filtered = hasActiveFilters(parseCatalogParams(await searchParams));
+  const filters = parseCatalogParams(await searchParams);
+  const filtered = hasActiveFilters(filters);
   const description =
     store.intro.slice(0, 160) ||
     `${pluralize(store.counts.available, "item disponível", "itens disponíveis")}.`;
@@ -34,8 +37,11 @@ export async function generateMetadata({
   return {
     title: store.name,
     description,
-    alternates: { canonical: "/" },
-    // Filtered views are for sharing, not for search results.
+    // Filtered views are for sharing, not for search results; plain pages
+    // of the catalog are their own canonical.
+    alternates: filtered
+      ? undefined
+      : { canonical: catalogHref({ ...DEFAULT_FILTERS, page: filters.page }) },
     robots: filtered ? { index: false, follow: true } : undefined,
     openGraph: {
       type: "website",
@@ -52,8 +58,14 @@ export async function generateMetadata({
 
 export default async function CatalogPage({ searchParams }: PageProps) {
   const filters = parseCatalogParams(await searchParams);
-  const [store, page] = await Promise.all([getStore(), getListings(filters)]);
+  const store = await getStore();
   if (!store) notFound();
+  const results = await getListings(filters);
+  // A page past the end (old link, edited URL) shows the first page instead
+  // of an empty catalog.
+  if (results.items.length === 0 && results.total > 0 && filters.page > 1) {
+    redirect(catalogHref({ ...filters, page: 1 }));
+  }
 
   const filtered = hasActiveFilters(filters);
   return (
@@ -90,17 +102,17 @@ export default async function CatalogPage({ searchParams }: PageProps) {
                 aria-live="polite"
               >
                 <span data-testid="results-count">
-                  {pluralize(page.total, "item", "itens")}
+                  {pluralize(results.total, "item", "itens")}
                 </span>
                 {filters.q && <> para “{filters.q}”</>}
               </h2>
             </div>
 
-            {page.items.length === 0 ? (
+            {results.items.length === 0 ? (
               <EmptyState filtered={filtered} />
             ) : (
               <ul className="grid grid-cols-2 gap-x-4 gap-y-12 sm:grid-cols-3 sm:gap-x-6 xl:grid-cols-4">
-                {page.items.map((listing, index) => (
+                {results.items.map((listing, index) => (
                   <li key={listing.slug}>
                     <ListingCard listing={listing} priority={index < 4} />
                   </li>
@@ -110,7 +122,7 @@ export default async function CatalogPage({ searchParams }: PageProps) {
 
             <Pagination
               filters={filters}
-              total={page.total}
+              total={results.total}
               pageSize={PAGE_SIZE}
             />
           </section>

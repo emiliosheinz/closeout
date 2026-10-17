@@ -16,9 +16,14 @@ export function ShareButton({ url, title }: { url: string; title: string }) {
         if ((err as DOMException).name === "AbortError") return;
       }
     }
-    await navigator.clipboard.writeText(url);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2500);
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } catch {
+      // Clipboard needs a secure context and permission; let the person copy by hand.
+      window.prompt("Copie o link do item:", url);
+    }
   };
 
   return (

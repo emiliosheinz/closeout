@@ -20,7 +20,7 @@ export function CategoryChips({
   );
   const chip = (active: boolean) =>
     cn(
-      "inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full px-4 text-sm font-medium whitespace-nowrap",
+      "inline-flex h-11 shrink-0 items-center gap-1.5 rounded-full px-4 text-sm font-medium whitespace-nowrap",
       active
         ? "bg-ink text-surface"
         : "border border-line bg-surface text-ink hover:border-ink/40",

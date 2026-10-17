@@ -2,6 +2,7 @@ import {
   activeFilterCount,
   catalogHref,
   DEFAULT_FILTERS,
+  hasActiveFilters,
   parseCatalogParams,
   toApiQuery,
   withFilters,
@@ -43,7 +44,16 @@ describe("catalog URL parameters", () => {
         ordem: "aleatorio",
         pagina: "0",
       }),
-    ).toEqual(DEFAULT_FILTERS);
+    ).toEqual({
+      q: "",
+      category: null,
+      condition: null,
+      availability: "listed",
+      minPrice: null,
+      maxPrice: null,
+      sort: "recent",
+      page: 1,
+    });
     expect(parseCatalogParams({ pagina: "99999" }).page).toBe(1);
   });
 
@@ -100,5 +110,40 @@ describe("catalog URL parameters", () => {
         q: "x",
       }),
     ).toBe(2);
+  });
+});
+
+describe("catalog URL edge cases", () => {
+  it("caps the search text at 100 characters", () => {
+    expect(parseCatalogParams({ q: "a".repeat(150) }).q).toHaveLength(100);
+  });
+
+  it("uses the first value of a repeated parameter", () => {
+    expect(parseCatalogParams({ q: ["a", "b"] }).q).toBe("a");
+  });
+
+  it("ignores prices above R$ 1.000.000", () => {
+    expect(parseCatalogParams({ min: "1000000" }).minPrice).toBe(1000000);
+    expect(parseCatalogParams({ min: "1000001" }).minPrice).toBeNull();
+  });
+
+  it("counts a one-sided price range as an active filter", () => {
+    expect(activeFilterCount({ ...DEFAULT_FILTERS, minPrice: 10 })).toBe(1);
+    expect(activeFilterCount({ ...DEFAULT_FILTERS, maxPrice: 10 })).toBe(1);
+  });
+
+  it("treats a search term as an active filter", () => {
+    expect(hasActiveFilters(DEFAULT_FILTERS)).toBe(false);
+    expect(hasActiveFilters({ ...DEFAULT_FILTERS, q: "mesa" })).toBe(true);
+  });
+
+  it("writes condition and sort slugs into the URL", () => {
+    expect(
+      catalogHref({
+        ...DEFAULT_FILTERS,
+        condition: "like_new",
+        sort: "price_asc",
+      }),
+    ).toBe("/?estado=como-novo&ordem=menor-preco");
   });
 });

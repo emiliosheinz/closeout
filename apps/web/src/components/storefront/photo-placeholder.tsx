@@ -7,7 +7,7 @@ export function PhotoPlaceholder({ className }: { className?: string }) {
     <div
       data-testid="photo-placeholder"
       className={cn(
-        "flex size-full flex-col items-center justify-center gap-2 bg-[repeating-linear-gradient(135deg,transparent_0_14px,rgba(185,139,78,0.08)_14px_28px)] bg-tape/15 text-tape",
+        "flex size-full flex-col items-center justify-center gap-2 bg-[repeating-linear-gradient(135deg,transparent_0_14px,rgba(185,139,78,0.08)_14px_28px)] bg-tape/15 text-ink-soft",
         className,
       )}
     >

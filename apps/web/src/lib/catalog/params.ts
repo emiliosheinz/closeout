@@ -92,24 +92,48 @@ export function parseCatalogParams(params: RawParams): CatalogFilters {
   };
 }
 
+export type CatalogParam =
+  | "q"
+  | "categoria"
+  | "estado"
+  | "disponibilidade"
+  | "min"
+  | "max"
+  | "ordem"
+  | "pagina";
+
+/**
+ * The URL parameters for `filters`, defaults omitted. The single source for
+ * both links and the hidden fields of the plain GET forms.
+ */
+export function catalogEntries(
+  filters: CatalogFilters,
+  omit: CatalogParam[] = [],
+): [CatalogParam, string][] {
+  const entries: [CatalogParam, string | null][] = [
+    ["q", filters.q || null],
+    ["categoria", filters.category],
+    ["estado", filters.condition && CONDITION_PARAM[filters.condition]],
+    [
+      "disponibilidade",
+      filters.availability === "listed"
+        ? null
+        : AVAILABILITY_PARAM[filters.availability],
+    ],
+    ["min", filters.minPrice === null ? null : String(filters.minPrice)],
+    ["max", filters.maxPrice === null ? null : String(filters.maxPrice)],
+    ["ordem", filters.sort === "recent" ? null : SORT_PARAM[filters.sort]],
+    ["pagina", filters.page > 1 ? String(filters.page) : null],
+  ];
+  return entries.filter(
+    (entry): entry is [CatalogParam, string] =>
+      entry[1] !== null && !omit.includes(entry[0]),
+  );
+}
+
 /** Catalog URL for `filters`, omitting defaults so links stay short. */
 export function catalogHref(filters: CatalogFilters): string {
-  const params = new URLSearchParams();
-  if (filters.q) params.set("q", filters.q);
-  if (filters.category) params.set("categoria", filters.category);
-  if (filters.condition) {
-    params.set("estado", CONDITION_PARAM[filters.condition]);
-  }
-  if (filters.availability !== "listed") {
-    params.set("disponibilidade", AVAILABILITY_PARAM[filters.availability]);
-  }
-  if (filters.minPrice !== null) params.set("min", String(filters.minPrice));
-  if (filters.maxPrice !== null) params.set("max", String(filters.maxPrice));
-  if (filters.sort !== "recent") {
-    params.set("ordem", SORT_PARAM[filters.sort]);
-  }
-  if (filters.page > 1) params.set("pagina", String(filters.page));
-  const query = params.toString();
+  const query = new URLSearchParams(catalogEntries(filters)).toString();
   return query ? `/?${query}` : "/";
 }
 

@@ -1,4 +1,9 @@
-import { formatPrice, formatStickerPrice } from "../format";
+import {
+  CONDITION_LABELS,
+  formatPrice,
+  formatStickerPrice,
+  pluralize,
+} from "../format";
 
 describe("formatPrice", () => {
   it("formats cents as Brazilian reais", () => {
@@ -17,5 +22,23 @@ describe("formatStickerPrice", () => {
     expect(formatStickerPrice(120000)).toBe("R$ 1.200");
     expect(formatStickerPrice(1990)).toBe("R$ 19,90");
     expect(formatStickerPrice(null)).toBe("A combinar");
+  });
+});
+
+describe("labels", () => {
+  it("names conditions in natural Portuguese", () => {
+    expect(CONDITION_LABELS).toEqual({
+      new: "Novo",
+      like_new: "Como novo",
+      good: "Bom estado",
+      fair: "Com marcas de uso",
+      for_parts: "Para conserto ou peças",
+    });
+  });
+
+  it("pluralizes counts with Brazilian digit grouping", () => {
+    expect(pluralize(0, "item", "itens")).toBe("0 itens");
+    expect(pluralize(1, "item", "itens")).toBe("1 item");
+    expect(pluralize(1500, "item", "itens")).toBe("1.500 itens");
   });
 });

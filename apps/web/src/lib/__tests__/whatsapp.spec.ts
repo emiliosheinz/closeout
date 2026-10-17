@@ -41,3 +41,24 @@ describe("sellerContactUrl", () => {
     );
   });
 });
+
+describe("number validation", () => {
+  const url = (number: string) =>
+    listingContactUrl(number, "Mesa", "https://x.y");
+
+  it("accepts 8 to 15 international digits without a leading zero", () => {
+    expect(url("12345678")).not.toBeNull();
+    expect(url("123456789012345")).not.toBeNull();
+    expect(url("1234567")).toBeNull();
+    expect(url("1234567890123456")).toBeNull();
+    expect(url("0123456789")).toBeNull();
+  });
+
+  it("encodes the store name in the general contact message", () => {
+    const href = sellerContactUrl("5511999998888", 'A&B "x"') ?? "";
+    const query = href.split("?text=")[1] ?? "";
+    expect(query).toContain("%26");
+    expect(query).toContain("%22");
+    expect(query).not.toMatch(/[&"]/);
+  });
+});

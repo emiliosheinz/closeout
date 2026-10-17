@@ -5,6 +5,8 @@ interface PriceStickerProps {
   priceCents: number | null;
   size?: "md" | "lg";
   className?: string;
+  /** Hide from assistive tech when the price is already written nearby. */
+  decorative?: boolean;
 }
 
 /**
@@ -15,11 +17,13 @@ export function PriceSticker({
   priceCents,
   size = "md",
   className,
+  decorative = false,
 }: PriceStickerProps) {
   const label = formatStickerPrice(priceCents);
   const long = label.length > 8;
   return (
     <span
+      aria-hidden={decorative || undefined}
       className={cn(
         "inline-flex aspect-square shrink-0 -rotate-6 items-center justify-center rounded-full bg-sticker p-1.5 text-center font-marker leading-none whitespace-nowrap text-sticker-ink shadow-[0_1px_0_rgba(0,0,0,0.12),0_6px_14px_-6px_rgba(23,32,43,0.45)] ring-1 ring-black/5",
         size === "md" &&
@@ -37,7 +41,9 @@ export function PriceSticker({
       >
         {label}
       </span>
-      <span className="sr-only">{formatPrice(priceCents)}</span>
+      {!decorative && (
+        <span className="sr-only">{formatPrice(priceCents)}</span>
+      )}
     </span>
   );
 }

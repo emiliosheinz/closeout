@@ -5,6 +5,7 @@ import {
   type CatalogFilters,
   type CatalogSort,
   CONDITION_PARAM,
+  catalogEntries,
   SORT_PARAM,
 } from "@/lib/catalog/params";
 import { CONDITIONS } from "@/lib/catalog/types";
@@ -35,7 +36,7 @@ function Choice({
   checked: boolean;
 }) {
   return (
-    <label className="relative inline-flex min-h-10 cursor-pointer items-center rounded-full border border-line bg-surface px-3.5 text-sm has-[:checked]:border-ink has-[:checked]:bg-ink has-[:checked]:text-surface has-[:focus-visible]:outline has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-focus">
+    <label className="relative inline-flex min-h-11 cursor-pointer items-center rounded-full border border-line bg-surface px-3.5 text-sm has-[:checked]:border-ink has-[:checked]:bg-ink has-[:checked]:text-surface has-[:focus-visible]:outline has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-focus">
       <input
         type="radio"
         name={name}
@@ -55,10 +56,16 @@ function Choice({
 export function FilterForm({ filters }: { filters: CatalogFilters }) {
   return (
     <form action="/" method="get" className="flex flex-col gap-6">
-      {filters.q && <input type="hidden" name="q" value={filters.q} />}
-      {filters.category && (
-        <input type="hidden" name="categoria" value={filters.category} />
-      )}
+      {catalogEntries(filters, [
+        "estado",
+        "disponibilidade",
+        "min",
+        "max",
+        "ordem",
+        "pagina",
+      ]).map(([name, value]) => (
+        <input key={name} type="hidden" name={name} value={value} />
+      ))}
 
       <fieldset>
         <legend className="mb-2 text-sm font-semibold">Estado</legend>
@@ -109,7 +116,7 @@ export function FilterForm({ filters }: { filters: CatalogFilters }) {
               step={1}
               placeholder="Mínimo"
               defaultValue={filters.minPrice ?? ""}
-              className="h-11 w-full rounded-md border border-line bg-surface px-3 text-base"
+              className="h-11 w-full rounded-md border border-line-strong bg-surface px-3 text-base placeholder:text-muted"
             />
           </label>
           <span aria-hidden="true" className="text-muted">
@@ -125,7 +132,7 @@ export function FilterForm({ filters }: { filters: CatalogFilters }) {
               step={1}
               placeholder="Máximo"
               defaultValue={filters.maxPrice ?? ""}
-              className="h-11 w-full rounded-md border border-line bg-surface px-3 text-base"
+              className="h-11 w-full rounded-md border border-line-strong bg-surface px-3 text-base placeholder:text-muted"
             />
           </label>
         </div>

@@ -15,10 +15,9 @@ export default function CatalogError({
 
   return (
     <main className="mx-auto flex min-h-[60dvh] max-w-xl flex-col justify-center px-4">
-      <h1 className="text-3xl font-extrabold">O catálogo não carregou</h1>
+      <h1 className="text-3xl font-extrabold">Esta página não carregou</h1>
       <p className="mt-3 text-ink-soft">
-        Algo falhou do nosso lado ao buscar os itens. Tente de novo em alguns
-        segundos.
+        Algo falhou do nosso lado. Tente de novo em alguns segundos.
       </p>
       <button
         type="button"
