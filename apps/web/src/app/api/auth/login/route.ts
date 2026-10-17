@@ -1,8 +1,48 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { clientIpFrom, isSameOrigin } from "@/lib/admin/origin";
-import { apiUrl, INTERNAL_SECRET_HEADER } from "@/lib/admin/server-api";
+import { apiUrl } from "@/lib/admin/server-api";
 import { setSessionCookie } from "@/lib/admin/session-cookie";
 import { requireEnv } from "@/lib/env";
+import {
+  CLIENT_IP_HEADER,
+  INTERNAL_SECRET_HEADER,
+} from "@/lib/internal-headers";
+
+const MAX_BODY_BYTES = 4096;
+
+/**
+ * Reads the body as text, giving up as soon as it exceeds `maxBytes`, so an
+ * oversized or chunked upload is never buffered whole.
+ */
+async function readCapped(
+  request: NextRequest,
+  maxBytes: number,
+): Promise<string | null> {
+  if (Number(request.headers.get("content-length")) > maxBytes) return null;
+  if (!request.body) return "";
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > maxBytes) {
+      await reader.cancel();
+      return null;
+    }
+    chunks.push(value);
+  }
+  return Buffer.concat(chunks).toString("utf8");
+}
+
+function parseJson(text: string): unknown {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Exchanges credentials for a session through the API and sets the session
@@ -20,7 +60,15 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const credentials = (await request.json().catch(() => null)) as {
+  const text = await readCapped(request, MAX_BODY_BYTES);
+  if (text === null) {
+    return NextResponse.json(
+      { message: "Requisição grande demais." },
+      { status: 413 },
+    );
+  }
+
+  const credentials = parseJson(text) as {
     email?: unknown;
     password?: unknown;
   } | null;
@@ -36,7 +84,7 @@ export async function POST(request: NextRequest) {
     headers: {
       "Content-Type": "application/json",
       [INTERNAL_SECRET_HEADER]: requireEnv("INTERNAL_API_SECRET"),
-      "x-client-ip":
+      [CLIENT_IP_HEADER]:
         clientIpFrom(request.headers.get("x-forwarded-for")) ?? "local",
     },
     body: JSON.stringify({

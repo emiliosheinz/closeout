@@ -223,3 +223,15 @@ test("sign-in and sign-out refuse requests from other sites without touching coo
   expect(logout.status()).toBe(403);
   expect(logout.headers()["set-cookie"]).toBeUndefined();
 });
+
+test("admin listing URLs with a non-UUID id render not-found", async ({
+  page,
+}) => {
+  await signIn(page);
+  for (const id of ["a%2Fb", "..%2F..", "not-a-uuid"]) {
+    for (const suffix of ["", "/previa"]) {
+      const response = await page.goto(`/admin/anuncios/${id}${suffix}`);
+      expect(response?.status()).toBe(404);
+    }
+  }
+});
