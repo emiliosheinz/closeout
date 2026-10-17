@@ -33,6 +33,13 @@ describe("login route body cap", () => {
     expect(res.status).toBe(413);
   });
 
+  it("reads a body of exactly 4 KB and refuses one byte more", async () => {
+    const atLimit = await login("x".repeat(4096), { "content-length": "" });
+    expect(atLimit.status).toBe(400);
+    const overLimit = await login("x".repeat(4097), { "content-length": "" });
+    expect(overLimit.status).toBe(413);
+  });
+
   it("rejects an oversized body sent without content-length", async () => {
     const res = await login("x".repeat(5000), { "content-length": "" });
     expect(res.status).toBe(413);
