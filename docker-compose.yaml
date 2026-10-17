@@ -131,11 +131,6 @@ services:
       - "${WEB_PORT:?required}:${WEB_PORT:?required}"
     restart: unless-stopped
 
-networks:
-  default:
-    name: closeout
-    driver: bridge
-
 volumes:
   db-data:
   media-data:
