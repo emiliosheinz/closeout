@@ -98,8 +98,10 @@ The `prod` targets of `apps/api/Dockerfile` and `apps/web/Dockerfile` build
 standalone images. A deployment needs Postgres, a persistent volume at `MEDIA_DIR`
 for the API, `NODE_ENV=production` (Secure cookies, HSTS), `PUBLIC_BASE_URL` set to
 the HTTPS origin, a strong `INTERNAL_API_SECRET`, and only the web app exposed.
-Run migrations with the same command as the `migration` service before starting
-the API. Put a reverse proxy (nginx, Caddy, a platform load balancer) in front of the web app
+Apply migrations before starting the API. The production API image holds only the
+compiled app, so run `pnpm turbo migration:run --filter=api` from a source checkout
+or the tooling image (`docker/Dockerfile.cli`) with the production `POSTGRES_*`
+variables. Put a reverse proxy (nginx, Caddy, a platform load balancer) in front of the web app
 and have it set `X-Forwarded-For` to the real client address
 (`proxy_set_header X-Forwarded-For $remote_addr;` in nginx). The login rate limiter
 keys on the last hop of that header; without a proxy a client can forge it and only
