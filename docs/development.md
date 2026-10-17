@@ -110,8 +110,8 @@ limit protects an account. If every request arrives with the same address (a pro
 that does not set the header), the per-IP limit becomes shared: 30 failed logins from
 anyone block all logins for 15 minutes.
 
-The web app caches the store, listing pages and the unfiltered catalog for up to
-5 minutes; searches and filtered views always read live data. Saves in the admin
+The web app caches the store, listing pages and the first page of the unfiltered
+catalog for up to 5 minutes; searches, filters and later pages always read live data. Saves in the admin
 expire that cache at once. Changes made elsewhere (`bin/closeout cli`, SQL) show on
 the storefront within 5 minutes. The cache lives in each web instance, so running
 several instances needs a shared Next.js cache handler.

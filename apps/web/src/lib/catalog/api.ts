@@ -13,8 +13,8 @@ const CATALOG_REVALIDATE_SECONDS = 300;
 const CACHED: RequestInit = {
   next: { revalidate: CATALOG_REVALIDATE_SECONDS, tags: [CATALOG_CACHE_TAG] },
 };
-// Search and filter combinations are unbounded, so they skip the cache
-// instead of filling it with one entry per query.
+// Only the first page of the plain catalog is cached: searches, filters and
+// deep pages would let any visitor add cache entries at will.
 const UNCACHED: RequestInit = { cache: "no-store" };
 
 async function getPublic<T>(
@@ -43,7 +43,7 @@ export async function getListings(
 ): Promise<ListingPage> {
   const page = await getPublic<ListingPage>(
     `/listings?${toApiQuery(filters, pageSize)}`,
-    hasActiveFilters(filters) ? UNCACHED : CACHED,
+    hasActiveFilters(filters) || filters.page > 1 ? UNCACHED : CACHED,
   );
   if (!page) throw new Error(`Store ${storeSlug()} not found`);
   return page;
