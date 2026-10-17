@@ -217,6 +217,8 @@ describe("public catalog", () => {
     await get("/listings?sort=random").expect(400);
     await get("/listings?page=0").expect(400);
     await get("/listings?minPrice=abc").expect(400);
+    await get("/listings?maxPrice=1e20").expect(400);
+    await get("/listings?minPrice=100000001").expect(400);
   });
 
   it("answers 404 for drafts, archived listings and unknown stores", async () => {

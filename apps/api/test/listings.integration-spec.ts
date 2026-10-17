@@ -546,6 +546,28 @@ describe("listing administration", () => {
       expect(detail.body.imageCount).toBe(1);
     });
 
+    it("keeps the immutable cache header on media and no-store on admin JSON", async () => {
+      const listing = await createListing();
+      const res = await upload(listing.id, [await photo()]).expect(201);
+      expect(res.headers["cache-control"]).toBe("no-store");
+      const media = await request(ctx.app.getHttpServer())
+        .get(res.body.items[0].urls.lg)
+        .expect(200);
+      expect(media.headers["cache-control"]).toBe(
+        "public, max-age=31536000, immutable",
+      );
+    });
+
+    it("rejects a non-file form field on upload in Portuguese", async () => {
+      const listing = await createListing();
+      const res = await client()
+        .post(`${base()}/${listing.id}/images`)
+        .field("alt", "texto")
+        .attach("files", await photo(), "a.jpg")
+        .expect(400);
+      expect(res.body.message).toBe("Envie apenas fotos, sem outros campos.");
+    });
+
     it("never serves files outside the media naming scheme", async () => {
       const server = ctx.app.getHttpServer();
       await request(server).get("/media/..%2F..%2Fetc%2Fpasswd").expect(404);

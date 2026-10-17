@@ -24,7 +24,7 @@ import {
   UploadErrorsFilter,
 } from "@/media/upload-errors.filter";
 import {
-  IMAGE_UPLOAD_OPTIONS,
+  imageUploadOptions,
   MAX_FILES_PER_REQUEST,
 } from "@/media/upload-limits";
 import { StoreMemberGuard } from "@/stores/guards/store-member.guard";
@@ -125,7 +125,11 @@ export class ListingsController {
   @HttpCode(201)
   @UseFilters(new UploadErrorsFilter(TOO_MANY_PHOTOS))
   @UseInterceptors(
-    FilesInterceptor("files", MAX_FILES_PER_REQUEST, IMAGE_UPLOAD_OPTIONS),
+    FilesInterceptor(
+      "files",
+      MAX_FILES_PER_REQUEST,
+      imageUploadOptions(MAX_FILES_PER_REQUEST),
+    ),
   )
   async addImages(
     @Param("storeId") storeId: string,

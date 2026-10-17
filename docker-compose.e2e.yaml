@@ -15,7 +15,7 @@ x-postgres-env: &postgres-env
 
 x-app-env: &app-env
   PUBLIC_BASE_URL: http://web:3001
-  INTERNAL_API_SECRET: e2e-fixed-internal-secret
+  INTERNAL_API_SECRET: e2e-fixed-internal-secret-0123456789abcdef
   STORE_SLUG: loja-e2e
   STORE_NAME: Loja E2E
 
