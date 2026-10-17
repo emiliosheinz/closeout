@@ -20,7 +20,7 @@ export const TOO_MANY_PHOTOS = `Envie até ${MAX_FILES_PER_REQUEST} fotos por ve
 export class UploadErrorsFilter implements ExceptionFilter {
   /**
    * @param unexpectedFileMessage Multer reports both extra files and a wrong
-   *   field name as "Unexpected field"; each route says what it expects.
+   *   field name as "Unexpected file field"; each route says what it expects.
    */
   constructor(private readonly unexpectedFileMessage: string) {}
 
@@ -35,7 +35,7 @@ export class UploadErrorsFilter implements ExceptionFilter {
     const translated: Record<string, string> = {
       "File too large": FILE_TOO_LARGE,
       "Too many files": this.unexpectedFileMessage,
-      "Unexpected field": this.unexpectedFileMessage,
+      "Unexpected file field": this.unexpectedFileMessage,
     };
     host
       .switchToHttp()
