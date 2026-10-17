@@ -138,10 +138,10 @@ describe("ListingView", () => {
       name: "Com quem você quer falar?",
     });
     const ana = within(dialog).getByRole("link", {
-      name: "Chamar Ana no WhatsApp (abre em nova aba)",
+      name: "Falar com Ana no WhatsApp (abre em nova aba)",
     });
     const bia = within(dialog).getByRole("link", {
-      name: "Chamar Bia no WhatsApp (abre em nova aba)",
+      name: "Falar com Bia no WhatsApp (abre em nova aba)",
     });
     expect(within(dialog).getAllByRole("link")).toHaveLength(2);
     expect(ana.getAttribute("href")).toMatch(
