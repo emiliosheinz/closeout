@@ -1,0 +1,19 @@
+import { Session } from "@/auth/entities/session.entity";
+import { User } from "@/auth/entities/user.entity";
+import { Listing } from "@/catalog/entities/listing.entity";
+import { ListingImage } from "@/catalog/entities/listing-image.entity";
+import { Seller } from "@/sellers/entities/seller.entity";
+import { Category } from "@/stores/entities/category.entity";
+import { Store } from "@/stores/entities/store.entity";
+import { StoreMember } from "@/stores/entities/store-member.entity";
+
+export const ENTITIES = [
+  User,
+  Session,
+  Store,
+  StoreMember,
+  Category,
+  Seller,
+  Listing,
+  ListingImage,
+];
