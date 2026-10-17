@@ -73,7 +73,11 @@ export function toPublicSummary(
 export function listingSellers(listing: Listing): Seller[] {
   return listing.sellers
     .map((row) => row.seller)
-    .sort((a, b) => a.displayName.localeCompare(b.displayName, "pt-BR"));
+    .sort(
+      (a, b) =>
+        a.displayName.localeCompare(b.displayName, "pt-BR") ||
+        a.id.localeCompare(b.id),
+    );
 }
 
 /** Expects `category`, `sellers.seller` and ordered `images` loaded. */

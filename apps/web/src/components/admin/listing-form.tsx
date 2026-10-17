@@ -334,7 +334,11 @@ export function ListingForm({
         />
       </Field>
 
-      <fieldset aria-describedby="sellers-hint">
+      <fieldset
+        aria-describedby={
+          errors.sellers ? "sellers-hint sellers-error" : "sellers-hint"
+        }
+      >
         <legend className="text-sm font-semibold">Quem vende</legend>
         <p id="sellers-hint" className="mt-1 text-xs text-muted">
           Quem recebe as mensagens no WhatsApp. Com mais de uma pessoa, o
@@ -364,7 +368,11 @@ export function ListingForm({
           ))}
         </div>
         {errors.sellers && (
-          <p role="alert" className="mt-1.5 text-sm font-medium text-stamp">
+          <p
+            id="sellers-error"
+            role="alert"
+            className="mt-1.5 text-sm font-medium text-stamp"
+          >
             {errors.sellers}
           </p>
         )}

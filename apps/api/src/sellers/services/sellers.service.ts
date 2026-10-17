@@ -87,9 +87,14 @@ export class SellersService {
    */
   async remove(storeId: string, id: string): Promise<void> {
     const seller = await this.findOrFail(storeId, id);
-    // ponytail: no lock against a concurrent edit that drops the co-seller of
-    // a shared listing in the same instant; two admins make that negligible.
     await this.dataSource.transaction(async (manager) => {
+      // Waits for any in-flight write that is adding this seller to a
+      // listing (it holds a key-share lock on the row through the foreign
+      // key), so the check below sees it.
+      await manager.query(
+        `SELECT 1 FROM sellers WHERE id = $1 AND store_id = $2 FOR UPDATE`,
+        [seller.id, storeId],
+      );
       const [soleSeller] = await manager.query(
         `SELECT 1 FROM listing_sellers mine
           WHERE mine.seller_id = $1

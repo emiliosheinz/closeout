@@ -110,6 +110,38 @@ describe("seller profiles", () => {
     ]);
   });
 
+  it("refuses to delete the only seller of one listing and leaves their shared ones alone", async () => {
+    const partner = await client()
+      .post(base())
+      .send({ displayName: "Bia" })
+      .expect(201);
+    const shared = await insertListing(ctx.dataSource, admin);
+    await client()
+      .patch(`/stores/${admin.storeId}/listings/${shared.id}`)
+      .send({ sellerIds: [admin.sellerId, partner.body.id] })
+      .expect(200);
+    const solo = await insertListing(ctx.dataSource, admin);
+    await client()
+      .patch(`/stores/${admin.storeId}/listings/${solo.id}`)
+      .send({ sellerIds: [partner.body.id] })
+      .expect(200);
+
+    await client().delete(`${base()}/${partner.body.id}`).expect(409);
+
+    const sharedAfter = await client()
+      .get(`/stores/${admin.storeId}/listings/${shared.id}`)
+      .expect(200);
+    expect(sharedAfter.body.sellers.map((s: { id: string }) => s.id)).toEqual(
+      expect.arrayContaining([admin.sellerId, partner.body.id]),
+    );
+    const list = await client().get(base()).expect(200);
+    expect(list.body.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: partner.body.id, listingCount: 2 }),
+      ]),
+    );
+  });
+
   it("deletes a seller without listings", async () => {
     const created = await client()
       .post(base())

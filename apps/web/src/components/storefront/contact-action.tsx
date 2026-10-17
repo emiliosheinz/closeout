@@ -67,12 +67,13 @@ export function ContactAction({
           </DialogDescription>
           <ul className="mt-5 flex flex-col gap-2">
             {contacts.map((contact) => (
-              <li key={contact.href}>
+              <li key={`${contact.name}-${contact.href}`}>
                 <a
                   href={contact.href}
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={() => setOpen(false)}
+                  aria-label={`Chamar ${contact.name} no WhatsApp (abre em nova aba)`}
                   className="flex min-h-14 items-center gap-3 rounded-xl border border-line bg-surface px-3 font-semibold hover:border-go/60 hover:bg-go/5"
                 >
                   {contact.avatarUrl ? (

@@ -137,15 +137,17 @@ describe("ListingView", () => {
     const dialog = screen.getByRole("dialog", {
       name: "Com quem você quer falar?",
     });
-    const links = within(dialog).getAllByRole("link");
-    expect(links.map((link) => link.textContent)).toEqual([
-      "Chamar AnaWhatsApp",
-      "Chamar BiaWhatsApp",
-    ]);
-    expect(links[0]?.getAttribute("href")).toMatch(
+    const ana = within(dialog).getByRole("link", {
+      name: "Chamar Ana no WhatsApp (abre em nova aba)",
+    });
+    const bia = within(dialog).getByRole("link", {
+      name: "Chamar Bia no WhatsApp (abre em nova aba)",
+    });
+    expect(within(dialog).getAllByRole("link")).toHaveLength(2);
+    expect(ana.getAttribute("href")).toMatch(
       /^https:\/\/wa\.me\/5511988887777\?text=/,
     );
-    expect(links[1]?.getAttribute("href")).toMatch(
+    expect(bia.getAttribute("href")).toMatch(
       /^https:\/\/wa\.me\/5521977771234\?text=/,
     );
   });
