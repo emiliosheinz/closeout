@@ -27,6 +27,19 @@ import { escapeLike } from "../sql";
 
 const RELATED_LIMIT = 4;
 
+/** Exactly what toPublicSummary reads, plus the id used to attach covers. */
+const SUMMARY_COLUMNS = [
+  "l.id",
+  "l.slug",
+  "l.title",
+  "l.priceCents",
+  "l.condition",
+  "l.availability",
+  "category.id",
+  "category.slug",
+  "category.name",
+];
+
 export interface PublicStore {
   slug: string;
   name: string;
@@ -65,7 +78,7 @@ export class PublicCatalogService {
   async getStore(slug: string): Promise<PublicStore> {
     const store = await this.findStore(slug);
 
-    const counts = await this.listings
+    const countsQuery = this.listings
       .createQueryBuilder("l")
       .select(
         `COUNT(*) FILTER (WHERE l.availability = 'available')::int`,
@@ -80,7 +93,7 @@ export class PublicCatalogService {
       .andWhere("l.publication = 'published'")
       .getRawOne<PublicStore["counts"]>();
 
-    const categoryRows = await this.categories
+    const categoriesQuery = this.categories
       .createQueryBuilder("c")
       .leftJoin(
         Listing,
@@ -95,10 +108,16 @@ export class PublicCatalogService {
       .orderBy("c.position", "ASC")
       .getRawMany<{ slug: string; name: string; count: number }>();
 
-    const sellers = await this.sellers.find({
+    const sellersQuery = this.sellers.find({
       where: { storeId: store.id, whatsappNumber: Not(IsNull()) },
       order: { createdAt: "ASC" },
     });
+
+    const [counts, categoryRows, sellers] = await Promise.all([
+      countsQuery,
+      categoriesQuery,
+      sellersQuery,
+    ]);
 
     return {
       slug: store.slug,
@@ -135,16 +154,23 @@ export class PublicCatalogService {
 
     const builder = this.listings
       .createQueryBuilder("l")
-      .innerJoinAndSelect("l.category", "category")
+      .innerJoin("l.category", "category")
+      .select(SUMMARY_COLUMNS)
       .where("l.store_id = :storeId", { storeId: store.id })
       .andWhere("l.publication = 'published'");
     applyFilters(builder, query);
     applySort(builder, query.sort ?? "recent");
 
-    const [rows, total] = await builder
-      .skip((page - 1) * pageSize)
-      .take(pageSize)
-      .getManyAndCount();
+    // Category is many-to-one, so offset/limit cannot split a listing and
+    // TypeORM skips its distinct-ids pre-query.
+    const [rows, total] = await Promise.all([
+      builder
+        .clone()
+        .offset((page - 1) * pageSize)
+        .limit(pageSize)
+        .getMany(),
+      builder.getCount(),
+    ]);
 
     return {
       items: await this.withCovers(rows),
@@ -172,7 +198,8 @@ export class PublicCatalogService {
   private async related(listing: Listing): Promise<PublicListingSummary[]> {
     const rows = await this.listings
       .createQueryBuilder("l")
-      .innerJoinAndSelect("l.category", "category")
+      .innerJoin("l.category", "category")
+      .select(SUMMARY_COLUMNS)
       .where("l.store_id = :storeId", { storeId: listing.storeId })
       .andWhere("l.publication = 'published'")
       .andWhere("l.availability <> 'sold'")
