@@ -99,7 +99,7 @@ export class Listing {
   @Column({ type: "text", default: "draft" })
   declare publication: Publication;
 
-  @Column({ type: "jsonb", default: () => "'[]'::jsonb" })
+  @Column({ type: "jsonb", default: () => "'[]'" })
   declare attributes: ListingAttribute[];
 
   @Column({ name: "published_at", type: "timestamptz", nullable: true })
