@@ -80,42 +80,27 @@ export function ListingView({ listing }: { listing: ListingDetail }) {
           <h1 className="mt-1 text-3xl leading-tight font-extrabold tracking-[-0.015em] text-balance break-words sm:text-4xl">
             {listing.title}
           </h1>
-          <p className="mt-2 text-xl font-bold">
-            {formatPrice(listing.priceCents)}
+          <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2">
+            <span className="text-xl font-bold">
+              {formatPrice(listing.priceCents)}
+            </span>
+            <span className="rounded-full bg-ink/5 px-3 py-1 text-sm font-semibold text-ink-soft">
+              {CONDITION_LABELS[listing.condition]}
+            </span>
+            {listing.availability !== "available" && (
+              <span
+                className={
+                  sold
+                    ? "rounded-full bg-stamp/10 px-3 py-1 text-sm font-semibold text-stamp"
+                    : "rounded-full bg-hold/10 px-3 py-1 text-sm font-semibold text-hold"
+                }
+              >
+                {AVAILABILITY_LABELS[listing.availability]}
+              </span>
+            )}
           </p>
 
-          <dl className="mt-6 grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-line bg-line text-sm">
-            <div className="bg-surface px-4 py-3">
-              <dt className="text-muted">Estado</dt>
-              <dd className="mt-0.5 font-semibold">
-                {CONDITION_LABELS[listing.condition]}
-              </dd>
-            </div>
-            <div className="bg-surface px-4 py-3">
-              <dt className="text-muted">Disponibilidade</dt>
-              <dd className="mt-0.5 font-semibold">
-                {AVAILABILITY_LABELS[listing.availability]}
-              </dd>
-            </div>
-            <div className="bg-surface px-4 py-3">
-              <dt className="text-muted">Quem vende</dt>
-              <dd className="mt-0.5 font-semibold">
-                {joinNames(listing.sellers.map((seller) => seller.name))}
-              </dd>
-            </div>
-            {listing.attributes.map((attribute) => (
-              <div
-                key={`${attribute.label}-${attribute.value}`}
-                className="bg-surface px-4 py-3"
-              >
-                <dt className="text-muted">{attribute.label}</dt>
-                <dd className="mt-0.5 font-semibold">{attribute.value}</dd>
-              </div>
-            ))}
-            {listing.attributes.length % 2 === 0 && (
-              <div className="bg-surface" aria-hidden="true" />
-            )}
-          </dl>
+          <Sellers sellers={listing.sellers} />
 
           <div className="mt-6 hidden lg:block">
             <Contact listing={listing} contacts={contacts} />
@@ -127,6 +112,25 @@ export function ListingView({ listing }: { listing: ListingDetail }) {
               <p className="mt-2 max-w-[65ch] leading-relaxed whitespace-pre-line text-ink-soft">
                 {listing.description}
               </p>
+            </div>
+          )}
+
+          {listing.attributes.length > 0 && (
+            <div className="mt-8">
+              <h2 className="text-base font-bold">Detalhes</h2>
+              <dl className="mt-2 divide-y divide-line border-y border-line text-sm">
+                {listing.attributes.map((attribute) => (
+                  <div
+                    key={`${attribute.label}-${attribute.value}`}
+                    className="flex justify-between gap-6 py-3"
+                  >
+                    <dt className="text-muted">{attribute.label}</dt>
+                    <dd className="text-right font-semibold">
+                      {attribute.value}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
             </div>
           )}
 
@@ -157,6 +161,42 @@ export function ListingView({ listing }: { listing: ListingDetail }) {
         <Contact listing={listing} contacts={contacts} compact />
       </div>
     </>
+  );
+}
+
+function Sellers({ sellers }: { sellers: ListingDetail["sellers"] }) {
+  return (
+    <div className="mt-6 flex items-center gap-3">
+      <div className="flex -space-x-2">
+        {sellers.map((seller) =>
+          seller.avatarUrl ? (
+            // biome-ignore lint/performance/noImgElement: small pre-sized avatar variant.
+            <img
+              key={seller.name}
+              src={seller.avatarUrl}
+              alt=""
+              width={40}
+              height={40}
+              className="size-10 rounded-full object-cover ring-2 ring-paper"
+            />
+          ) : (
+            <span
+              key={seller.name}
+              aria-hidden="true"
+              className="inline-flex size-10 items-center justify-center rounded-full bg-go/10 font-bold text-go ring-2 ring-paper"
+            >
+              {seller.name.charAt(0).toUpperCase()}
+            </span>
+          ),
+        )}
+      </div>
+      <p className="text-sm text-muted">
+        Vendido por{" "}
+        <span className="font-semibold text-ink">
+          {joinNames(sellers.map((seller) => seller.name))}
+        </span>
+      </p>
+    </div>
   );
 }
 
