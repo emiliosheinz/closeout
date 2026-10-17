@@ -134,6 +134,7 @@ describe("seller profiles", () => {
     expect(list.body.items).toEqual([
       expect.objectContaining({
         id: admin.sellerId,
+        userId: expect.any(String),
         displayName: "Admin loja-a",
         whatsappNumber: "5511999998888",
       }),

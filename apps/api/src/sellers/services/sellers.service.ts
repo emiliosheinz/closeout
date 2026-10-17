@@ -12,6 +12,8 @@ import { Seller } from "../entities/seller.entity";
 
 export interface SellerResponse {
   id: string;
+  /** The administrator this profile represents, if any. */
+  userId: string | null;
   displayName: string;
   whatsappNumber: string | null;
   avatarUrl: string | null;
@@ -140,6 +142,7 @@ function isForeignKeyViolation(err: unknown): boolean {
 function toResponse(seller: Seller, listingCount: number): SellerResponse {
   return {
     id: seller.id,
+    userId: seller.userId,
     displayName: seller.displayName,
     whatsappNumber: seller.whatsappNumber,
     avatarUrl: seller.avatarKey ? mediaUrls(seller.avatarKey).sm : null,
