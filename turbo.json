@@ -1,0 +1,24 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "envMode": "loose",
+  "tasks": {
+    "build": { "dependsOn": ["^build"], "outputs": ["dist/**", ".next/**"] },
+    "start:dev": { "dependsOn": ["^build"], "persistent": true, "cache": false },
+    "lint": { "dependsOn": ["^build"] },
+    "format": { "dependsOn": ["^build"] },
+    "check": { "dependsOn": ["^build"] },
+    "typecheck": { "dependsOn": ["^build"] },
+    "lint:fix": { "dependsOn": ["^build"] },
+    "format:fix": { "dependsOn": ["^build"] },
+    "check:fix": { "dependsOn": ["^build"] },
+    "test": { "dependsOn": ["^build"] },
+    "test:watch": { "dependsOn": ["^build"], "persistent": true },
+    "test:integration": { "dependsOn": ["^build"], "cache": false },
+    "test:e2e": { "dependsOn": ["^build"], "cache": false },
+    "migration:run": { "dependsOn": ["^build"], "cache": false },
+    "migration:revert": { "dependsOn": ["^build"], "cache": false },
+    "migration:show": { "dependsOn": ["^build"], "cache": false },
+    "migration:generate": { "dependsOn": ["^build"], "cache": false },
+    "cli": { "dependsOn": ["^build"], "cache": false }
+  }
+}

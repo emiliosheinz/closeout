@@ -1,0 +1,9 @@
+# Playwright image pinned to the same version as @playwright/test, so the
+# bundled browsers match the test runner.
+FROM mcr.microsoft.com/playwright:v1.60.0-noble
+
+RUN corepack enable pnpm && corepack install -g pnpm@11.1.0
+
+WORKDIR /closeout
+
+CMD ["pnpm", "--filter", "web", "test:e2e"]

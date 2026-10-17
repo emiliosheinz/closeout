@@ -1,0 +1,20 @@
+{
+  "extends": ["@closeout/config/biome"],
+  "root": false,
+  "javascript": {
+    "parser": {
+      "unsafeParameterDecoratorsEnabled": true
+    }
+  },
+  "linter": {
+    "rules": {
+      "style": {
+        /**
+         * NestJs dependency injection doesn't play well with this rule
+         * @see: https://stackoverflow.com/questions/74175543/nest-cant-resolve-dependencies-of-the-controller
+         */
+        "useImportType": "off"
+      }
+    }
+  }
+}

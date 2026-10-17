@@ -1,0 +1,39 @@
+{
+  "extends": ["@closeout/config/biome"],
+  "root": false,
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
+    }
+  },
+  "linter": {
+    "rules": {
+      "suspicious": {
+        "noUnknownAtRules": "off"
+      }
+    },
+    "domains": {
+      "next": "recommended",
+      "react": "recommended"
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["src/components/ui/**", "src/hooks/use-mobile.tsx"],
+      "linter": {
+        "rules": {
+          "security": {
+            "noDangerouslySetInnerHtml": "off"
+          },
+          "suspicious": {
+            "noArrayIndexKey": "off",
+            "noDocumentCookie": "off"
+          },
+          "correctness": {
+            "useExhaustiveDependencies": "off"
+          }
+        }
+      }
+    }
+  ]
+}
