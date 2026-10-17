@@ -3,7 +3,11 @@
   "envMode": "loose",
   "tasks": {
     "build": { "dependsOn": ["^build"], "outputs": ["dist/**", ".next/**"] },
-    "start:dev": { "dependsOn": ["^build"], "persistent": true, "cache": false },
+    "start:dev": {
+      "dependsOn": ["^build"],
+      "persistent": true,
+      "cache": false
+    },
     "lint": { "dependsOn": ["^build"] },
     "format": { "dependsOn": ["^build"] },
     "check": { "dependsOn": ["^build"] },

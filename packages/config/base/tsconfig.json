@@ -1,5 +1,5 @@
 {
-	"compilerOptions": {
+  "compilerOptions": {
     "module": "nodenext",
     "moduleResolution": "nodenext",
     "strict": true,
@@ -16,5 +16,5 @@
     "forceConsistentCasingInFileNames": true,
     "allowJs": false,
     "ignoreDeprecations": "6.0"
-	}
+  }
 }
