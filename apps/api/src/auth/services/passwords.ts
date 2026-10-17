@@ -2,7 +2,7 @@ import { randomBytes, scrypt, timingSafeEqual } from "node:crypto";
 
 const COST = 2 ** 15;
 const BLOCK_SIZE = 8;
-const PARALLELIZATION = 1;
+const PARALLELIZATION = 3;
 const KEY_LENGTH = 64;
 const SALT_BYTES = 16;
 
@@ -47,6 +47,17 @@ export async function hashPassword(password: string): Promise<string> {
     salt.toString("base64"),
     key.toString("base64"),
   ].join("$");
+}
+
+/** True when the stored hash was made with other parameters than the current ones. */
+export function needsRehash(stored: string): boolean {
+  const [scheme, cost, blockSize, parallelization] = stored.split("$");
+  return (
+    scheme !== "scrypt" ||
+    Number(cost) !== COST ||
+    Number(blockSize) !== BLOCK_SIZE ||
+    Number(parallelization) !== PARALLELIZATION
+  );
 }
 
 export async function verifyPassword(
