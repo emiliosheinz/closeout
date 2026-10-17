@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import type { EntityManager, Repository } from "typeorm";
-import { Listing } from "@/catalog/entities/listing.entity";
+import { User } from "@/auth/entities/user.entity";
 import { DEFAULT_CATEGORIES } from "../default-categories";
 import { Category } from "../entities/category.entity";
 import { Store } from "../entities/store.entity";
@@ -23,13 +23,9 @@ export interface CategoryResponse {
   name: string;
 }
 
-export interface DashboardCounts {
-  published: number;
-  available: number;
-  reserved: number;
-  sold: number;
-  draft: number;
-  archived: number;
+export interface MeResponse {
+  user: { id: string; name: string; email: string };
+  memberships: Membership[];
 }
 
 export interface Membership {
@@ -46,8 +42,8 @@ export class StoresService {
     private readonly members: Repository<StoreMember>,
     @InjectRepository(Category)
     private readonly categories: Repository<Category>,
-    @InjectRepository(Listing)
-    private readonly listings: Repository<Listing>,
+    @InjectRepository(User)
+    private readonly users: Repository<User>,
   ) {}
 
   /** Create a store together with its default categories. */
@@ -69,6 +65,15 @@ export class StoresService {
       })),
     );
     return store;
+  }
+
+  /** The signed-in admin and the stores they can manage. */
+  async me(userId: string): Promise<MeResponse> {
+    const user = await this.users.findOneOrFail({ where: { id: userId } });
+    return {
+      user: { id: user.id, name: user.name, email: user.email },
+      memberships: await this.membershipsFor(userId),
+    };
   }
 
   async membershipsFor(userId: string): Promise<Membership[]> {
@@ -102,39 +107,6 @@ export class StoresService {
       order: { position: "ASC" },
     });
     return rows.map(({ id, slug, name }) => ({ id, slug, name }));
-  }
-
-  async dashboard(storeId: string): Promise<DashboardCounts> {
-    const row = await this.listings
-      .createQueryBuilder("l")
-      .select(
-        `COUNT(*) FILTER (WHERE l.publication = 'published')::int`,
-        "published",
-      )
-      .addSelect(
-        `COUNT(*) FILTER (WHERE l.publication = 'published' AND l.availability = 'available')::int`,
-        "available",
-      )
-      .addSelect(
-        `COUNT(*) FILTER (WHERE l.publication = 'published' AND l.availability = 'reserved')::int`,
-        "reserved",
-      )
-      .addSelect(
-        `COUNT(*) FILTER (WHERE l.publication = 'published' AND l.availability = 'sold')::int`,
-        "sold",
-      )
-      .addSelect(
-        `COUNT(*) FILTER (WHERE l.publication = 'draft')::int`,
-        "draft",
-      )
-      .addSelect(
-        `COUNT(*) FILTER (WHERE l.publication = 'archived')::int`,
-        "archived",
-      )
-      .where("l.store_id = :storeId", { storeId })
-      .getRawOne<DashboardCounts>();
-    if (!row) throw new Error("Dashboard aggregate returned no row");
-    return row;
   }
 
   private async findOrFail(storeId: string): Promise<Store> {

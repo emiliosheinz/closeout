@@ -6,12 +6,12 @@ import {
 import { InjectDataSource } from "@nestjs/typeorm";
 import type { DataSource, EntityManager } from "typeorm";
 import { MediaService, type StoredImage } from "@/media/media.service";
-import { mediaUrls } from "@/media/media-urls";
 import { MAX_IMAGES_PER_LISTING } from "@/media/upload-limits";
+import { type AdminImage, toAdminImage } from "../admin-mappers";
 import { Listing } from "../entities/listing.entity";
 import { ListingImage } from "../entities/listing-image.entity";
-import { isPubliclyVisible } from "../listing-rules";
-import type { AdminImage } from "./listings.service";
+import { canRemovePhoto, PUBLISHED_KEEPS_A_PHOTO } from "../listing-rules";
+import { lockListing } from "./listings.service";
 
 @Injectable()
 export class ListingImagesService {
@@ -30,11 +30,15 @@ export class ListingImagesService {
     listingId: string,
     files: Buffer[],
   ): Promise<AdminImage[]> {
-    const existing = await this.countImages(
-      this.dataSource.manager,
-      storeId,
-      listingId,
-    );
+    const repo = this.dataSource.getRepository(ListingImage);
+    if (
+      !(await this.dataSource
+        .getRepository(Listing)
+        .exists({ where: { id: listingId, storeId } }))
+    ) {
+      throw new NotFoundException("Anúncio não encontrado.");
+    }
+    const existing = await repo.count({ where: { listingId } });
     if (existing + files.length > MAX_IMAGES_PER_LISTING) {
       throw new UnprocessableEntityException(
         `Cada anúncio pode ter até ${MAX_IMAGES_PER_LISTING} fotos.`,
@@ -45,7 +49,10 @@ export class ListingImagesService {
     try {
       for (const file of files) stored.push(await this.media.store(file));
       return await this.dataSource.transaction(async (manager) => {
-        const count = await this.countImages(manager, storeId, listingId);
+        await lockListing(manager, storeId, listingId);
+        const count = await manager
+          .getRepository(ListingImage)
+          .count({ where: { listingId } });
         if (count + stored.length > MAX_IMAGES_PER_LISTING) {
           throw new UnprocessableEntityException(
             `Cada anúncio pode ter até ${MAX_IMAGES_PER_LISTING} fotos.`,
@@ -76,7 +83,7 @@ export class ListingImagesService {
     ids: string[],
   ): Promise<AdminImage[]> {
     return this.dataSource.transaction(async (manager) => {
-      await this.lockListing(manager, storeId, listingId);
+      await lockListing(manager, storeId, listingId);
       const current = await manager
         .getRepository(ListingImage)
         .find({ where: { listingId } });
@@ -106,7 +113,7 @@ export class ListingImagesService {
   ): Promise<AdminImage[]> {
     const { key, images } = await this.dataSource.transaction(
       async (manager) => {
-        const listing = await this.lockListing(manager, storeId, listingId);
+        const listing = await lockListing(manager, storeId, listingId);
         const repo = manager.getRepository(ListingImage);
         const remaining = await repo.find({
           where: { listingId },
@@ -114,10 +121,8 @@ export class ListingImagesService {
         });
         const target = remaining.find((image) => image.id === imageId);
         if (!target) throw new NotFoundException("Foto não encontrada.");
-        if (isPubliclyVisible(listing) && remaining.length === 1) {
-          throw new UnprocessableEntityException(
-            "Um anúncio publicado precisa de ao menos uma foto. Adicione outra antes de remover esta.",
-          );
+        if (!canRemovePhoto(listing, remaining.length)) {
+          throw new UnprocessableEntityException(PUBLISHED_KEEPS_A_PHOTO);
         }
         await repo.delete({ id: target.id });
         const rest = remaining.filter((image) => image.id !== target.id);
@@ -136,37 +141,6 @@ export class ListingImagesService {
     return images;
   }
 
-  private async lockListing(
-    manager: EntityManager,
-    storeId: string,
-    listingId: string,
-  ): Promise<Listing> {
-    const listing = await manager.getRepository(Listing).findOne({
-      where: { id: listingId, storeId },
-      lock: { mode: "pessimistic_write" },
-    });
-    if (!listing) throw new NotFoundException("Anúncio não encontrado.");
-    return listing;
-  }
-
-  /** Pass a transactional manager to also lock the listing row. */
-  private async countImages(
-    manager: EntityManager,
-    storeId: string,
-    listingId: string,
-  ): Promise<number> {
-    if (manager.queryRunner?.isTransactionActive) {
-      await this.lockListing(manager, storeId, listingId);
-    } else if (
-      !(await manager
-        .getRepository(Listing)
-        .exists({ where: { id: listingId, storeId } }))
-    ) {
-      throw new NotFoundException("Anúncio não encontrado.");
-    }
-    return manager.getRepository(ListingImage).count({ where: { listingId } });
-  }
-
   private async listImages(
     manager: EntityManager,
     listingId: string,
@@ -175,15 +149,6 @@ export class ListingImagesService {
       where: { listingId },
       order: { position: "ASC" },
     });
-    return rows.map((image) => {
-      const urls = mediaUrls(image.storageKey);
-      return {
-        id: image.id,
-        position: image.position,
-        width: image.width,
-        height: image.height,
-        urls: { sm: urls.sm, lg: urls.lg },
-      };
-    });
+    return rows.map(toAdminImage);
   }
 }

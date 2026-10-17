@@ -1,7 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { IsNull, type Repository } from "typeorm";
+import { type EntityManager, IsNull, type Repository } from "typeorm";
 import { Session } from "../entities/session.entity";
 import { SESSION_DURATION_MS } from "../session-cookie";
 
@@ -43,8 +43,13 @@ export class SessionsService {
     await this.sessions.update({ id: sessionId }, { revokedAt: new Date() });
   }
 
-  async revokeAllForUser(userId: string): Promise<void> {
-    await this.sessions.update(
+  /** Pass a transactional manager to revoke as part of a wider change. */
+  async revokeAllForUser(
+    userId: string,
+    manager?: EntityManager,
+  ): Promise<void> {
+    const sessions = manager?.getRepository(Session) ?? this.sessions;
+    await sessions.update(
       { userId, revokedAt: IsNull() },
       { revokedAt: new Date() },
     );

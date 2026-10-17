@@ -10,12 +10,14 @@ import {
   Patch,
   Post,
   UploadedFile,
+  UseFilters,
   UseGuards,
   UseInterceptors,
 } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { SessionGuard } from "@/auth/guards/session.guard";
 import { InvalidImageError } from "@/media/image-processor";
+import { UploadErrorsFilter } from "@/media/upload-errors.filter";
 import { IMAGE_UPLOAD_OPTIONS } from "@/media/upload-limits";
 import { StoreMemberGuard } from "@/stores/guards/store-member.guard";
 import { CreateSellerDto, UpdateSellerDto } from "../dto/seller.dto";
@@ -64,6 +66,7 @@ export class SellersController {
   }
 
   @Post(":id/avatar")
+  @UseFilters(UploadErrorsFilter)
   @UseInterceptors(FileInterceptor("file", IMAGE_UPLOAD_OPTIONS))
   async avatar(
     @Param("storeId") storeId: string,

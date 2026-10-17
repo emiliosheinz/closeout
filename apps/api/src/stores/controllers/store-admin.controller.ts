@@ -4,7 +4,6 @@ import { UpdateStoreDto } from "../dto/update-store.dto";
 import { StoreMemberGuard } from "../guards/store-member.guard";
 import {
   type CategoryResponse,
-  type DashboardCounts,
   type StoreSettings,
   StoresService,
 } from "../services/stores.service";
@@ -25,11 +24,6 @@ export class StoreAdminController {
     @Body() body: UpdateStoreDto,
   ): Promise<StoreSettings> {
     return this.stores.updateSettings(storeId, body);
-  }
-
-  @Get("dashboard")
-  dashboard(@Param("storeId") storeId: string): Promise<DashboardCounts> {
-    return this.stores.dashboard(storeId);
   }
 
   @Get("categories")

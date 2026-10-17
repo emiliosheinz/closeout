@@ -6,6 +6,7 @@ import {
   INTERNAL_SECRET,
   ORIGIN,
   PASSWORD,
+  registeredRoutes,
   resetDatabase,
   type TestContext,
 } from "./helpers";
@@ -125,19 +126,12 @@ describe("admin authentication", () => {
       .expect(201);
   });
 
-  it("does not expose any route that creates users", async () => {
-    for (const path of ["/users", "/auth/register", "/auth/signup", "/me"]) {
-      await request(server())
-        .post(path)
-        .set("Origin", ORIGIN)
-        .send({ email: "new@example.com", password: PASSWORD })
-        .expect((res) => {
-          expect([401, 404]).toContain(res.status);
-        });
-    }
-    const [{ count }] = await ctx.dataSource.query(
-      `SELECT COUNT(*)::int AS count FROM users`,
+  it("exposes no unauthenticated write route other than login", () => {
+    const writes = registeredRoutes(ctx.app).filter(
+      (route) => route.method !== "GET" && !route.guarded,
     );
-    expect(count).toBe(0);
+    expect(writes.map((route) => `${route.method} ${route.path}`)).toEqual([
+      "POST /auth/login",
+    ]);
   });
 });

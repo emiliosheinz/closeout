@@ -52,6 +52,20 @@ describe("seller profiles", () => {
     }
   });
 
+  it("links public listings to the seller's updated number", async () => {
+    const listing = await insertListing(ctx.dataSource, admin, {
+      publication: "published",
+    });
+    await client()
+      .patch(`${base()}/${admin.sellerId}`)
+      .send({ whatsappNumber: "+55 21 97777-1234" })
+      .expect(200);
+    const res = await request(ctx.app.getHttpServer())
+      .get(`/public/stores/loja-a/listings/${listing.slug}`)
+      .expect(200);
+    expect(res.body.seller.whatsappNumber).toBe("5521977771234");
+  });
+
   it("clears a number when an empty value is saved", async () => {
     const res = await client()
       .patch(`${base()}/${admin.sellerId}`)
@@ -64,7 +78,9 @@ describe("seller profiles", () => {
     await insertListing(ctx.dataSource, admin);
     await client().delete(`${base()}/${admin.sellerId}`).expect(409);
     const list = await client().get(base()).expect(200);
-    expect(list.body.items).toHaveLength(1);
+    expect(list.body.items).toEqual([
+      expect.objectContaining({ id: admin.sellerId, listingCount: 1 }),
+    ]);
   });
 
   it("deletes a seller without listings", async () => {
@@ -104,5 +120,13 @@ describe("seller profiles", () => {
     await intruder
       .delete(`/stores/${other.storeId}/sellers/${admin.sellerId}`)
       .expect(404);
+    const list = await client().get(base()).expect(200);
+    expect(list.body.items).toEqual([
+      expect.objectContaining({
+        id: admin.sellerId,
+        displayName: "Admin loja-a",
+        whatsappNumber: "5511999998888",
+      }),
+    ]);
   });
 });

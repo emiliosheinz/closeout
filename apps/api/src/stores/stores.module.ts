@@ -2,7 +2,6 @@ import { Module } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { AuthModule } from "@/auth/auth.module";
 import { User } from "@/auth/entities/user.entity";
-import { Listing } from "@/catalog/entities/listing.entity";
 import { MeController } from "./controllers/me.controller";
 import { StoreAdminController } from "./controllers/store-admin.controller";
 import { Category } from "./entities/category.entity";
@@ -14,7 +13,7 @@ import { StoresService } from "./services/stores.service";
 @Module({
   imports: [
     AuthModule,
-    TypeOrmModule.forFeature([Store, StoreMember, Category, Listing, User]),
+    TypeOrmModule.forFeature([Store, StoreMember, Category, User]),
   ],
   controllers: [MeController, StoreAdminController],
   providers: [StoresService, StoreMemberGuard],

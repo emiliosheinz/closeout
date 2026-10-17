@@ -96,13 +96,15 @@ export async function resetPassword(
 ): Promise<void> {
   assertPasswordStrength(input.password);
   const email = input.email.trim().toLowerCase();
-  const user = await dataSource
-    .getRepository(User)
-    .findOne({ where: { email } });
-  if (!user) throw new CommandError(`No user with email ${email}.`);
-  user.passwordHash = await hashPassword(input.password);
-  await dataSource.getRepository(User).save(user);
-  await sessions.revokeAllForUser(user.id);
+  const passwordHash = await hashPassword(input.password);
+  await dataSource.transaction(async (manager) => {
+    const user = await manager
+      .getRepository(User)
+      .findOne({ where: { email } });
+    if (!user) throw new CommandError(`No user with email ${email}.`);
+    await manager.getRepository(User).update({ id: user.id }, { passwordHash });
+    await sessions.revokeAllForUser(user.id, manager);
+  });
 }
 
 function assertPasswordStrength(password: string): void {

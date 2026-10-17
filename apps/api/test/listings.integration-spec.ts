@@ -168,13 +168,27 @@ describe("listing administration", () => {
     });
 
     it("duplicates into a new draft without photos", async () => {
-      const listing = await createListing({ priceCents: 500 });
+      const listing = await createListing({
+        priceCents: 500,
+        description: "Seis lugares",
+        condition: "like_new",
+        attributes: [{ label: "Material", value: "Madeira" }],
+      });
       await upload(listing.id, [await photo()]).expect(201);
+      await client()
+        .patch(`${base()}/${listing.id}/status`)
+        .send({ publication: "published", availability: "reserved" })
+        .expect(200);
       const copy = await client()
         .post(`${base()}/${listing.id}/duplicate`)
         .expect(201);
       expect(copy.body).toMatchObject({
         title: "Mesa de jantar (cópia)",
+        description: "Seis lugares",
+        condition: "like_new",
+        attributes: [{ label: "Material", value: "Madeira" }],
+        category: { id: admin.categoryId },
+        seller: { id: admin.sellerId },
         publication: "draft",
         availability: "available",
         priceCents: 500,
@@ -194,6 +208,46 @@ describe("listing administration", () => {
 
       await client().get(`${base()}/${listing.id}`).expect(404);
       await request(ctx.app.getHttpServer()).get(imageUrl).expect(404);
+    });
+
+    it("removes a deleted published listing from its public URL", async () => {
+      const listing = await createListing();
+      await upload(listing.id, [await photo()]).expect(201);
+      await client()
+        .patch(`${base()}/${listing.id}/status`)
+        .send({ publication: "published" })
+        .expect(200);
+      const publicUrl = `/public/stores/loja-a/listings/${listing.slug}`;
+      await request(ctx.app.getHttpServer()).get(publicUrl).expect(200);
+      await client().delete(`${base()}/${listing.id}`).expect(204);
+      await request(ctx.app.getHttpServer()).get(publicUrl).expect(404);
+    });
+
+    it("reflects an availability change on the public page right away", async () => {
+      const listing = await createListing();
+      await upload(listing.id, [await photo()]).expect(201);
+      const status = (body: object) =>
+        client().patch(`${base()}/${listing.id}/status`).send(body).expect(200);
+      await status({ publication: "published" });
+      const publicUrl = `/public/stores/loja-a/listings/${listing.slug}`;
+      const server = ctx.app.getHttpServer();
+
+      await status({ availability: "reserved" });
+      expect(
+        (await request(server).get(publicUrl).expect(200)).body,
+      ).toMatchObject({
+        availability: "reserved",
+        canContact: true,
+      });
+
+      await status({ availability: "sold" });
+      expect(
+        (await request(server).get(publicUrl).expect(200)).body,
+      ).toMatchObject({
+        availability: "sold",
+        canContact: false,
+        seller: { whatsappNumber: null },
+      });
     });
 
     it("filters the admin table by title, ignoring accents and case", async () => {
@@ -242,8 +296,20 @@ describe("listing administration", () => {
       const listing = await createListing();
       await client()
         .patch(`${base()}/${listing.id}`)
-        .send({ sellerId: other.sellerId })
+        .send({ sellerId: other.sellerId, title: "Trocado" })
         .expect(422);
+      await client()
+        .patch(`${base()}/${listing.id}`)
+        .send({ categoryId: other.categoryId, title: "Trocado" })
+        .expect(422);
+      const unchanged = await client()
+        .get(`${base()}/${listing.id}`)
+        .expect(200);
+      expect(unchanged.body).toMatchObject({
+        title: "Mesa de jantar",
+        seller: { id: admin.sellerId },
+        category: { id: admin.categoryId },
+      });
       const [{ count }] = await ctx.dataSource.query(
         `SELECT COUNT(*)::int AS count FROM listings`,
       );
@@ -275,6 +341,37 @@ describe("listing administration", () => {
         .get(`${base()}/${listing.id}`)
         .expect(200);
       expect(unchanged.body.title).toBe("Mesa de jantar");
+    });
+
+    it("refuses to reorder or delete another store's photos", async () => {
+      const listing = await createListing();
+      const uploaded = await upload(listing.id, [
+        await photo("#111"),
+        await photo("#222"),
+      ]).expect(201);
+      const ids = uploaded.body.items.map((i: { id: string }) => i.id);
+      const other = await createStoreWithAdmin(ctx, "loja-b");
+      const intruder = as(ctx.app, other.cookie);
+      const ownStore = `/stores/${other.storeId}/listings/${listing.id}`;
+
+      await intruder
+        .put(`${base()}/${listing.id}/images/order`)
+        .send({ ids: [ids[1], ids[0]] })
+        .expect(404);
+      await intruder
+        .delete(`${base()}/${listing.id}/images/${ids[0]}`)
+        .expect(404);
+      await intruder
+        .put(`${ownStore}/images/order`)
+        .send({ ids: [ids[1], ids[0]] })
+        .expect(404);
+      await intruder.delete(`${ownStore}/images/${ids[0]}`).expect(404);
+
+      const detail = await client().get(`${base()}/${listing.id}`).expect(200);
+      expect(detail.body.images.map((i: { id: string }) => i.id)).toEqual(ids);
+      await request(ctx.app.getHttpServer())
+        .get(uploaded.body.items[0].urls.lg)
+        .expect(200);
     });
   });
 
@@ -336,11 +433,23 @@ describe("listing administration", () => {
       expect(detail.body.imageCount).toBe(0);
     });
 
-    it("rejects files over 10 MB with 413", async () => {
+    it("rejects files over 10 MB with 413 and persists nothing", async () => {
       const listing = await createListing();
-      await upload(listing.id, [Buffer.alloc(10 * 1024 * 1024 + 1)]).expect(
-        413,
-      );
+      const before = await mediaFileCount();
+      const res = await upload(listing.id, [
+        Buffer.alloc(10 * 1024 * 1024 + 1),
+      ]).expect(413);
+      expect(res.body.message).toBe("Cada foto pode ter até 10 MB.");
+      expect(await mediaFileCount()).toBe(before);
+      const detail = await client().get(`${base()}/${listing.id}`).expect(200);
+      expect(detail.body.imageCount).toBe(0);
+    });
+
+    it("rejects more than 8 files per request", async () => {
+      const listing = await createListing();
+      const small = await photo("#123", 32, 32);
+      const res = await upload(listing.id, Array(9).fill(small)).expect(400);
+      expect(res.body.message).toBe("Envie até 8 fotos por vez.");
     });
 
     it("rejects images above 40 megapixels before decoding them", async () => {
@@ -351,7 +460,11 @@ describe("listing administration", () => {
         .png({ compressionLevel: 9 })
         .toBuffer();
       expect(bomb.length).toBeLessThan(10 * 1024 * 1024);
-      await upload(listing.id, [bomb]).expect(400);
+      const before = await mediaFileCount();
+      await upload(listing.id, [await photo(), bomb]).expect(400);
+      expect(await mediaFileCount()).toBe(before);
+      const detail = await client().get(`${base()}/${listing.id}`).expect(200);
+      expect(detail.body.imageCount).toBe(0);
     });
 
     it("caps a listing at 20 photos", async () => {

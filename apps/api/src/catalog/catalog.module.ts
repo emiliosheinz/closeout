@@ -6,6 +6,7 @@ import { Seller } from "@/sellers/entities/seller.entity";
 import { Category } from "@/stores/entities/category.entity";
 import { Store } from "@/stores/entities/store.entity";
 import { StoresModule } from "@/stores/stores.module";
+import { DashboardController } from "./controllers/dashboard.controller";
 import { ListingsController } from "./controllers/listings.controller";
 import { PublicCatalogController } from "./controllers/public-catalog.controller";
 import { Listing } from "./entities/listing.entity";
@@ -21,7 +22,11 @@ import { PublicCatalogService } from "./services/public-catalog.service";
     MediaModule,
     TypeOrmModule.forFeature([Listing, ListingImage, Store, Category, Seller]),
   ],
-  controllers: [ListingsController, PublicCatalogController],
+  controllers: [
+    ListingsController,
+    DashboardController,
+    PublicCatalogController,
+  ],
   providers: [ListingsService, ListingImagesService, PublicCatalogService],
   exports: [ListingsService, ListingImagesService],
 })

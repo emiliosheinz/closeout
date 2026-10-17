@@ -1,3 +1,4 @@
+import request from "supertest";
 import {
   as,
   createStoreWithAdmin,
@@ -82,12 +83,22 @@ describe("store administration", () => {
     const admin = await createStoreWithAdmin(ctx, "loja-a");
     const res = await as(ctx.app, admin.cookie)
       .patch(`/stores/${admin.storeId}`)
-      .send({ name: "  Desapego da Casa  ", headline: "Tudo precisa ir" })
+      .send({
+        name: "  Desapego da Casa  ",
+        headline: "Tudo precisa ir",
+        intro: "Mudamos em março.",
+      })
       .expect(200);
-    expect(res.body).toMatchObject({
+    const expected = {
       name: "Desapego da Casa",
       headline: "Tudo precisa ir",
-    });
+      intro: "Mudamos em março.",
+    };
+    expect(res.body).toMatchObject(expected);
+    const publicStore = await request(ctx.app.getHttpServer())
+      .get("/public/stores/loja-a")
+      .expect(200);
+    expect(publicStore.body).toMatchObject(expected);
   });
 
   it("answers 404 to members of another store and changes nothing", async () => {

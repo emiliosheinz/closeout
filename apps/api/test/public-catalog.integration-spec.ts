@@ -227,9 +227,7 @@ describe("public catalog", () => {
     expect(res.body.availability).toBe("sold");
     expect(res.body.canContact).toBe(false);
     expect(res.body.seller.whatsappNumber).toBeNull();
-    expect(JSON.stringify(res.body)).not.toContain(
-      "5511999998888".slice(0, 0) + "11999998888",
-    );
+    expect(JSON.stringify(res.body)).not.toContain("11999998888");
     expect(res.body.related.map((r: { title: string }) => r.title)).toEqual([
       "Disponível",
     ]);

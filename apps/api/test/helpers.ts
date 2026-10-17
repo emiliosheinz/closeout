@@ -1,4 +1,10 @@
 import type { INestApplication } from "@nestjs/common";
+import {
+  GUARDS_METADATA,
+  METHOD_METADATA,
+  PATH_METADATA,
+} from "@nestjs/common/constants";
+import { ModulesContainer } from "@nestjs/core";
 import { Test } from "@nestjs/testing";
 import sharp from "sharp";
 import request from "supertest";
@@ -154,4 +160,54 @@ export async function insertListing(
     ],
   );
   return row;
+}
+
+const HTTP_METHODS = [
+  "GET",
+  "POST",
+  "PUT",
+  "DELETE",
+  "PATCH",
+  "ALL",
+  "OPTIONS",
+  "HEAD",
+];
+
+interface Route {
+  method: string;
+  path: string;
+  guarded: boolean;
+}
+
+/** Every route the app registers, read from Nest's controller metadata. */
+export function registeredRoutes(app: INestApplication): Route[] {
+  const routes: Route[] = [];
+  for (const moduleRef of app.get(ModulesContainer).values()) {
+    for (const wrapper of moduleRef.controllers.values()) {
+      const controller = wrapper.metatype as { prototype: object } | null;
+      if (!controller) continue;
+      const prefix: string =
+        Reflect.getMetadata(PATH_METADATA, controller) ?? "";
+      const guardedClass =
+        (Reflect.getMetadata(GUARDS_METADATA, controller) ?? []).length > 0;
+      for (const name of Object.getOwnPropertyNames(controller.prototype)) {
+        const handler = (controller.prototype as Record<string, unknown>)[name];
+        if (typeof handler !== "function") continue;
+        const method: number | undefined = Reflect.getMetadata(
+          METHOD_METADATA,
+          handler,
+        );
+        if (method === undefined) continue;
+        const path: string = Reflect.getMetadata(PATH_METADATA, handler) ?? "";
+        routes.push({
+          method: HTTP_METHODS[method] ?? String(method),
+          path: `/${[prefix, path].filter((part) => part && part !== "/").join("/")}`,
+          guarded:
+            guardedClass ||
+            (Reflect.getMetadata(GUARDS_METADATA, handler) ?? []).length > 0,
+        });
+      }
+    }
+  }
+  return routes;
 }

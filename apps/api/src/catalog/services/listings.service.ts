@@ -9,8 +9,8 @@ import { MediaService } from "@/media/media.service";
 import { mediaUrls } from "@/media/media-urls";
 import { Seller } from "@/sellers/entities/seller.entity";
 import { Category } from "@/stores/entities/category.entity";
+import { type AdminImage, toAdminImage } from "../admin-mappers";
 import { Listing } from "../entities/listing.entity";
-import { ListingImage } from "../entities/listing-image.entity";
 import { canPublish, PUBLISH_REQUIRES_PHOTO } from "../listing-rules";
 import type {
   Availability,
@@ -22,12 +22,15 @@ import { type PublicListingDetail, toPublicDetail } from "../public-mappers";
 import { listingSlug } from "../slug";
 import { escapeLike } from "../sql";
 
-export interface AdminImage {
-  id: string;
-  position: number;
-  width: number;
-  height: number;
-  urls: { sm: string; lg: string };
+export type { AdminImage };
+
+export interface DashboardCounts {
+  published: number;
+  available: number;
+  reserved: number;
+  sold: number;
+  draft: number;
+  archived: number;
 }
 
 export interface AdminListingSummary {
@@ -93,6 +96,40 @@ export class ListingsService {
     return rows.map(toSummary);
   }
 
+  /** Counts for the admin dashboard; availability covers published listings only. */
+  async dashboard(storeId: string): Promise<DashboardCounts> {
+    const row = await this.listings
+      .createQueryBuilder("l")
+      .select(
+        `COUNT(*) FILTER (WHERE l.publication = 'published')::int`,
+        "published",
+      )
+      .addSelect(
+        `COUNT(*) FILTER (WHERE l.publication = 'published' AND l.availability = 'available')::int`,
+        "available",
+      )
+      .addSelect(
+        `COUNT(*) FILTER (WHERE l.publication = 'published' AND l.availability = 'reserved')::int`,
+        "reserved",
+      )
+      .addSelect(
+        `COUNT(*) FILTER (WHERE l.publication = 'published' AND l.availability = 'sold')::int`,
+        "sold",
+      )
+      .addSelect(
+        `COUNT(*) FILTER (WHERE l.publication = 'draft')::int`,
+        "draft",
+      )
+      .addSelect(
+        `COUNT(*) FILTER (WHERE l.publication = 'archived')::int`,
+        "archived",
+      )
+      .where("l.store_id = :storeId", { storeId })
+      .getRawOne<DashboardCounts>();
+    if (!row) throw new Error("Dashboard aggregate returned no row");
+    return row;
+  }
+
   async get(storeId: string, id: string): Promise<AdminListingDetail> {
     return toDetail(
       await this.findWithRelations(this.dataSource.manager, storeId, id),
@@ -105,7 +142,8 @@ export class ListingsService {
       storeId,
       id,
     );
-    return toPublicDetail(listing, []);
+    // Show contact exactly as it will look once the draft is published.
+    return toPublicDetail({ ...listing, publication: "published" }, []);
   }
 
   async create(
@@ -141,6 +179,9 @@ export class ListingsService {
     patch: ListingInput,
   ): Promise<AdminListingDetail> {
     return this.dataSource.transaction(async (manager) => {
+      // Same row lock photo removal takes, so a concurrent delete of the last
+      // photo cannot slip in between the photo check and the publish.
+      await lockListing(manager, storeId, id);
       const listing = await this.findWithRelations(manager, storeId, id);
       await assertReferencesBelongToStore(manager, storeId, patch);
 
@@ -212,6 +253,19 @@ export class ListingsService {
   }
 }
 
+export async function lockListing(
+  manager: EntityManager,
+  storeId: string,
+  id: string,
+): Promise<Listing> {
+  const listing = await manager.getRepository(Listing).findOne({
+    where: { id, storeId },
+    lock: { mode: "pessimistic_write" },
+  });
+  if (!listing) throw new NotFoundException("Anúncio não encontrado.");
+  return listing;
+}
+
 /**
  * Seller and category ids arrive in the request body, so they must be
  * checked against the store explicitly; the store-member guard only covers
@@ -244,17 +298,6 @@ function definedOnly(patch: ListingInput): Partial<Listing> {
   return Object.fromEntries(
     Object.entries(patch).filter(([, value]) => value !== undefined),
   ) as Partial<Listing>;
-}
-
-function toAdminImage(image: ListingImage): AdminImage {
-  const urls = mediaUrls(image.storageKey);
-  return {
-    id: image.id,
-    position: image.position,
-    width: image.width,
-    height: image.height,
-    urls: { sm: urls.sm, lg: urls.lg },
-  };
 }
 
 function toSummary(listing: Listing): AdminListingSummary {

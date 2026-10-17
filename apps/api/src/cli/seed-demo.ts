@@ -309,10 +309,34 @@ export async function seedDemo(
     return category.id;
   };
 
-  for (const demo of DEMO_LISTINGS) {
+  const created: string[] = [];
+  try {
+    for (const demo of DEMO_LISTINGS) {
+      created.push(
+        await createDemoListing(deps, store.id, demo, sellers, categoryId),
+      );
+    }
+  } catch (err) {
+    // Leave no half-seeded store behind: the "store has listings" guard
+    // would otherwise skip every later run.
+    for (const id of created) await deps.listings.remove(store.id, id);
+    await sellerRepo.delete(sellers.map((seller) => seller.id));
+    throw err;
+  }
+  return { created: created.length, skipped: false };
+}
+
+async function createDemoListing(
+  deps: SeedDeps,
+  storeId: string,
+  demo: DemoListing,
+  sellers: Seller[],
+  categoryId: (slug: string) => string,
+): Promise<string> {
+  {
     const seller = sellers[demo.seller];
     if (!seller) throw new Error("Demo seller index out of range");
-    const listing = await deps.listings.create(store.id, {
+    const listing = await deps.listings.create(storeId, {
       title: demo.title,
       description: `${demo.description}\n\n${DEMO_NOTE}`,
       categoryId: categoryId(demo.category),
@@ -327,12 +351,12 @@ export async function seedDemo(
           placeholderImage(demo.category, i),
         ),
       );
-      await deps.images.add(store.id, listing.id, files);
+      await deps.images.add(storeId, listing.id, files);
     }
-    await deps.listings.update(store.id, listing.id, {
+    await deps.listings.update(storeId, listing.id, {
       publication: demo.publication,
       availability: demo.availability,
     });
+    return listing.id;
   }
-  return { created: DEMO_LISTINGS.length, skipped: false };
 }

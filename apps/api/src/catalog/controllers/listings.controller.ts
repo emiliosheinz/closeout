@@ -12,12 +12,14 @@ import {
   Put,
   Query,
   UploadedFiles,
+  UseFilters,
   UseGuards,
   UseInterceptors,
 } from "@nestjs/common";
 import { FilesInterceptor } from "@nestjs/platform-express";
 import { SessionGuard } from "@/auth/guards/session.guard";
 import { InvalidImageError } from "@/media/image-processor";
+import { UploadErrorsFilter } from "@/media/upload-errors.filter";
 import {
   IMAGE_UPLOAD_OPTIONS,
   MAX_FILES_PER_REQUEST,
@@ -118,6 +120,7 @@ export class ListingsController {
 
   @Post(":id/images")
   @HttpCode(201)
+  @UseFilters(UploadErrorsFilter)
   @UseInterceptors(
     FilesInterceptor("files", MAX_FILES_PER_REQUEST, IMAGE_UPLOAD_OPTIONS),
   )

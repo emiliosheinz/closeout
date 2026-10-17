@@ -1,7 +1,7 @@
 import {
   canContact,
   canPublish,
-  isListedByDefault,
+  canRemovePhoto,
   isPubliclyVisible,
 } from "./listing-rules";
 
@@ -12,30 +12,37 @@ describe("listing rules", () => {
     expect(isPubliclyVisible({ publication: "archived" })).toBe(false);
   });
 
-  it("keeps sold listings out of the default catalog view", () => {
-    expect(
-      isListedByDefault({ publication: "published", availability: "reserved" }),
-    ).toBe(true);
-    expect(
-      isListedByDefault({ publication: "published", availability: "sold" }),
-    ).toBe(false);
-    expect(
-      isListedByDefault({ publication: "draft", availability: "available" }),
-    ).toBe(false);
-  });
-
-  it("allows contact for available and reserved items with a reachable seller", () => {
+  it("allows contact for published available and reserved items with a reachable seller", () => {
     const seller = { whatsappNumber: "5511999998888" };
-    expect(canContact({ availability: "available" }, seller)).toBe(true);
-    expect(canContact({ availability: "reserved" }, seller)).toBe(true);
-    expect(canContact({ availability: "sold" }, seller)).toBe(false);
+    const published = { publication: "published" } as const;
     expect(
-      canContact({ availability: "available" }, { whatsappNumber: null }),
+      canContact({ ...published, availability: "available" }, seller),
+    ).toBe(true);
+    expect(canContact({ ...published, availability: "reserved" }, seller)).toBe(
+      true,
+    );
+    expect(canContact({ ...published, availability: "sold" }, seller)).toBe(
+      false,
+    );
+    expect(
+      canContact(
+        { ...published, availability: "available" },
+        { whatsappNumber: null },
+      ),
+    ).toBe(false);
+    expect(
+      canContact({ publication: "draft", availability: "available" }, seller),
     ).toBe(false);
   });
 
   it("requires at least one photo to publish", () => {
     expect(canPublish(0)).toBe(false);
     expect(canPublish(1)).toBe(true);
+  });
+
+  it("keeps the last photo of a published listing", () => {
+    expect(canRemovePhoto({ publication: "published" }, 1)).toBe(false);
+    expect(canRemovePhoto({ publication: "published" }, 2)).toBe(true);
+    expect(canRemovePhoto({ publication: "draft" }, 1)).toBe(true);
   });
 });
