@@ -22,6 +22,7 @@
     "migration:run": { "dependsOn": ["^build"], "cache": false },
     "migration:revert": { "dependsOn": ["^build"], "cache": false },
     "migration:show": { "dependsOn": ["^build"], "cache": false },
+    "migration:check": { "dependsOn": ["^build"], "cache": false },
     "migration:generate": { "dependsOn": ["^build"], "cache": false },
     "cli": { "dependsOn": ["^build"], "cache": false }
   }
