@@ -9,11 +9,8 @@ import {
 import type { Response } from "express";
 import { MAX_FILE_BYTES, MAX_FILES_PER_REQUEST } from "./upload-limits";
 
-const MULTER_MESSAGES: Record<string, string> = {
-  "File too large": `Cada foto pode ter até ${MAX_FILE_BYTES / 1024 / 1024} MB.`,
-  "Too many files": `Envie até ${MAX_FILES_PER_REQUEST} fotos por vez.`,
-  "Unexpected field": `Envie até ${MAX_FILES_PER_REQUEST} fotos por vez.`,
-};
+const FILE_TOO_LARGE = `Cada foto pode ter até ${MAX_FILE_BYTES / 1024 / 1024} MB.`;
+export const TOO_MANY_PHOTOS = `Envie até ${MAX_FILES_PER_REQUEST} fotos por vez.`;
 
 /**
  * Nest turns Multer limit errors into English messages; upload routes
@@ -21,13 +18,25 @@ const MULTER_MESSAGES: Record<string, string> = {
  */
 @Catch(PayloadTooLargeException, BadRequestException)
 export class UploadErrorsFilter implements ExceptionFilter {
+  /**
+   * @param unexpectedFileMessage Multer reports both extra files and a wrong
+   *   field name as "Unexpected field"; each route says what it expects.
+   */
+  constructor(private readonly unexpectedFileMessage: string) {}
+
   catch(exception: HttpException, host: ArgumentsHost): void {
     const status = exception.getStatus();
     const original = exception.getResponse();
-    const message =
-      typeof original === "object" && original !== null && "message" in original
-        ? (original as { message: unknown }).message
-        : exception.message;
+    const body =
+      typeof original === "object" && original !== null
+        ? (original as { message?: unknown; error?: unknown })
+        : {};
+    const message = body.message ?? exception.message;
+    const translated: Record<string, string> = {
+      "File too large": FILE_TOO_LARGE,
+      "Too many files": this.unexpectedFileMessage,
+      "Unexpected field": this.unexpectedFileMessage,
+    };
     host
       .switchToHttp()
       .getResponse<Response>()
@@ -36,8 +45,9 @@ export class UploadErrorsFilter implements ExceptionFilter {
         statusCode: status,
         message:
           typeof message === "string"
-            ? (MULTER_MESSAGES[message] ?? message)
+            ? (translated[message] ?? message)
             : message,
+        error: body.error,
       });
   }
 }

@@ -233,6 +233,25 @@ describe("public catalog", () => {
     ]);
   });
 
+  it("never suggests drafts or archived listings as related items", async () => {
+    const listing = await publish({ title: "Mesa", category: "moveis" });
+    await publish({ title: "Cadeira", category: "moveis" });
+    await insertListing(ctx.dataSource, admin, {
+      title: "Rascunho",
+      category: "moveis",
+      publication: "draft",
+    });
+    await insertListing(ctx.dataSource, admin, {
+      title: "Arquivado",
+      category: "moveis",
+      publication: "archived",
+    });
+    const res = await get(`/listings/${listing.slug}`).expect(200);
+    expect(res.body.related.map((r: { title: string }) => r.title)).toEqual([
+      "Cadeira",
+    ]);
+  });
+
   it("exposes only intentionally public fields", async () => {
     const listing = await publish({ title: "Mesa" });
     await as(ctx.app, admin.cookie)

@@ -168,6 +168,36 @@ describe("operator commands", () => {
       expect(numbers).toEqual([{ whatsapp_number: "5511977776666" }]);
     });
 
+    it("removes everything it created when a step fails halfway", async () => {
+      const images = ctx.app.get(ListingImagesService);
+      let calls = 0;
+      const failing = {
+        add: (...args: Parameters<ListingImagesService["add"]>) => {
+          calls += 1;
+          if (calls === 2) return Promise.reject(new Error("disk full"));
+          return images.add(...args);
+        },
+      } as ListingImagesService;
+      await expect(
+        seedDemo(
+          ctx.dataSource,
+          {
+            stores: ctx.app.get(StoresService),
+            listings: ctx.app.get(ListingsService),
+            images: failing,
+          },
+          { store, whatsapp: null },
+        ),
+      ).rejects.toThrow("disk full");
+      const [counts] = await ctx.dataSource.query(
+        `SELECT (SELECT COUNT(*)::int FROM listings) AS listings,
+                (SELECT COUNT(*)::int FROM listing_images) AS images,
+                (SELECT COUNT(*)::int FROM sellers) AS sellers`,
+      );
+      expect(counts).toEqual({ listings: 0, images: 0, sellers: 0 });
+      expect((await seed()).skipped).toBe(false);
+    });
+
     it("gives every published demo listing a photo", async () => {
       await seed();
       const rows = await ctx.dataSource.query(

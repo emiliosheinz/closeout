@@ -68,6 +68,44 @@ describe("admin authentication", () => {
     await attempt("limite@example.com", PASSWORD, "198.51.100.1").expect(200);
   });
 
+  it("refuses a wrong internal secret on login and on origin-less writes", async () => {
+    await createStoreWithAdmin(ctx, "loja-a");
+    await request(server())
+      .post("/auth/login")
+      .set("x-internal-secret", "not-the-secret")
+      .set("x-client-ip", "203.0.113.1")
+      .send({ email: "loja-a@example.com", password: PASSWORD })
+      .expect(403);
+    const admin = await createStoreWithAdmin(ctx, "loja-b");
+    await request(server())
+      .post(`/stores/${admin.storeId}/sellers`)
+      .set("Cookie", admin.cookie)
+      .set("x-internal-secret", "not-the-secret")
+      .send({ displayName: "X" })
+      .expect(403);
+  });
+
+  it("does not count a successful login against the limit", async () => {
+    await createStoreWithAdmin(ctx, "perdoa");
+    for (let i = 0; i < 9; i++) {
+      await attempt("perdoa@example.com", "wrong").expect(401);
+    }
+    await attempt("perdoa@example.com", PASSWORD).expect(200);
+    for (let i = 0; i < 9; i++) {
+      await attempt("perdoa@example.com", "wrong").expect(401);
+    }
+    await attempt("perdoa@example.com", "wrong").expect(401);
+  });
+
+  it("rejects an expired session", async () => {
+    const admin = await createStoreWithAdmin(ctx, "loja-a");
+    await as(ctx.app, admin.cookie).get("/me").expect(200);
+    await ctx.dataSource.query(
+      `UPDATE sessions SET expires_at = now() - interval '1 second'`,
+    );
+    await as(ctx.app, admin.cookie).get("/me").expect(401);
+  });
+
   it("requires the forwarded client IP on internal login calls", async () => {
     await createStoreWithAdmin(ctx, "loja-a");
     await request(server())

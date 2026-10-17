@@ -312,8 +312,8 @@ export async function seedDemo(
   const created: string[] = [];
   try {
     for (const demo of DEMO_LISTINGS) {
-      created.push(
-        await createDemoListing(deps, store.id, demo, sellers, categoryId),
+      await createDemoListing(deps, store.id, demo, sellers, categoryId, (id) =>
+        created.push(id),
       );
     }
   } catch (err) {
@@ -326,37 +326,37 @@ export async function seedDemo(
   return { created: created.length, skipped: false };
 }
 
+/** Reports the listing id as soon as it exists, so a later failure can undo it. */
 async function createDemoListing(
   deps: SeedDeps,
   storeId: string,
   demo: DemoListing,
   sellers: Seller[],
   categoryId: (slug: string) => string,
-): Promise<string> {
-  {
-    const seller = sellers[demo.seller];
-    if (!seller) throw new Error("Demo seller index out of range");
-    const listing = await deps.listings.create(storeId, {
-      title: demo.title,
-      description: `${demo.description}\n\n${DEMO_NOTE}`,
-      categoryId: categoryId(demo.category),
-      sellerId: seller.id,
-      priceCents: demo.priceCents,
-      condition: demo.condition,
-      attributes: [...demo.attributes, DEMO_ATTRIBUTE],
-    });
-    if (demo.images > 0) {
-      const files = await Promise.all(
-        Array.from({ length: demo.images }, (_, i) =>
-          placeholderImage(demo.category, i),
-        ),
-      );
-      await deps.images.add(storeId, listing.id, files);
-    }
-    await deps.listings.update(storeId, listing.id, {
-      publication: demo.publication,
-      availability: demo.availability,
-    });
-    return listing.id;
+  onCreated: (id: string) => void,
+): Promise<void> {
+  const seller = sellers[demo.seller];
+  if (!seller) throw new Error("Demo seller index out of range");
+  const listing = await deps.listings.create(storeId, {
+    title: demo.title,
+    description: `${demo.description}\n\n${DEMO_NOTE}`,
+    categoryId: categoryId(demo.category),
+    sellerId: seller.id,
+    priceCents: demo.priceCents,
+    condition: demo.condition,
+    attributes: [...demo.attributes, DEMO_ATTRIBUTE],
+  });
+  onCreated(listing.id);
+  if (demo.images > 0) {
+    const files = await Promise.all(
+      Array.from({ length: demo.images }, (_, i) =>
+        placeholderImage(demo.category, i),
+      ),
+    );
+    await deps.images.add(storeId, listing.id, files);
   }
+  await deps.listings.update(storeId, listing.id, {
+    publication: demo.publication,
+    availability: demo.availability,
+  });
 }

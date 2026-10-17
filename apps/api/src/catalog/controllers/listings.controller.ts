@@ -19,7 +19,10 @@ import {
 import { FilesInterceptor } from "@nestjs/platform-express";
 import { SessionGuard } from "@/auth/guards/session.guard";
 import { InvalidImageError } from "@/media/image-processor";
-import { UploadErrorsFilter } from "@/media/upload-errors.filter";
+import {
+  TOO_MANY_PHOTOS,
+  UploadErrorsFilter,
+} from "@/media/upload-errors.filter";
 import {
   IMAGE_UPLOAD_OPTIONS,
   MAX_FILES_PER_REQUEST,
@@ -120,7 +123,7 @@ export class ListingsController {
 
   @Post(":id/images")
   @HttpCode(201)
-  @UseFilters(UploadErrorsFilter)
+  @UseFilters(new UploadErrorsFilter(TOO_MANY_PHOTOS))
   @UseInterceptors(
     FilesInterceptor("files", MAX_FILES_PER_REQUEST, IMAGE_UPLOAD_OPTIONS),
   )

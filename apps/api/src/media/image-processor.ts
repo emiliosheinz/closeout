@@ -29,7 +29,9 @@ export async function processImage(input: Buffer): Promise<ProcessedImage> {
 
   let metadata: sharp.Metadata;
   try {
-    metadata = await source().metadata();
+    // Header only, nothing is decoded yet: safe without the pixel limit, and
+    // lets an oversized photo get its own explanation below.
+    metadata = await sharp(input).metadata();
   } catch {
     throw new InvalidImageError("Arquivo não é uma imagem válida.");
   }

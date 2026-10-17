@@ -66,7 +66,7 @@ export class SellersController {
   }
 
   @Post(":id/avatar")
-  @UseFilters(UploadErrorsFilter)
+  @UseFilters(new UploadErrorsFilter("Envie uma foto por vez."))
   @UseInterceptors(FileInterceptor("file", IMAGE_UPLOAD_OPTIONS))
   async avatar(
     @Param("storeId") storeId: string,

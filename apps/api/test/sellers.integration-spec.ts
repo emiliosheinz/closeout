@@ -109,6 +109,16 @@ describe("seller profiles", () => {
     await request(server).get(first.body.avatarUrl).expect(404);
   });
 
+  it("refuses avatar uploads for another store's seller", async () => {
+    const other = await createStoreWithAdmin(ctx, "loja-b");
+    await as(ctx.app, other.cookie)
+      .post(`/stores/${other.storeId}/sellers/${admin.sellerId}/avatar`)
+      .attach("file", await photo(), "a.jpg")
+      .expect(404);
+    const list = await client().get(base()).expect(200);
+    expect(list.body.items[0].avatarUrl).toBeNull();
+  });
+
   it("hides sellers of other stores", async () => {
     const other = await createStoreWithAdmin(ctx, "loja-b");
     const intruder = as(ctx.app, other.cookie);
