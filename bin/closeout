@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Single entry point for every pnpm/test/lint/migration/operator command.
+# Everything runs inside containers; the host only needs Docker.
+
+cd "$(dirname "${BASH_SOURCE[0]}")/.."
+
+# Pass -it only when stdin is a terminal, so scripts and agents can call
+# this without "the input device is not a TTY".
+if [ -t 0 ]; then
+  tty_flag=""
+else
+  tty_flag="-T"
+fi
+
+case "${1:-}" in
+  db)
+    shift
+    task="${1:-}"
+    if [ -z "$task" ]; then
+      echo "Usage: bin/closeout db <migration:run|migration:revert|migration:show|migration:generate <Name>>" >&2
+      exit 1
+    fi
+    shift
+    docker compose run --rm ${tty_flag} migration pnpm turbo "$task" --filter=api -- "$@"
+    ;;
+  cli)
+    shift
+    if [ $# -eq 0 ]; then
+      echo "Usage: bin/closeout cli <admin:create|admin:password|seed:demo> [options]" >&2
+      exit 1
+    fi
+    docker compose exec ${tty_flag} api pnpm --silent cli "$@"
+    ;;
+  e2e)
+    shift
+    if [ $# -eq 0 ]; then
+      trap 'docker compose -f docker-compose.e2e.yaml down -v' EXIT
+      docker compose -f docker-compose.e2e.yaml run --rm --build web-e2e
+    else
+      docker compose -f docker-compose.e2e.yaml "$@"
+    fi
+    ;;
+  "")
+    docker compose exec workspace sh
+    ;;
+  *)
+    docker compose exec ${tty_flag} workspace "$@"
+    ;;
+esac

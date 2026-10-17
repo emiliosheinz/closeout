@@ -1,0 +1,13 @@
+# General-purpose Node image with pnpm available. Backs the setup, workspace,
+# migration, api and web dev services.
+
+ARG NODE_TAG=24-alpine
+ARG PNPM_VERSION=11.1.0
+
+FROM node:${NODE_TAG}
+
+ARG PNPM_VERSION
+RUN apk add --no-cache git curl
+RUN corepack enable pnpm && corepack install -g pnpm@${PNPM_VERSION}
+
+WORKDIR /closeout

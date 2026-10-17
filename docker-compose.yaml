@@ -1,0 +1,141 @@
+name: closeout
+
+# Built once by `setup`; the other tooling services reuse the local tag.
+x-cli-image: &cli-image
+  image: closeout-cli:local
+  pull_policy: never
+
+x-postgres-env: &postgres-env
+  POSTGRES_HOST: ${POSTGRES_HOST:?required}
+  POSTGRES_PORT: ${POSTGRES_PORT:?required}
+  POSTGRES_SSL: ${POSTGRES_SSL:?required}
+  POSTGRES_DB: ${POSTGRES_DB:?required}
+  POSTGRES_USER: ${POSTGRES_USER:?required}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?required}
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?required}
+      POSTGRES_USER: ${POSTGRES_USER:?required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?required}
+    ports:
+      - "127.0.0.1:${POSTGRES_HOST_PORT:?required}:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+
+  setup:
+    image: closeout-cli:local
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.cli
+    volumes:
+      - .:/closeout
+    environment:
+      CI: "true"
+    command: sh -lc "pnpm install && pnpm turbo build --filter=@closeout/config"
+    restart: "no"
+
+  workspace:
+    <<: *cli-image
+    depends_on:
+      setup:
+        condition: service_completed_successfully
+    environment:
+      <<: *postgres-env
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:?required}
+      INTERNAL_API_SECRET: ${INTERNAL_API_SECRET:?required}
+    volumes:
+      - .:/closeout
+    command: sh -c "tail -f /dev/null"
+    restart: "no"
+
+  migration:
+    <<: *cli-image
+    command: ["pnpm", "turbo", "migration:run", "--filter=api"]
+    environment:
+      <<: *postgres-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      setup:
+        condition: service_completed_successfully
+    volumes:
+      - .:/closeout
+    restart: "no"
+
+  api:
+    build:
+      context: .
+      target: dev
+      dockerfile: apps/api/Dockerfile
+    environment:
+      <<: *postgres-env
+      PORT: ${API_PORT:?required}
+      HOST: ${API_HOST:?required}
+      MEDIA_DIR: ${MEDIA_DIR:?required}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:?required}
+      INTERNAL_API_SECRET: ${INTERNAL_API_SECRET:?required}
+      STORE_SLUG: ${STORE_SLUG:?required}
+      STORE_NAME: ${STORE_NAME:?required}
+    depends_on:
+      setup:
+        condition: service_completed_successfully
+      migration:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:$${PORT}/health || exit 1"]
+      start_period: 20s
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - .:/closeout
+      - media-data:/data/media
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      target: dev
+      dockerfile: apps/web/Dockerfile
+    environment:
+      PORT: ${WEB_PORT:?required}
+      HOSTNAME: ${WEB_HOST:?required}
+      API_BASE_URL: ${API_BASE_URL:?required}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:?required}
+      INTERNAL_API_SECRET: ${INTERNAL_API_SECRET:?required}
+      STORE_SLUG: ${STORE_SLUG:?required}
+    depends_on:
+      setup:
+        condition: service_completed_successfully
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:$${PORT}/health || exit 1"]
+      start_period: 20s
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - .:/closeout
+    ports:
+      - "${WEB_PORT:?required}:${WEB_PORT:?required}"
+    restart: unless-stopped
+
+networks:
+  default:
+    name: closeout
+    driver: bridge
+
+volumes:
+  db-data:
+  media-data:
