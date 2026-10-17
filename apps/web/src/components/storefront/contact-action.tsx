@@ -73,7 +73,7 @@ export function ContactAction({
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={() => setOpen(false)}
-                  aria-label={`Falar com ${contact.name} no WhatsApp (abre em nova aba)`}
+                  aria-label={`Chamar ${contact.name} no WhatsApp (abre em nova aba)`}
                   className="flex min-h-14 items-center gap-3 rounded-xl border border-line bg-surface px-3 font-semibold hover:border-go/60 hover:bg-go/5"
                 >
                   {contact.avatarUrl ? (
@@ -90,7 +90,7 @@ export function ContactAction({
                       <MessageCircle className="size-4" aria-hidden="true" />
                     </span>
                   )}
-                  <span className="flex-1">Falar com {contact.name}</span>
+                  <span className="flex-1">{contact.name}</span>
                 </a>
               </li>
             ))}
