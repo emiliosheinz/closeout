@@ -5,7 +5,8 @@
   "description": "Shared configuration for the closeout monorepo",
   "license": "MIT",
   "scripts": {
-    "build": "tsup"
+    "build": "tsup",
+    "typecheck": "tsc --noEmit"
   },
   "exports": {
     "./biome": "./dist/biome.json",
@@ -18,6 +19,7 @@
   },
   "devDependencies": {
     "jest": "catalog:",
-    "tsup": "8.5.1"
+    "tsup": "8.5.1",
+    "typescript": "catalog:"
   }
 }
