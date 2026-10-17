@@ -1,0 +1,14 @@
+{
+  "name": "closeout",
+  "version": "0.0.1",
+  "description": "A personal storefront to sell the things you no longer need to people you know",
+  "private": true,
+  "license": "MIT",
+  "packageManager": "pnpm@11.1.0",
+  "devDependencies": {
+    "turbo": "2.9.12"
+  },
+  "engines": {
+    "node": "24.x"
+  }
+}
