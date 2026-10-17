@@ -13,25 +13,40 @@ describe("listing rules", () => {
   });
 
   it("allows contact for published available and reserved items with a reachable seller", () => {
-    const seller = { whatsappNumber: "5511999998888" };
+    const sellers = [{ whatsappNumber: "5511999998888" }];
     const published = { publication: "published" } as const;
     expect(
-      canContact({ ...published, availability: "available" }, seller),
+      canContact({ ...published, availability: "available" }, sellers),
     ).toBe(true);
-    expect(canContact({ ...published, availability: "reserved" }, seller)).toBe(
-      true,
-    );
-    expect(canContact({ ...published, availability: "sold" }, seller)).toBe(
+    expect(
+      canContact({ ...published, availability: "reserved" }, sellers),
+    ).toBe(true);
+    expect(canContact({ ...published, availability: "sold" }, sellers)).toBe(
       false,
     );
     expect(
-      canContact(
-        { ...published, availability: "available" },
+      canContact({ ...published, availability: "available" }, [
         { whatsappNumber: null },
-      ),
+      ]),
     ).toBe(false);
     expect(
-      canContact({ publication: "draft", availability: "available" }, seller),
+      canContact({ publication: "draft", availability: "available" }, sellers),
+    ).toBe(false);
+  });
+
+  it("allows contact when any one of several sellers is reachable", () => {
+    const listing = {
+      publication: "published",
+      availability: "available",
+    } as const;
+    expect(
+      canContact(listing, [
+        { whatsappNumber: null },
+        { whatsappNumber: "5521977771234" },
+      ]),
+    ).toBe(true);
+    expect(
+      canContact(listing, [{ whatsappNumber: null }, { whatsappNumber: null }]),
     ).toBe(false);
   });
 

@@ -142,9 +142,14 @@ export async function insertListing(
   const title = state.title ?? "Item";
   const publication = state.publication ?? "draft";
   const [row] = await dataSource.query(
-    `INSERT INTO listings (store_id, seller_id, category_id, slug, title, description, price_cents, condition, availability, publication, published_at)
-     VALUES ($1, $2, (SELECT id FROM categories WHERE store_id = $1 AND slug = $3), $4, $5, $6, $7, $8, $9, $10, $11)
-     RETURNING id, slug`,
+    `WITH listing AS (
+       INSERT INTO listings (store_id, category_id, slug, title, description, price_cents, condition, availability, publication, published_at)
+       VALUES ($1, (SELECT id FROM categories WHERE store_id = $1 AND slug = $3), $4, $5, $6, $7, $8, $9, $10, $11)
+       RETURNING id, slug
+     ), seller AS (
+       INSERT INTO listing_sellers (listing_id, seller_id) SELECT id, $2 FROM listing
+     )
+     SELECT id, slug FROM listing`,
     [
       admin.storeId,
       admin.sellerId,

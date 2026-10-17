@@ -34,6 +34,7 @@ interface ListingFormProps {
 
 interface FormErrors {
   title?: string;
+  sellers?: string;
   price?: string;
   form?: string;
 }
@@ -59,9 +60,11 @@ export function ListingForm({
   const [categoryId, setCategoryId] = useState(
     listing?.category.id ?? categories[0]?.id ?? "",
   );
-  const [sellerId, setSellerId] = useState(
-    listing?.seller.id ?? defaultSellerId ?? sellers[0]?.id ?? "",
-  );
+  const [sellerIds, setSellerIds] = useState<string[]>(() => {
+    if (listing) return listing.sellers.map((seller) => seller.id);
+    const first = defaultSellerId ?? sellers[0]?.id;
+    return first ? [first] : [];
+  });
   const [price, setPrice] = useState(centsToInput(listing?.priceCents ?? null));
   const [noPrice, setNoPrice] = useState(
     editing ? listing.priceCents === null : false,
@@ -96,6 +99,9 @@ export function ListingForm({
   function validate(): { priceCents: number | null } | null {
     const next: FormErrors = {};
     if (!title.trim()) next.title = "Dê um nome ao item.";
+    if (sellerIds.length === 0) {
+      next.sellers = "Escolha ao menos uma pessoa para receber as mensagens.";
+    }
     let priceCents: number | null = null;
     if (!noPrice && price.trim() !== "") {
       priceCents = parsePriceToCents(price);
@@ -115,7 +121,7 @@ export function ListingForm({
       title: title.trim(),
       description: description.trim(),
       categoryId,
-      sellerId,
+      sellerIds,
       priceCents: valid.priceCents,
       condition,
       attributes: attributes.filter((a) => a.label.trim() && a.value.trim()),
@@ -169,6 +175,73 @@ export function ListingForm({
       className="flex flex-col gap-6"
       noValidate
     >
+      {!editing && (
+        <Field
+          label="Fotos"
+          htmlFor="photos"
+          hint="Comece pelas fotos: são elas que vendem. Escolha várias de uma vez; a primeira vira a capa."
+        >
+          <div className="flex items-center gap-3">
+            <span className="relative inline-flex h-11 items-center gap-2 rounded-full bg-ink px-5 text-sm font-semibold text-surface has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-focus">
+              <ImagePlus className="size-4" aria-hidden="true" />
+              Escolher fotos
+              <input
+                id="photos"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                multiple
+                onChange={(e) => {
+                  setFiles(
+                    [...files, ...Array.from(e.target.files ?? [])].slice(
+                      0,
+                      20,
+                    ),
+                  );
+                  e.target.value = "";
+                }}
+                className="absolute inset-0 cursor-pointer opacity-0"
+              />
+            </span>
+            <span className="text-sm text-muted">
+              {files.length === 0
+                ? "Nenhuma foto escolhida"
+                : files.length === 1
+                  ? "1 foto"
+                  : `${files.length} fotos`}
+            </span>
+          </div>
+          {previews.length > 0 && (
+            <ul className="mt-3 grid grid-cols-4 gap-2 sm:grid-cols-6">
+              {previews.map((preview, index) => (
+                <li key={preview.url} className="relative">
+                  {/* biome-ignore lint/performance/noImgElement: local object URL preview. */}
+                  <img
+                    src={preview.url}
+                    alt={`Foto ${index + 1} selecionada`}
+                    className="aspect-square w-full rounded-md object-cover"
+                  />
+                  {index === 0 && (
+                    <span className="absolute bottom-1 left-1 rounded bg-ink/80 px-1.5 text-xs font-semibold text-surface">
+                      Capa
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setFiles(files.filter((_, i) => i !== index))
+                    }
+                    aria-label={`Remover foto ${index + 1}`}
+                    className="absolute top-1 right-1 inline-flex size-11 items-center justify-center rounded-full bg-surface/90 shadow"
+                  >
+                    <X className="size-4" aria-hidden="true" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Field>
+      )}
+
       <Field label="Nome do item" htmlFor="title" error={errors.title}>
         <input
           id="title"
@@ -186,7 +259,7 @@ export function ListingForm({
           label="Preço (R$)"
           htmlFor="price"
           error={errors.price}
-          hint="Deixe vazio para receber propostas (preço a combinar)."
+          hint="Sem preço definido? Marque a opção e receba propostas."
         >
           <input
             id="price"
@@ -261,25 +334,49 @@ export function ListingForm({
         />
       </Field>
 
-      <Field
-        label="Quem vende"
-        htmlFor="seller"
-        hint="Quem recebe as mensagens no WhatsApp."
+      <fieldset
+        aria-describedby={
+          errors.sellers ? "sellers-hint sellers-error" : "sellers-hint"
+        }
       >
-        <select
-          id="seller"
-          value={sellerId}
-          onChange={(e) => setSellerId(e.target.value)}
-          className={inputClass}
-        >
+        <legend className="text-sm font-semibold">Quem vende</legend>
+        <p id="sellers-hint" className="mt-1 text-xs text-muted">
+          Quem recebe as mensagens no WhatsApp. Com mais de uma pessoa, o
+          comprador escolhe com quem falar.
+        </p>
+        <div className="mt-2 flex flex-wrap gap-2">
           {sellers.map((seller) => (
-            <option key={seller.id} value={seller.id}>
+            <label
+              key={seller.id}
+              className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border border-line bg-surface px-3.5 text-sm has-[:checked]:border-ink has-[:checked]:bg-ink has-[:checked]:text-surface has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-focus"
+            >
+              <input
+                type="checkbox"
+                checked={sellerIds.includes(seller.id)}
+                onChange={(e) =>
+                  setSellerIds(
+                    e.target.checked
+                      ? [...sellerIds, seller.id]
+                      : sellerIds.filter((id) => id !== seller.id),
+                  )
+                }
+                className="size-4 accent-surface"
+              />
               {seller.displayName}
               {seller.whatsappNumber ? "" : " (sem WhatsApp)"}
-            </option>
+            </label>
           ))}
-        </select>
-      </Field>
+        </div>
+        {errors.sellers && (
+          <p
+            id="sellers-error"
+            role="alert"
+            className="mt-1.5 text-sm font-medium text-stamp"
+          >
+            {errors.sellers}
+          </p>
+        )}
+      </fieldset>
 
       <fieldset>
         <legend className="text-sm font-semibold">Detalhes (opcional)</legend>
@@ -344,73 +441,6 @@ export function ListingForm({
           </button>
         )}
       </fieldset>
-
-      {!editing && (
-        <Field
-          label="Fotos"
-          htmlFor="photos"
-          hint="Escolha várias de uma vez. A primeira vira a capa; dá para reordenar depois."
-        >
-          <div className="flex items-center gap-3">
-            <span className="relative inline-flex h-11 items-center gap-2 rounded-full bg-ink px-5 text-sm font-semibold text-surface has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-focus">
-              <ImagePlus className="size-4" aria-hidden="true" />
-              Escolher fotos
-              <input
-                id="photos"
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                multiple
-                onChange={(e) => {
-                  setFiles(
-                    [...files, ...Array.from(e.target.files ?? [])].slice(
-                      0,
-                      20,
-                    ),
-                  );
-                  e.target.value = "";
-                }}
-                className="absolute inset-0 cursor-pointer opacity-0"
-              />
-            </span>
-            <span className="text-sm text-muted">
-              {files.length === 0
-                ? "Nenhuma foto escolhida"
-                : files.length === 1
-                  ? "1 foto"
-                  : `${files.length} fotos`}
-            </span>
-          </div>
-          {previews.length > 0 && (
-            <ul className="mt-3 grid grid-cols-4 gap-2 sm:grid-cols-6">
-              {previews.map((preview, index) => (
-                <li key={preview.url} className="relative">
-                  {/* biome-ignore lint/performance/noImgElement: local object URL preview. */}
-                  <img
-                    src={preview.url}
-                    alt={`Foto ${index + 1} selecionada`}
-                    className="aspect-square w-full rounded-md object-cover"
-                  />
-                  {index === 0 && (
-                    <span className="absolute bottom-1 left-1 rounded bg-ink/80 px-1.5 text-xs font-semibold text-surface">
-                      Capa
-                    </span>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setFiles(files.filter((_, i) => i !== index))
-                    }
-                    aria-label={`Remover foto ${index + 1}`}
-                    className="absolute top-1 right-1 inline-flex size-11 items-center justify-center rounded-full bg-surface/90 shadow"
-                  >
-                    <X className="size-4" aria-hidden="true" />
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Field>
-      )}
 
       {editing && (
         <div className="grid gap-6 sm:grid-cols-2">

@@ -23,7 +23,7 @@ describe("listing administration", () => {
       .send({
         title: "Mesa de jantar",
         categoryId: admin.categoryId,
-        sellerId: admin.sellerId,
+        sellerIds: [admin.sellerId],
         condition: "good",
         ...fields,
       })
@@ -160,11 +160,77 @@ describe("listing administration", () => {
         .send({
           title: "x",
           categoryId: admin.categoryId,
-          sellerId: admin.sellerId,
+          sellerIds: [admin.sellerId],
           condition: "good",
           priceCents: -1,
         })
         .expect(400);
+    });
+
+    it("sells one listing through several sellers, listed by name", async () => {
+      const partner = await client()
+        .post(`/stores/${admin.storeId}/sellers`)
+        .send({ displayName: "Bia", whatsappNumber: "+55 21 97777-1234" })
+        .expect(201);
+      const listing = await createListing({
+        sellerIds: [admin.sellerId, partner.body.id],
+      });
+      expect(listing.sellers).toEqual([
+        { id: admin.sellerId, displayName: "Admin loja-a" },
+        { id: partner.body.id, displayName: "Bia" },
+      ]);
+
+      const updated = await client()
+        .patch(`${base()}/${listing.id}`)
+        .send({ sellerIds: [partner.body.id] })
+        .expect(200);
+      expect(updated.body.sellers).toEqual([
+        { id: partner.body.id, displayName: "Bia" },
+      ]);
+
+      await upload(listing.id, [await photo()]).expect(201);
+      await client()
+        .patch(`${base()}/${listing.id}`)
+        .send({
+          sellerIds: [partner.body.id, admin.sellerId],
+          publication: "published",
+        })
+        .expect(200);
+      const page = await request(ctx.app.getHttpServer())
+        .get(`/public/stores/loja-a/listings/${listing.slug}`)
+        .expect(200);
+      expect(page.body).toMatchObject({
+        canContact: true,
+        sellers: [
+          { name: "Admin loja-a", whatsappNumber: "5511999998888" },
+          { name: "Bia", whatsappNumber: "5521977771234" },
+        ],
+      });
+    });
+
+    it("requires at least one seller and no repeats", async () => {
+      await client()
+        .post(base())
+        .send({
+          title: "Mesa",
+          categoryId: admin.categoryId,
+          sellerIds: [],
+          condition: "good",
+        })
+        .expect(400);
+      const listing = await createListing();
+      await client()
+        .patch(`${base()}/${listing.id}`)
+        .send({ sellerIds: [admin.sellerId, admin.sellerId] })
+        .expect(400);
+      await client()
+        .patch(`${base()}/${listing.id}`)
+        .send({ sellerIds: [] })
+        .expect(400);
+      const unchanged = await client().get(`${base()}/${listing.id}`);
+      expect(unchanged.body.sellers).toEqual([
+        { id: admin.sellerId, displayName: "Admin loja-a" },
+      ]);
     });
 
     it("duplicates into a new draft without photos", async () => {
@@ -188,7 +254,7 @@ describe("listing administration", () => {
         condition: "like_new",
         attributes: [{ label: "Material", value: "Madeira" }],
         category: { id: admin.categoryId },
-        seller: { id: admin.sellerId },
+        sellers: [{ id: admin.sellerId }],
         publication: "draft",
         availability: "available",
         priceCents: 500,
@@ -246,7 +312,7 @@ describe("listing administration", () => {
       ).toMatchObject({
         availability: "sold",
         canContact: false,
-        seller: { whatsappNumber: null },
+        sellers: [{ whatsappNumber: null }],
       });
     });
 
@@ -275,7 +341,7 @@ describe("listing administration", () => {
       expect(res.body).toMatchObject({
         title: "Mesa de jantar",
         description: "Seis lugares",
-        seller: { name: "Admin loja-a", whatsappNumber: "5511999998888" },
+        sellers: [{ name: "Admin loja-a", whatsappNumber: "5511999998888" }],
       });
     });
   });
@@ -288,7 +354,7 @@ describe("listing administration", () => {
         .send({
           title: "Mesa",
           categoryId: admin.categoryId,
-          sellerId: other.sellerId,
+          sellerIds: [other.sellerId],
           condition: "good",
         })
         .expect(422);
@@ -297,14 +363,14 @@ describe("listing administration", () => {
         .send({
           title: "Mesa",
           categoryId: other.categoryId,
-          sellerId: admin.sellerId,
+          sellerIds: [admin.sellerId],
           condition: "good",
         })
         .expect(422);
       const listing = await createListing();
       await client()
         .patch(`${base()}/${listing.id}`)
-        .send({ sellerId: other.sellerId, title: "Trocado" })
+        .send({ sellerIds: [other.sellerId], title: "Trocado" })
         .expect(422);
       await client()
         .patch(`${base()}/${listing.id}`)
@@ -315,7 +381,7 @@ describe("listing administration", () => {
         .expect(200);
       expect(unchanged.body).toMatchObject({
         title: "Mesa de jantar",
-        seller: { id: admin.sellerId },
+        sellers: [{ id: admin.sellerId }],
         category: { id: admin.categoryId },
       });
       const [{ count }] = await ctx.dataSource.query(

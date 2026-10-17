@@ -26,12 +26,15 @@ describe("admin listing summaries", () => {
     const client = as(ctx.app, admin.cookie);
     const ids: string[] = [];
     for (const title of ["Zero", "Um", "Varias"]) {
-      const res = await client.post(base()).send({
-        title,
-        categoryId: admin.categoryId,
-        sellerId: admin.sellerId,
-        condition: "good",
-      });
+      const res = await client
+        .post(base())
+        .send({
+          title,
+          categoryId: admin.categoryId,
+          sellerIds: [admin.sellerId],
+          condition: "good",
+        })
+        .expect(201);
       ids.push(res.body.id);
     }
     await client

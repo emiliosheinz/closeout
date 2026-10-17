@@ -252,7 +252,7 @@ describe("public catalog", () => {
       condition: "like_new",
       availability: "available",
       category: { slug: "esporte-e-lazer", name: "Esporte e lazer" },
-      seller: { name: "Admin loja-a", whatsappNumber: "5511999998888" },
+      sellers: [{ name: "Admin loja-a", whatsappNumber: "5511999998888" }],
       canContact: true,
       cover: null,
       images: [],
@@ -266,7 +266,7 @@ describe("public catalog", () => {
     const res = await get(`/listings/${sold.slug}`).expect(200);
     expect(res.body.availability).toBe("sold");
     expect(res.body.canContact).toBe(false);
-    expect(res.body.seller.whatsappNumber).toBeNull();
+    expect(res.body.sellers[0].whatsappNumber).toBeNull();
     expect(JSON.stringify(res.body)).not.toContain("11999998888");
     expect(res.body.related.map((r: { title: string }) => r.title)).toEqual([
       "Disponível",

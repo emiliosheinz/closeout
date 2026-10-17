@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
+import { ActiveFilters } from "@/components/storefront/active-filters";
+import { RememberCatalogView } from "@/components/storefront/catalog-return";
 import { CategoryChips } from "@/components/storefront/category-chips";
 import { EmptyState } from "@/components/storefront/empty-state";
 import { FilterForm } from "@/components/storefront/filter-form";
@@ -10,6 +12,7 @@ import { SearchForm } from "@/components/storefront/search-form";
 import { StoreHeader } from "@/components/storefront/store-header";
 import { getListings, getStore, PAGE_SIZE } from "@/lib/catalog/api";
 import {
+  activeFilterChips,
   activeFilterCount,
   catalogHref,
   DEFAULT_FILTERS,
@@ -17,6 +20,7 @@ import {
   parseCatalogParams,
 } from "@/lib/catalog/params";
 import { pluralize } from "@/lib/format";
+import { sellerContactUrl } from "@/lib/whatsapp";
 
 interface PageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -81,9 +85,18 @@ export default async function CatalogPage({ searchParams }: PageProps) {
   }
 
   const filtered = hasActiveFilters(filters);
+  const chips = activeFilterChips(
+    filters,
+    (slug) => store.categories.find((category) => category.slug === slug)?.name,
+  );
+  const contactHref =
+    store.sellers
+      .map((seller) => sellerContactUrl(seller.whatsappNumber, store.name))
+      .find((href) => href !== null) ?? null;
   return (
     <>
-      <StoreHeader store={store} />
+      <RememberCatalogView href={catalogHref(filters)} />
+      <StoreHeader store={store} compact={filtered || filters.page > 1} />
       <main
         id="catalogo"
         className="mx-auto max-w-6xl px-4 pb-24 sm:px-6 lg:px-8"
@@ -108,7 +121,7 @@ export default async function CatalogPage({ searchParams }: PageProps) {
           </aside>
 
           <section aria-labelledby="results-heading">
-            <div className="mb-5 flex items-baseline justify-between gap-4">
+            <div className="mb-5 flex flex-col gap-3">
               <h2
                 id="results-heading"
                 className="text-sm font-medium text-ink-soft"
@@ -117,12 +130,12 @@ export default async function CatalogPage({ searchParams }: PageProps) {
                 <span data-testid="results-count">
                   {pluralize(results.total, "item", "itens")}
                 </span>
-                {filters.q && <> para “{filters.q}”</>}
               </h2>
+              <ActiveFilters chips={chips} />
             </div>
 
             {results.items.length === 0 ? (
-              <EmptyState filtered={filtered} />
+              <EmptyState filtered={filtered} contactHref={contactHref} />
             ) : (
               <ul className="grid grid-cols-2 gap-x-4 gap-y-12 sm:grid-cols-3 sm:gap-x-6 xl:grid-cols-4">
                 {results.items.map((listing, index) => (

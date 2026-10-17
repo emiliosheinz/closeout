@@ -1,7 +1,7 @@
 import { Module } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { AuthModule } from "@/auth/auth.module";
-import { Listing } from "@/catalog/entities/listing.entity";
+import { ListingSeller } from "@/catalog/entities/listing-seller.entity";
 import { MediaModule } from "@/media/media.module";
 import { StoresModule } from "@/stores/stores.module";
 import { SellersController } from "./controllers/sellers.controller";
@@ -13,7 +13,7 @@ import { SellersService } from "./services/sellers.service";
     AuthModule,
     StoresModule,
     MediaModule,
-    TypeOrmModule.forFeature([Seller, Listing]),
+    TypeOrmModule.forFeature([Seller, ListingSeller]),
   ],
   controllers: [SellersController],
   providers: [SellersService],
