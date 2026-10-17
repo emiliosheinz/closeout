@@ -123,24 +123,34 @@ export async function insertListing(
   admin: Admin,
   state: {
     title?: string;
+    description?: string;
+    priceCents?: number | null;
+    condition?: "new" | "like_new" | "good" | "fair" | "for_parts";
+    category?: string;
     publication?: "draft" | "published" | "archived";
     availability?: "available" | "reserved" | "sold";
+    publishedAt?: Date;
   } = {},
-): Promise<string> {
+): Promise<{ id: string; slug: string }> {
   const title = state.title ?? "Item";
+  const publication = state.publication ?? "draft";
   const [row] = await dataSource.query(
-    `INSERT INTO listings (store_id, seller_id, category_id, slug, title, condition, availability, publication, published_at)
-     VALUES ($1, $2, $3, $4, $5, 'good', $6, $7, CASE WHEN $7 = 'published' THEN now() END)
-     RETURNING id`,
+    `INSERT INTO listings (store_id, seller_id, category_id, slug, title, description, price_cents, condition, availability, publication, published_at)
+     VALUES ($1, $2, (SELECT id FROM categories WHERE store_id = $1 AND slug = $3), $4, $5, $6, $7, $8, $9, $10, $11)
+     RETURNING id, slug`,
     [
       admin.storeId,
       admin.sellerId,
-      admin.categoryId,
-      `${title.toLowerCase().replace(/\W+/g, "-")}-${Math.random().toString(36).slice(2, 8)}`,
+      state.category ?? "moveis",
+      `item-${Math.random().toString(36).slice(2, 10)}`,
       title,
+      state.description ?? "",
+      state.priceCents ?? null,
+      state.condition ?? "good",
       state.availability ?? "available",
-      state.publication ?? "draft",
+      publication,
+      publication === "published" ? (state.publishedAt ?? new Date()) : null,
     ],
   );
-  return row.id;
+  return row;
 }
