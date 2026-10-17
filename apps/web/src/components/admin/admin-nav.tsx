@@ -22,7 +22,7 @@ export function AdminNav({ storeName }: { storeName: string }) {
         </Link>
         <nav
           aria-label="Administração"
-          className="order-3 -mx-1 flex w-full gap-1 overflow-x-auto sm:order-none sm:w-auto"
+          className="order-3 -mx-2.5 -my-1.5 flex w-full gap-1 overflow-x-auto px-1.5 py-1.5 sm:order-none sm:w-auto"
         >
           {LINKS.map((link) => {
             const active =

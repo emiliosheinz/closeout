@@ -64,9 +64,9 @@ export default async function DashboardPage({
       {counts && (
         <nav
           aria-label="Filtrar por situação"
-          className="-mx-4 mt-6 overflow-x-auto px-4 scrollbar-none sm:mx-0 sm:px-0"
+          className="-mx-4 mt-4.5 -mb-1.5 overflow-x-auto px-4 py-1.5 scrollbar-none sm:-mx-1.5 sm:px-1.5"
         >
-          <ul className="flex gap-2 py-1">
+          <ul className="flex gap-2">
             <li>
               <Link
                 href={dashboardHref(null, q)}

@@ -92,7 +92,7 @@ export function Gallery({
       </div>
       {images.length > 1 && (
         <ul
-          className="mt-2 flex gap-2 overflow-x-auto p-1 scrollbar-none"
+          className="-mx-0.5 mt-1.5 flex gap-2 overflow-x-auto p-1.5 scrollbar-none"
           aria-label="Escolher foto"
         >
           {images.map((image, index) => (
