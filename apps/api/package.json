@@ -20,7 +20,7 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:integration": "jest --config ./test/jest-integration.json",
-    "cli": "tsx src/cli/main.ts",
+    "cli": "node dist/cli/main.js",
     "migration:generate": "scripts/generate-migration.sh",
     "migration:run": "tsx node_modules/typeorm/cli.js migration:run -d src/database/connection.ts",
     "migration:revert": "tsx node_modules/typeorm/cli.js migration:revert -d src/database/connection.ts",

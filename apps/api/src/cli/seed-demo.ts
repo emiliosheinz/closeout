@@ -284,7 +284,7 @@ export async function seedDemo(
     await deps.stores.updateSettings(store.id, {
       headline: "Estamos de mudança e tudo precisa de um novo lar",
       intro:
-        "Juntamos aqui as coisas que não vão com a gente para o apartamento novo. Tudo usado com carinho, com fotos reais e estado descrito com sinceridade. Gostou de algo? Chama no WhatsApp.",
+        "Juntamos aqui as coisas que não vão com a gente para o apartamento novo. Tudo usado com carinho e com o estado descrito com sinceridade. Gostou de algo? Chama no WhatsApp.",
     });
   }
 

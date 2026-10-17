@@ -31,7 +31,12 @@ case "${1:-}" in
       echo "Usage: bin/closeout cli <admin:create|admin:password|seed:demo> [options]" >&2
       exit 1
     fi
-    docker compose exec ${tty_flag} api pnpm --silent cli "$@"
+    # Forward a non-interactive password when the caller provides one.
+    env_flag=""
+    if [ -n "${CLOSEOUT_PASSWORD:-}" ]; then
+      env_flag="-e CLOSEOUT_PASSWORD"
+    fi
+    docker compose exec ${tty_flag} ${env_flag} -w /closeout/apps/api api pnpm --silent cli "$@"
     ;;
   e2e)
     shift
