@@ -57,8 +57,9 @@ Passwords need at least 10 characters. For non-interactive use set
 self-registration endpoint; these commands are the only way to create users.
 
 Seller contact numbers are edited in the admin under **Vendedores** and must include
-the country code (`+55 ...`). A seller without a number shows "contato indisponível"
-instead of a WhatsApp button.
+the country code (`+55 ...`). A listing can have several sellers; buyers pick whom to
+message when more than one has a number. A listing none of whose sellers has a number
+shows "contato indisponível" instead of a WhatsApp button.
 
 ## Tests
 

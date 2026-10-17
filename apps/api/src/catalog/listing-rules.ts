@@ -7,17 +7,17 @@ export function isPubliclyVisible(listing: { publication: Publication }) {
 
 /**
  * A visitor may start a conversation about a listing only while it is
- * public, can still be bought, and its seller has a number to reach.
- * Reserved items stay contactable so buyers can queue.
+ * public, can still be bought, and at least one of its sellers has a number
+ * to reach. Reserved items stay contactable so buyers can queue.
  */
 export function canContact(
   listing: { publication: Publication; availability: Availability },
-  seller: { whatsappNumber: string | null },
+  sellers: { whatsappNumber: string | null }[],
 ): boolean {
   return (
     isPubliclyVisible(listing) &&
     listing.availability !== "sold" &&
-    seller.whatsappNumber !== null
+    sellers.some((seller) => seller.whatsappNumber !== null)
   );
 }
 

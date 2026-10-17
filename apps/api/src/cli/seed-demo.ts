@@ -29,7 +29,8 @@ interface DemoListing {
   condition: Condition;
   availability: Availability;
   publication: Publication;
-  seller: 0 | 1;
+  /** Index into the demo sellers, or both of them for a shared item. */
+  seller: 0 | 1 | "both";
   description: string;
   attributes: ListingAttribute[];
   images: number;
@@ -43,7 +44,7 @@ const DEMO_LISTINGS: DemoListing[] = [
     condition: "good",
     availability: "available",
     publication: "published",
-    seller: 0,
+    seller: "both",
     description:
       "Sofá retrátil e reclinável, tecido suede cinza. Sem rasgos, só um leve desbotado no braço esquerdo. Precisa de carro grande ou frete para levar.",
     attributes: [
@@ -59,7 +60,7 @@ const DEMO_LISTINGS: DemoListing[] = [
     condition: "like_new",
     availability: "reserved",
     publication: "published",
-    seller: 1,
+    seller: "both",
     description:
       "Mesa de madeira maciça com tampo de vidro e quatro cadeiras estofadas. Usamos pouco, está como nova.",
     attributes: [{ label: "Tampo", value: "1,40 m × 0,90 m" }],
@@ -100,7 +101,7 @@ const DEMO_LISTINGS: DemoListing[] = [
     condition: "good",
     availability: "available",
     publication: "published",
-    seller: 0,
+    seller: "both",
     description:
       "Geladeira duplex inox, gelando muito bem. Pequeno amassado na lateral que fica encostada na parede.",
     attributes: [{ label: "Voltagem", value: "220 V" }],
@@ -113,7 +114,7 @@ const DEMO_LISTINGS: DemoListing[] = [
     condition: "fair",
     availability: "available",
     publication: "published",
-    seller: 1,
+    seller: "both",
     description:
       "Funciona bem, mas faz barulho na centrifugação. Aceitamos proposta.",
     attributes: [{ label: "Voltagem", value: "127 V" }],
@@ -335,13 +336,16 @@ async function createDemoListing(
   categoryId: (slug: string) => string,
   onCreated: (id: string) => void,
 ): Promise<void> {
-  const seller = sellers[demo.seller];
-  if (!seller) throw new Error("Demo seller index out of range");
+  const chosen = demo.seller === "both" ? sellers : [sellers[demo.seller]];
+  const sellerIds = chosen.map((seller) => {
+    if (!seller) throw new Error("Demo seller index out of range");
+    return seller.id;
+  });
   const listing = await deps.listings.create(storeId, {
     title: demo.title,
     description: `${demo.description}\n\n${DEMO_NOTE}`,
     categoryId: categoryId(demo.category),
-    sellerId: seller.id,
+    sellerIds,
     priceCents: demo.priceCents,
     condition: demo.condition,
     attributes: [...demo.attributes, DEMO_ATTRIBUTE],
