@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ApiError, api } from "@/lib/admin/client-api";
+import { createListingWithPhotos } from "@/lib/admin/listings";
 import { centsToInput, parsePriceToCents } from "@/lib/admin/money";
 import type { AdminListingDetail, Category, Seller } from "@/lib/admin/types";
 import {
@@ -38,7 +39,6 @@ interface FormErrors {
 }
 
 const PUBLICATIONS: Publication[] = ["draft", "published", "archived"];
-const MAX_FILES_PER_UPLOAD = 8;
 
 /**
  * Create and edit form. New listings can attach photos right away: the
@@ -97,11 +97,11 @@ export function ListingForm({
     const next: FormErrors = {};
     if (!title.trim()) next.title = "Dê um nome ao item.";
     let priceCents: number | null = null;
-    if (!noPrice) {
+    if (!noPrice && price.trim() !== "") {
       priceCents = parsePriceToCents(price);
       if (priceCents === null) {
         next.price =
-          'Use um valor como 1.200,00, ou marque "Preço a combinar".';
+          'Use um valor como 1.200,00, ou deixe vazio para "Preço a combinar".';
       }
     }
     setErrors(next);
@@ -138,27 +138,13 @@ export function ListingForm({
         return;
       }
 
-      const created = await api<AdminListingDetail>(
-        "POST",
-        `/stores/${storeId}/listings`,
-        fields,
-      );
-      id = created.id;
-      for (let i = 0; i < files.length; i += MAX_FILES_PER_UPLOAD) {
-        setPending(
-          `Enviando fotos (${i + 1}-${Math.min(i + MAX_FILES_PER_UPLOAD, files.length)} de ${files.length})...`,
-        );
-        const body = new FormData();
-        for (const file of files.slice(i, i + MAX_FILES_PER_UPLOAD)) {
-          body.append("files", file);
-        }
-        await api("POST", `/stores/${storeId}/listings/${id}/images`, body);
-      }
-      if (publish) {
-        await api("PATCH", `/stores/${storeId}/listings/${id}/status`, {
-          publication: "published",
-        });
-      }
+      id = await createListingWithPhotos(storeId, fields, files, {
+        publish,
+        onCreated: (createdId) => {
+          id = createdId;
+        },
+        onProgress: setPending,
+      });
       router.push(`/admin/anuncios/${id}?salvo=${publish ? "publicado" : "1"}`);
     } catch (err) {
       setPending(null);
@@ -166,9 +152,8 @@ export function ListingForm({
         err instanceof ApiError ? err.message : "Não foi possível salvar.";
       if (!editing && id) {
         // The listing exists; continue on its page instead of creating a duplicate.
-        router.push(
-          `/admin/anuncios/${id}?erro=${encodeURIComponent(message)}`,
-        );
+        setPending(null);
+        router.push(`/admin/anuncios/${id}?erro=envio`);
         return;
       }
       setErrors({ form: message });
@@ -201,7 +186,7 @@ export function ListingForm({
           label="Preço (R$)"
           htmlFor="price"
           error={errors.price}
-          hint="Deixe sem preço para receber propostas."
+          hint="Deixe vazio para receber propostas (preço a combinar)."
         >
           <input
             id="price"
@@ -245,7 +230,7 @@ export function ListingForm({
           {CONDITIONS.map((value) => (
             <label
               key={value}
-              className="inline-flex min-h-10 cursor-pointer items-center rounded-full border border-line bg-surface px-3.5 text-sm has-[:checked]:border-ink has-[:checked]:bg-ink has-[:checked]:text-surface has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-focus"
+              className="inline-flex min-h-11 cursor-pointer items-center rounded-full border border-line bg-surface px-3.5 text-sm has-[:checked]:border-ink has-[:checked]:bg-ink has-[:checked]:text-surface has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-focus"
             >
               <input
                 type="radio"
@@ -352,7 +337,7 @@ export function ListingForm({
             onClick={() =>
               setAttributes([...attributes, { label: "", value: "" }])
             }
-            className="mt-2 inline-flex h-10 items-center gap-1.5 rounded-full px-3 text-sm font-semibold hover:bg-ink/5"
+            className="mt-2 inline-flex h-11 items-center gap-1.5 rounded-full px-3 text-sm font-semibold hover:bg-ink/5"
           >
             <Plus className="size-4" aria-hidden="true" />
             Adicionar detalhe
@@ -416,7 +401,7 @@ export function ListingForm({
                       setFiles(files.filter((_, i) => i !== index))
                     }
                     aria-label={`Remover foto ${index + 1}`}
-                    className="absolute top-1 right-1 inline-flex size-7 items-center justify-center rounded-full bg-surface/90 shadow"
+                    className="absolute top-1 right-1 inline-flex size-11 items-center justify-center rounded-full bg-surface/90 shadow"
                   >
                     <X className="size-4" aria-hidden="true" />
                   </button>

@@ -11,7 +11,9 @@ export default async function LoginPage({
   searchParams: Promise<{ erro?: string }>;
 }) {
   const { erro } = await searchParams;
-  if (erro !== "sem-acesso" && (await getMe())) redirect("/admin");
+  // An unreachable API must not take the login form down with it.
+  const me = erro === "sem-acesso" ? null : await getMe().catch(() => null);
+  if (me) redirect("/admin");
   return (
     <main className="mx-auto flex min-h-dvh max-w-sm flex-col justify-center px-4 py-12">
       <h1 className="text-3xl font-extrabold">Entrar</h1>

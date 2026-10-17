@@ -20,10 +20,11 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  let credentials: { email?: unknown; password?: unknown };
-  try {
-    credentials = await request.json();
-  } catch {
+  const credentials = (await request.json().catch(() => null)) as {
+    email?: unknown;
+    password?: unknown;
+  } | null;
+  if (!credentials || typeof credentials !== "object") {
     return NextResponse.json(
       { message: "Requisição inválida." },
       { status: 400 },

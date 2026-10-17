@@ -10,14 +10,28 @@ export class ApiError extends Error {
 }
 
 const GENERIC_ERROR = "Não foi possível salvar. Tente de novo.";
+const INVALID_FIELDS =
+  "Alguns campos estão inválidos. Confira e tente de novo.";
+/** Messages written by the API for people contain Portuguese characters or words. */
+const PORTUGUESE =
+  /[áàâãéêíóôõúçÁÉÍÓÚÇ]|\b(Informe|Envie|Use|Adicione|Cada|Este|Esta|Um|Uma)\b/;
 
 async function readError(response: Response): Promise<ApiError> {
   try {
     const body = (await response.json()) as { message?: string | string[] };
-    const message = Array.isArray(body.message)
-      ? body.message.join(" ")
-      : body.message;
-    return new ApiError(response.status, message || GENERIC_ERROR);
+    const messages = Array.isArray(body.message)
+      ? body.message
+      : [body.message];
+    // The API writes user-facing messages in Portuguese; framework validation
+    // defaults are English and mean a field the form should have caught.
+    const portuguese = messages.filter(
+      (m): m is string => typeof m === "string" && PORTUGUESE.test(m),
+    );
+    return new ApiError(
+      response.status,
+      portuguese.join(" ") ||
+        (response.status === 400 ? INVALID_FIELDS : GENERIC_ERROR),
+    );
   } catch {
     return new ApiError(response.status, GENERIC_ERROR);
   }

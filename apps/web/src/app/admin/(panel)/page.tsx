@@ -14,6 +14,7 @@ const COUNTS: { key: keyof DashboardCounts; label: string }[] = [
   { key: "reserved", label: "Reservados" },
   { key: "sold", label: "Vendidos" },
   { key: "draft", label: "Rascunhos" },
+  { key: "archived", label: "Arquivados" },
 ];
 
 export default async function DashboardPage({
@@ -44,7 +45,7 @@ export default async function DashboardPage({
       </div>
 
       {counts && (
-        <dl className="mt-6 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-line bg-line sm:grid-cols-5">
+        <dl className="mt-6 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-line bg-line sm:grid-cols-3 lg:grid-cols-6">
           {COUNTS.map(({ key, label }) => (
             <div key={key} className="bg-surface px-4 py-3">
               <dt className="text-sm text-muted">{label}</dt>

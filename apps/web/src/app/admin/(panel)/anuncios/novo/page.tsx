@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: "Novo anúncio" };
 export default async function NewListingPage() {
   const { me, store } = await requireAdmin();
   const { categories, sellers } = await listingFormOptions(store.id);
-  const mine = sellers.find((seller) => seller.displayName === me.user.name);
+  const mine = sellers.find((seller) => seller.userId === me.user.id);
 
   return (
     <div className="max-w-2xl">
@@ -24,7 +24,12 @@ export default async function NewListingPage() {
         Só o nome é obrigatório. Ele fica como rascunho até você publicar.
       </p>
       <div className="mt-8">
-        {sellers.length === 0 ? (
+        {categories.length === 0 ? (
+          <p className="rounded-md bg-stamp/10 px-3 py-2 text-sm text-stamp">
+            Esta loja ainda não tem categorias. Recrie a loja pelo comando
+            admin:create.
+          </p>
+        ) : sellers.length === 0 ? (
           <p className="rounded-md bg-stamp/10 px-3 py-2 text-sm text-stamp">
             Cadastre um vendedor antes, em{" "}
             <Link href="/admin/vendedores" className="underline">

@@ -99,8 +99,11 @@ standalone images. A deployment needs Postgres, a persistent volume at `MEDIA_DI
 for the API, `NODE_ENV=production` (Secure cookies, HSTS), `PUBLIC_BASE_URL` set to
 the HTTPS origin, a strong `INTERNAL_API_SECRET`, and only the web app exposed.
 Run migrations with the same command as the `migration` service before starting
-the API. Behind a reverse proxy, the proxy must append the client address to
-`X-Forwarded-For` (the login rate limiter trusts only the last hop).
+the API. Put a reverse proxy (nginx, Caddy, a platform load balancer) in front of the web app
+and have it set `X-Forwarded-For` to the real client address
+(`proxy_set_header X-Forwarded-For $remote_addr;` in nginx). The login rate limiter
+keys on the last hop of that header; without a proxy a client can forge it and only
+the per-email limit (30 failures in 15 minutes) protects an account.
 
 ### Moving media to object storage
 

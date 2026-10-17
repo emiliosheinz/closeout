@@ -60,7 +60,7 @@ export function StoreSettingsForm({
           <code className="rounded-md bg-paper px-3 py-2 text-sm break-all">
             {storeUrl}
           </code>
-          <Button type="button" variant="outline" size="sm" onClick={copyLink}>
+          <Button type="button" variant="outline" onClick={copyLink}>
             {copied ? (
               <Check aria-hidden="true" />
             ) : (
@@ -72,7 +72,7 @@ export function StoreSettingsForm({
             href={`https://wa.me/?text=${encodeURIComponent(`Estamos vendendo algumas coisas da casa: ${storeUrl}`)}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex h-9 items-center rounded-full bg-go px-3.5 text-sm font-semibold text-white hover:bg-go-strong"
+            className="inline-flex h-11 items-center rounded-full bg-go px-4 text-sm font-semibold text-white hover:bg-go-strong"
           >
             Enviar no WhatsApp
           </a>

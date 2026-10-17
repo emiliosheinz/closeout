@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { cache } from "react";
 import { requireEnv } from "../env";
 import { SESSION_COOKIE_NAME } from "./session-cookie";
 import type { Me } from "./types";
@@ -28,6 +29,5 @@ export async function adminGet<T>(path: string): Promise<T | null> {
   return (await response.json()) as T;
 }
 
-export function getMe(): Promise<Me | null> {
-  return adminGet<Me>("/me");
-}
+/** The signed-in admin; deduplicated across layout and page in one request. */
+export const getMe = cache((): Promise<Me | null> => adminGet<Me>("/me"));

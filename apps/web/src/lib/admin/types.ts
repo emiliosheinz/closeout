@@ -60,6 +60,7 @@ export interface DashboardCounts {
 
 export interface Seller {
   id: string;
+  userId: string | null;
   displayName: string;
   whatsappNumber: string | null;
   avatarUrl: string | null;

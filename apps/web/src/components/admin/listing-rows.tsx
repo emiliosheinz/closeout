@@ -35,13 +35,20 @@ export function ListingRows({
   listings: AdminListingSummary[];
 }) {
   const router = useRouter();
+  const [busyId, setBusyId] = useState<string | null>(null);
   const [message, setMessage] = useState<{
     text: string;
     error: boolean;
   } | null>(null);
   const base = `/stores/${storeId}/listings`;
 
-  async function run(action: () => Promise<unknown>, success: string) {
+  async function run(
+    id: string,
+    action: () => Promise<unknown>,
+    success: string,
+  ) {
+    if (busyId) return;
+    setBusyId(id);
     setMessage(null);
     try {
       await action();
@@ -52,10 +59,14 @@ export function ListingRows({
         text: err instanceof Error ? err.message : "Algo deu errado.",
         error: true,
       });
+    } finally {
+      setBusyId(null);
     }
   }
 
   async function duplicate(listing: AdminListingSummary) {
+    if (busyId) return;
+    setBusyId(listing.id);
     try {
       const copy = await api<{ id: string }>(
         "POST",
@@ -63,6 +74,7 @@ export function ListingRows({
       );
       router.push(`/admin/anuncios/${copy.id}?copiado=1`);
     } catch (err) {
+      setBusyId(null);
       setMessage({
         text: err instanceof Error ? err.message : "Algo deu errado.",
         error: true,
@@ -133,6 +145,7 @@ export function ListingRows({
                   value={listing.publication}
                   onChange={(event) =>
                     run(
+                      listing.id,
                       () =>
                         api("PATCH", `${base}/${listing.id}/status`, {
                           publication: event.target.value,
@@ -155,6 +168,7 @@ export function ListingRows({
                   value={listing.availability}
                   onChange={(event) =>
                     run(
+                      listing.id,
                       () =>
                         api("PATCH", `${base}/${listing.id}/status`, {
                           availability: event.target.value,
@@ -174,7 +188,7 @@ export function ListingRows({
             <div className="col-span-2 flex flex-wrap gap-1 md:col-span-1 md:justify-end">
               <Link
                 href={`/admin/anuncios/${listing.id}`}
-                className="inline-flex size-10 items-center justify-center rounded-full hover:bg-ink/5"
+                className="inline-flex size-11 items-center justify-center rounded-full hover:bg-ink/5"
                 aria-label={`Editar ${listing.title}`}
               >
                 <Pencil className="size-4" aria-hidden="true" />
@@ -187,7 +201,7 @@ export function ListingRows({
                 }
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex size-10 items-center justify-center rounded-full hover:bg-ink/5"
+                className="inline-flex size-11 items-center justify-center rounded-full hover:bg-ink/5"
                 aria-label={
                   listing.publication === "published"
                     ? `Ver ${listing.title} na loja`
@@ -199,7 +213,8 @@ export function ListingRows({
               <button
                 type="button"
                 onClick={() => duplicate(listing)}
-                className="inline-flex size-10 items-center justify-center rounded-full hover:bg-ink/5"
+                disabled={busyId === listing.id}
+                className="inline-flex size-11 items-center justify-center rounded-full hover:bg-ink/5"
                 aria-label={`Duplicar ${listing.title}`}
               >
                 <Copy className="size-4" aria-hidden="true" />
@@ -208,6 +223,7 @@ export function ListingRows({
                 title={`Excluir "${listing.title}"?`}
                 description="O anúncio e as fotos são apagados de vez, e o link compartilhado deixa de funcionar. Para só tirar da loja, mude a publicação para Arquivado."
                 confirmLabel="Excluir anúncio"
+                pendingLabel="Excluindo..."
                 onConfirm={async () => {
                   await api("DELETE", `${base}/${listing.id}`);
                   setMessage({
@@ -220,7 +236,7 @@ export function ListingRows({
                   <button
                     type="button"
                     onClick={open}
-                    className="inline-flex size-10 items-center justify-center rounded-full text-stamp hover:bg-stamp/10"
+                    className="inline-flex size-11 items-center justify-center rounded-full text-stamp hover:bg-stamp/10"
                     aria-label={`Excluir ${listing.title}`}
                   >
                     <Trash2 className="size-4" aria-hidden="true" />

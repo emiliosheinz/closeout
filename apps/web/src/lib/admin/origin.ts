@@ -11,9 +11,10 @@ export function isSameOrigin(
 }
 
 /**
- * Last hop of X-Forwarded-For: the address appended by the proxy closest to
- * this server. Earlier hops are client-supplied and could be forged to dodge
- * the login rate limit.
+ * Last hop of X-Forwarded-For. Trustworthy only behind a reverse proxy that
+ * sets the header itself (overwriting or appending the real peer address);
+ * without one, Next.js keeps whatever the client sent, and the per-client
+ * login limit can be dodged (the per-email limit still applies).
  */
 export function clientIpFrom(forwardedFor: string | null): string | null {
   const last = forwardedFor?.split(",").at(-1)?.trim();

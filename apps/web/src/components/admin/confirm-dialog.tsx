@@ -16,12 +16,14 @@ export function ConfirmDialog({
   title,
   description,
   confirmLabel,
+  pendingLabel,
   onConfirm,
 }: {
   trigger: (open: () => void) => React.ReactNode;
   title: string;
   description: string;
   confirmLabel: string;
+  pendingLabel: string;
   onConfirm: () => Promise<void>;
 }) {
   const [open, setOpen] = useState(false);
@@ -60,7 +62,7 @@ export function ConfirmDialog({
               <Button variant="outline">Cancelar</Button>
             </DialogClose>
             <Button variant="destructive" onClick={confirm} disabled={pending}>
-              {pending ? "Excluindo..." : confirmLabel}
+              {pending ? pendingLabel : confirmLabel}
             </Button>
           </div>
         </DialogContent>

@@ -2,12 +2,12 @@
 
 import { ArrowLeft, ArrowRight, Star, Trash2, Upload } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ApiError, api } from "@/lib/admin/client-api";
+import { uploadPhotos } from "@/lib/admin/listings";
 import type { AdminImage } from "@/lib/admin/types";
 import { cn } from "@/lib/utils";
 
-const MAX_FILES_PER_UPLOAD = 8;
 const MAX_PHOTOS = 20;
 
 /**
@@ -26,6 +26,7 @@ export function PhotoManager({
 }) {
   const router = useRouter();
   const [images, setImages] = useState(initialImages);
+  useEffect(() => setImages(initialImages), [initialImages]);
   const [status, setStatus] = useState<{ text: string; error: boolean } | null>(
     null,
   );
@@ -51,6 +52,7 @@ export function PhotoManager({
             : "Algo deu errado com as fotos.",
         error: true,
       });
+      router.refresh();
     } finally {
       setBusy(false);
     }
@@ -60,18 +62,23 @@ export function PhotoManager({
     if (files.length === 0) return;
     await act(
       async () => {
-        let result = { items: images };
-        for (let i = 0; i < files.length; i += MAX_FILES_PER_UPLOAD) {
-          setStatus({
-            text: `Enviando ${Math.min(i + MAX_FILES_PER_UPLOAD, files.length)} de ${files.length}...`,
-            error: false,
-          });
-          const body = new FormData();
-          for (const file of files.slice(i, i + MAX_FILES_PER_UPLOAD))
-            body.append("files", file);
-          result = await api<{ items: AdminImage[] }>("POST", base, body);
-        }
-        return result;
+        let latest = images;
+        await uploadPhotos(
+          storeId,
+          listingId,
+          files,
+          ({ done, total, images: items }) => {
+            // Keep the list in step with the server after every batch, so a
+            // later failing batch cannot leave the screen behind the server.
+            latest = items;
+            setImages(items);
+            setStatus({
+              text: `Enviando ${done} de ${total}...`,
+              error: false,
+            });
+          },
+        );
+        return { items: latest };
       },
       files.length === 1
         ? "Foto adicionada."
@@ -169,7 +176,7 @@ export function PhotoManager({
                     disabled={busy || index === 0}
                     onClick={() => move(index, index - 1)}
                     aria-label={`Mover foto ${index + 1} para a esquerda`}
-                    className="inline-flex size-10 items-center justify-center rounded-full hover:bg-ink/5 disabled:opacity-30"
+                    className="inline-flex size-11 items-center justify-center rounded-full hover:bg-ink/5 disabled:opacity-30"
                   >
                     <ArrowLeft className="size-4" aria-hidden="true" />
                   </button>
@@ -178,7 +185,7 @@ export function PhotoManager({
                     disabled={busy || index === images.length - 1}
                     onClick={() => move(index, index + 1)}
                     aria-label={`Mover foto ${index + 1} para a direita`}
-                    className="inline-flex size-10 items-center justify-center rounded-full hover:bg-ink/5 disabled:opacity-30"
+                    className="inline-flex size-11 items-center justify-center rounded-full hover:bg-ink/5 disabled:opacity-30"
                   >
                     <ArrowRight className="size-4" aria-hidden="true" />
                   </button>
@@ -188,7 +195,7 @@ export function PhotoManager({
                       disabled={busy}
                       onClick={() => move(index, 0)}
                       aria-label={`Usar foto ${index + 1} como capa`}
-                      className="inline-flex size-10 items-center justify-center rounded-full hover:bg-ink/5"
+                      className="inline-flex size-11 items-center justify-center rounded-full hover:bg-ink/5"
                     >
                       <Star className="size-4" aria-hidden="true" />
                     </button>
@@ -204,7 +211,7 @@ export function PhotoManager({
                     )
                   }
                   aria-label={`Remover foto ${index + 1}`}
-                  className="inline-flex size-10 items-center justify-center rounded-full text-stamp hover:bg-stamp/10"
+                  className="inline-flex size-11 items-center justify-center rounded-full text-stamp hover:bg-stamp/10"
                 >
                   <Trash2 className="size-4" aria-hidden="true" />
                 </button>

@@ -71,12 +71,13 @@ export default async function EditListingPage({
           {notice}
         </p>
       )}
-      {query.erro && (
+      {query.erro === "envio" && (
         <p
           role="alert"
           className="mt-4 rounded-md bg-stamp/10 px-3 py-2 text-sm font-medium text-stamp"
         >
-          O anúncio foi salvo, mas algo falhou depois: {query.erro}
+          O anúncio foi salvo, mas o envio das fotos ou a publicação falhou.
+          Confira as fotos abaixo e tente de novo.
         </p>
       )}
       <div className="mt-8">

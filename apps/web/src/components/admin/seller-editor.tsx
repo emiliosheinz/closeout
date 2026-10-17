@@ -48,7 +48,8 @@ function SellerCard({ storeId, seller }: { storeId: string; seller: Seller }) {
   }
 
   async function uploadAvatar(file: File | undefined) {
-    if (!file) return;
+    if (!file || pending) return;
+    setPending(true);
     const body = new FormData();
     body.append("file", file);
     try {
@@ -61,6 +62,8 @@ function SellerCard({ storeId, seller }: { storeId: string; seller: Seller }) {
           err instanceof ApiError ? err.message : "Não foi possível enviar.",
         error: true,
       });
+    } finally {
+      setPending(false);
     }
   }
 
@@ -85,7 +88,10 @@ function SellerCard({ storeId, seller }: { storeId: string; seller: Seller }) {
               type="file"
               accept="image/jpeg,image/png,image/webp"
               className="sr-only"
-              onChange={(e) => uploadAvatar(e.target.files?.[0])}
+              onChange={(e) => {
+                uploadAvatar(e.target.files?.[0]);
+                e.target.value = "";
+              }}
             />
           </label>
           <p className="text-sm text-muted">
@@ -127,6 +133,7 @@ function SellerCard({ storeId, seller }: { storeId: string; seller: Seller }) {
             title={`Excluir ${seller.displayName}?`}
             description="O vendedor some da loja. Só é possível excluir quem não tem anúncios."
             confirmLabel="Excluir vendedor"
+            pendingLabel="Excluindo..."
             onConfirm={async () => {
               await api("DELETE", base);
               router.refresh();
@@ -169,14 +176,20 @@ export function SellerEditor({
 }) {
   const router = useRouter();
   const [adding, setAdding] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function add() {
     setAdding(true);
+    setError(null);
     try {
       await api("POST", `/stores/${storeId}/sellers`, {
         displayName: "Novo vendedor",
       });
       router.refresh();
+    } catch (err) {
+      setError(
+        err instanceof ApiError ? err.message : "Não foi possível adicionar.",
+      );
     } finally {
       setAdding(false);
     }
@@ -186,11 +199,7 @@ export function SellerEditor({
     <>
       <ul className="grid gap-4 md:grid-cols-2">
         {sellers.map((seller) => (
-          <SellerCard
-            key={`${seller.id}-${seller.whatsappNumber}-${seller.avatarUrl}`}
-            storeId={storeId}
-            seller={seller}
-          />
+          <SellerCard key={seller.id} storeId={storeId} seller={seller} />
         ))}
       </ul>
       <Button
@@ -202,6 +211,11 @@ export function SellerEditor({
         <Plus aria-hidden="true" />
         Adicionar vendedor
       </Button>
+      {error && (
+        <p role="alert" className="mt-2 text-sm font-medium text-stamp">
+          {error}
+        </p>
+      )}
     </>
   );
 }
