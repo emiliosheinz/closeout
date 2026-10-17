@@ -24,6 +24,7 @@ bin/closeout cli admin:create --email ... --name ... [--whatsapp "+55 ..."]
 ```
 
 Details: `docs/development.md`. Decisions: `docs/architecture/decisions/`.
+CI checks every ready PR into `main` and lints its commit messages (Conventional Commits); checks and local repro: `docs/development.md` "Continuous integration".
 
 # Architecture map
 

@@ -68,9 +68,48 @@ instead of a WhatsApp button.
 | `bin/closeout pnpm --filter api test:integration` | API integration suites. Each run creates a throwaway `closeout_test_*` database on the compose Postgres, applies the real migrations and drops it at the end. |
 | `bin/closeout e2e` | Playwright against an isolated `closeout-e2e` Compose project with its own database, media and fixture admin; torn down afterwards. |
 | `bin/closeout pnpm turbo check typecheck` | Biome lint + format check and `tsc --noEmit` |
+| `bin/closeout pnpm check` | Biome check over the whole repo, root files and `packages/config` included |
+| `bin/closeout db migration:check` | Fails when entities differ from the migrated schema |
 
 `bin/closeout e2e <compose args>` passes arguments to the e2e project, e.g.
 `bin/closeout e2e logs web`.
+
+## Continuous integration
+
+`.github/workflows/ci.yml` runs on every non-draft pull request into `main`, and again
+on each new commit (a newer push cancels the older run). Drafts and PRs into other
+branches run nothing; marking a draft ready for review starts the run. A PR with merge
+conflicts against `main` gets no run at all: resolve the conflict to get checks.
+
+Each check reports its own status. These names are the required-check contract:
+**renaming one silently drops it from the required checks on `main`.**
+
+| Status | Reproduce locally |
+| --- | --- |
+| `check` | `bin/closeout pnpm check` (Biome lint rules, import order and formatting, whole repo) |
+| `typecheck` | `bin/closeout pnpm typecheck` |
+| `unit` | `bin/closeout pnpm test` |
+| `integration` | `bin/closeout pnpm --filter api test:integration` |
+| `migration-drift` | `bin/closeout db migration:run && bin/closeout db migration:check` (fails and prints the SQL when entities and migrations disagree) |
+| `commitlint` | `git log -1 --format=%B <sha> \| bin/closeout pnpm --silent commitlint`, per commit. CI lints every non-merge commit in `origin/main..HEAD` |
+| `workflow-lint` | `docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.12` |
+| `image-api` | `docker build -f apps/api/Dockerfile --target prod .` |
+| `image-web` | `docker build -f apps/web/Dockerfile --target prod .` |
+| `e2e` | `bin/closeout e2e`. On failure CI uploads `e2e-diagnostics` (HTML report, traces, every service log) for 7 days |
+
+`.github/workflows/seed-cache.yml` runs on every push to `main` and refreshes the
+dependency and image-layer caches that pull requests restore. It is the only workflow
+that saves caches and reports none of the names above.
+
+### Making the checks required
+
+Branch protection is unavailable on a free private repository. Once the repository is
+public or on a paid plan:
+
+1. Open a pull request so every status above has reported at least once.
+2. Settings → Branches → add a branch protection rule (or ruleset) for `main`.
+3. Enable "Require status checks to pass before merging" and add all ten names above.
+4. Check with `gh api repos/{owner}/{repo}/branches/main/protection/required_status_checks --jq .contexts`.
 
 ## Resetting local data
 
