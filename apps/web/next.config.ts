@@ -27,6 +27,8 @@ const nextConfig: NextConfig = {
   output: "standalone",
   poweredByHeader: false,
   allowedDevOrigins: ["web"],
+  // The floating dev badge covers bottom-of-screen controls on phones.
+  devIndicators: false,
   turbopack: {
     root: monorepoRoot,
   },

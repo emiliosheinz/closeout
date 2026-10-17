@@ -16,6 +16,11 @@ const marker = Permanent_Marker({
   display: "swap",
 });
 
+// Every page reads runtime configuration (PUBLIC_BASE_URL, API_BASE_URL) and
+// live catalog data, so nothing is prerendered at build time and one image
+// works in any environment.
+export const dynamic = "force-dynamic";
+
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,

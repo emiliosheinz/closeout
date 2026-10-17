@@ -13,7 +13,7 @@ export function apiUrl(path: string): string {
 
 /**
  * Server-side admin request carrying the visitor's session cookie. Returns
- * null on 401/404 so pages can redirect or render not-found.
+ * null on 400/401/404 so pages can redirect or render not-found.
  */
 export async function adminGet<T>(path: string): Promise<T | null> {
   const token = (await cookies()).get(SESSION_COOKIE_NAME)?.value;
@@ -22,7 +22,8 @@ export async function adminGet<T>(path: string): Promise<T | null> {
     headers: { Cookie: `${SESSION_COOKIE_NAME}=${token}` },
     cache: "no-store",
   });
-  if (response.status === 401 || response.status === 404) return null;
+  // 400 here means a malformed id in the URL: as absent as an unknown one.
+  if ([400, 401, 404].includes(response.status)) return null;
   if (!response.ok) {
     throw new Error(`Admin request ${path} failed with ${response.status}`);
   }
