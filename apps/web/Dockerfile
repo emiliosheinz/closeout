@@ -30,6 +30,8 @@ COPY --from=builder /closeout/apps/web/.next/standalone ./
 COPY --from=builder /closeout/apps/web/public ./apps/web/public
 COPY --from=builder /closeout/apps/web/.next/static ./apps/web/.next/static
 
+USER node
+
 CMD ["node", "apps/web/server.js"]
 
 

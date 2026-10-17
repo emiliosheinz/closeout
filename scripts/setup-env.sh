@@ -20,6 +20,10 @@ if [[ ! -f "$EXAMPLE" ]]; then
 fi
 
 if [[ -f "$TARGET" && $FORCE == false ]]; then
+  if grep -q '^INTERNAL_API_SECRET=$' "$TARGET"; then
+    echo "Error: .env exists but INTERNAL_API_SECRET is empty (rerun with -f)" >&2
+    exit 1
+  fi
   echo "[skip] .env already exists (use -f to overwrite)"
   exit 0
 fi

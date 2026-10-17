@@ -32,7 +32,9 @@ RUN apk add --no-cache curl
 COPY --from=builder /out ./
 
 ENV MEDIA_DIR=/data/media
+RUN mkdir -p /data/media && chown node:node /data/media
 VOLUME ["/data/media"]
+USER node
 
 CMD ["node", "dist/main"]
 

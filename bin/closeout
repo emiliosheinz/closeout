@@ -43,6 +43,10 @@ case "${1:-}" in
     fi
     ;;
   "")
+    if [ -n "${tty_flag}" ]; then
+      echo "bin/closeout needs a command when stdin is not a terminal" >&2
+      exit 1
+    fi
     docker compose exec workspace sh
     ;;
   *)
