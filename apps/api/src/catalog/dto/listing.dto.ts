@@ -1,6 +1,8 @@
 import { Transform, Type } from "class-transformer";
 import {
   ArrayMaxSize,
+  ArrayMinSize,
+  ArrayUnique,
   IsArray,
   IsIn,
   IsInt,
@@ -29,6 +31,7 @@ const isPresent = (_: unknown, value: unknown) =>
   value !== undefined && value !== null;
 
 export const MAX_PRICE_CENTS = 100_000_000;
+const MAX_SELLERS = 10;
 
 export class AttributeDto {
   @IsString()
@@ -60,8 +63,12 @@ export class CreateListingDto {
   @IsUUID()
   declare categoryId: string;
 
-  @IsUUID()
-  declare sellerId: string;
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(MAX_SELLERS)
+  @ArrayUnique()
+  @IsUUID("all", { each: true })
+  declare sellerIds: string[];
 
   /** Null or absent means "a combinar". */
   @ValidateIf(isPresent)
@@ -100,8 +107,12 @@ export class UpdateListingDto {
   declare categoryId?: string;
 
   @ValidateIf(isDefined)
-  @IsUUID()
-  declare sellerId?: string;
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(MAX_SELLERS)
+  @ArrayUnique()
+  @IsUUID("all", { each: true })
+  declare sellerIds?: string[];
 
   @ValidateIf(isPresent)
   @IsInt()

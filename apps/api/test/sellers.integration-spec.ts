@@ -63,7 +63,7 @@ describe("seller profiles", () => {
     const res = await request(ctx.app.getHttpServer())
       .get(`/public/stores/loja-a/listings/${listing.slug}`)
       .expect(200);
-    expect(res.body.seller.whatsappNumber).toBe("5521977771234");
+    expect(res.body.sellers[0].whatsappNumber).toBe("5521977771234");
   });
 
   it("clears a number when an empty value is saved", async () => {
@@ -72,6 +72,33 @@ describe("seller profiles", () => {
       .send({ whatsappNumber: "" })
       .expect(200);
     expect(res.body.whatsappNumber).toBeNull();
+  });
+
+  it("removes a deleted seller from listings they share and keeps the co-seller", async () => {
+    const listing = await insertListing(ctx.dataSource, admin);
+    const partner = await client()
+      .post(base())
+      .send({ displayName: "Bia", whatsappNumber: "+55 21 97777-1234" })
+      .expect(201);
+    await client()
+      .patch(`/stores/${admin.storeId}/listings/${listing.id}`)
+      .send({ sellerIds: [admin.sellerId, partner.body.id] })
+      .expect(200);
+    const counted = await client().get(base()).expect(200);
+    expect(counted.body.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: partner.body.id, listingCount: 1 }),
+      ]),
+    );
+
+    await client().delete(`${base()}/${partner.body.id}`).expect(204);
+
+    const after = await client()
+      .get(`/stores/${admin.storeId}/listings/${listing.id}`)
+      .expect(200);
+    expect(after.body.sellers).toEqual([
+      { id: admin.sellerId, displayName: "Admin loja-a" },
+    ]);
   });
 
   it("refuses to delete a seller who still has listings", async () => {

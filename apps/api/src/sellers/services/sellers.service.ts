@@ -3,9 +3,9 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
-import { InjectRepository } from "@nestjs/typeorm";
-import { QueryFailedError, type Repository } from "typeorm";
-import { Listing } from "@/catalog/entities/listing.entity";
+import { InjectDataSource, InjectRepository } from "@nestjs/typeorm";
+import type { DataSource, Repository } from "typeorm";
+import { ListingSeller } from "@/catalog/entities/listing-seller.entity";
 import { MediaService } from "@/media/media.service";
 import { mediaUrls } from "@/media/media-urls";
 import { Seller } from "../entities/seller.entity";
@@ -30,8 +30,9 @@ export class SellersService {
   constructor(
     @InjectRepository(Seller)
     private readonly sellers: Repository<Seller>,
-    @InjectRepository(Listing)
-    private readonly listings: Repository<Listing>,
+    @InjectRepository(ListingSeller)
+    private readonly listingSellers: Repository<ListingSeller>,
+    @InjectDataSource() private readonly dataSource: DataSource,
     private readonly media: MediaService,
   ) {}
 
@@ -40,12 +41,13 @@ export class SellersService {
       where: { storeId },
       order: { createdAt: "ASC" },
     });
-    const counts = await this.listings
-      .createQueryBuilder("l")
-      .select("l.seller_id", "sellerId")
+    const counts = await this.listingSellers
+      .createQueryBuilder("ls")
+      .innerJoin("ls.seller", "s")
+      .select("ls.seller_id", "sellerId")
       .addSelect("COUNT(*)::int", "count")
-      .where("l.store_id = :storeId", { storeId })
-      .groupBy("l.seller_id")
+      .where("s.store_id = :storeId", { storeId })
+      .groupBy("ls.seller_id")
       .getRawMany<{ sellerId: string; count: number }>();
     const countBySeller = new Map(counts.map((c) => [c.sellerId, c.count]));
     return rows.map((row) => toResponse(row, countBySeller.get(row.id) ?? 0));
@@ -78,20 +80,29 @@ export class SellersService {
     return this.toResponse(await this.sellers.save(seller));
   }
 
+  /**
+   * Removes the seller from the listings they share with someone else.
+   * Refused while they are the only seller of a listing, which would be left
+   * with nobody to contact.
+   */
   async remove(storeId: string, id: string): Promise<void> {
     const seller = await this.findOrFail(storeId, id);
-    if (await this.listings.exists({ where: { sellerId: seller.id } })) {
-      throw new ConflictException(SELLER_HAS_LISTINGS);
-    }
-    try {
-      await this.sellers.delete({ id: seller.id, storeId });
-    } catch (err) {
-      // A listing created after the check above still trips the FK.
-      if (isForeignKeyViolation(err)) {
-        throw new ConflictException(SELLER_HAS_LISTINGS);
-      }
-      throw err;
-    }
+    // ponytail: no lock against a concurrent edit that drops the co-seller of
+    // a shared listing in the same instant; two admins make that negligible.
+    await this.dataSource.transaction(async (manager) => {
+      const [soleSeller] = await manager.query(
+        `SELECT 1 FROM listing_sellers mine
+          WHERE mine.seller_id = $1
+            AND NOT EXISTS (
+              SELECT 1 FROM listing_sellers other
+               WHERE other.listing_id = mine.listing_id
+                 AND other.seller_id <> mine.seller_id)
+          LIMIT 1`,
+        [seller.id],
+      );
+      if (soleSeller) throw new ConflictException(ONLY_SELLER_OF_LISTINGS);
+      await manager.getRepository(Seller).delete({ id: seller.id, storeId });
+    });
     if (seller.avatarKey) await this.media.remove(seller.avatarKey);
   }
 
@@ -123,21 +134,13 @@ export class SellersService {
   private async toResponse(seller: Seller): Promise<SellerResponse> {
     return toResponse(
       seller,
-      await this.listings.count({ where: { sellerId: seller.id } }),
+      await this.listingSellers.count({ where: { sellerId: seller.id } }),
     );
   }
 }
 
-const SELLER_HAS_LISTINGS =
-  "Este vendedor ainda tem anúncios. Transfira ou exclua os anúncios antes.";
-const FOREIGN_KEY_VIOLATION = "23503";
-
-function isForeignKeyViolation(err: unknown): boolean {
-  return (
-    err instanceof QueryFailedError &&
-    (err.driverError as { code?: string })?.code === FOREIGN_KEY_VIOLATION
-  );
-}
+const ONLY_SELLER_OF_LISTINGS =
+  "Este vendedor é o único de alguns anúncios. Adicione outra pessoa a eles ou exclua os anúncios antes.";
 
 function toResponse(seller: Seller, listingCount: number): SellerResponse {
   return {

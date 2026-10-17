@@ -1,4 +1,5 @@
 import { type ImageUrls, mediaUrls } from "@/media/media-urls";
+import type { Seller } from "@/sellers/entities/seller.entity";
 import type { Listing } from "./entities/listing.entity";
 import type { ListingImage } from "./entities/listing-image.entity";
 import { canContact } from "./listing-rules";
@@ -33,11 +34,11 @@ export interface PublicListingDetail extends PublicListingSummary {
   description: string;
   attributes: ListingAttribute[];
   images: PublicImage[];
-  seller: {
+  sellers: {
     name: string;
     avatarUrl: string | null;
     whatsappNumber: string | null;
-  };
+  }[];
   canContact: boolean;
   publishedAt: string | null;
   updatedAt: string;
@@ -68,26 +69,32 @@ export function toPublicSummary(
   };
 }
 
-/** Expects `category`, `seller` and ordered `images` loaded. */
+/** A listing's sellers, alphabetical so every page lists them the same way. */
+export function listingSellers(listing: Listing): Seller[] {
+  return listing.sellers
+    .map((row) => row.seller)
+    .sort((a, b) => a.displayName.localeCompare(b.displayName, "pt-BR"));
+}
+
+/** Expects `category`, `sellers.seller` and ordered `images` loaded. */
 export function toPublicDetail(
   listing: Listing,
   related: PublicListingSummary[],
 ): PublicListingDetail {
-  const contactable = canContact(listing, listing.seller);
+  const sellers = listingSellers(listing);
+  const contactable = canContact(listing, sellers);
   return {
     ...toPublicSummary(listing),
     description: listing.description,
     attributes: listing.attributes,
     images: listing.images.map(toPublicImage),
-    seller: {
-      name: listing.seller.displayName,
-      avatarUrl: listing.seller.avatarKey
-        ? mediaUrls(listing.seller.avatarKey).sm
-        : null,
+    sellers: sellers.map((seller) => ({
+      name: seller.displayName,
+      avatarUrl: seller.avatarKey ? mediaUrls(seller.avatarKey).sm : null,
       // Withheld once the item cannot be bought, so a sold page carries no
       // contact data at all.
-      whatsappNumber: contactable ? listing.seller.whatsappNumber : null,
-    },
+      whatsappNumber: contactable ? seller.whatsappNumber : null,
+    })),
     canContact: contactable,
     publishedAt: listing.publishedAt?.toISOString() ?? null,
     updatedAt: listing.updatedAt.toISOString(),
