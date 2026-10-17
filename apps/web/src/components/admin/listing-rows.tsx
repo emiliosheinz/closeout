@@ -1,6 +1,6 @@
 "use client";
 
-import { Copy, Eye, ImageOff, Pencil, Trash2 } from "lucide-react";
+import { Copy, Eye, ImageOff, Pencil, PhoneOff, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -30,9 +30,12 @@ const selectClass =
 export function ListingRows({
   storeId,
   listings,
+  unreachableSellerIds = [],
 }: {
   storeId: string;
   listings: AdminListingSummary[];
+  /** Sellers without a WhatsApp number: their items show no contact button. */
+  unreachableSellerIds?: string[];
 }) {
   const router = useRouter();
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -136,6 +139,18 @@ export function ListingRows({
                   {listing.category.name}, por {listing.seller.displayName}
                 </span>
               </p>
+              {listing.publication === "published" &&
+                listing.availability !== "sold" &&
+                unreachableSellerIds.includes(listing.seller.id) && (
+                  <Link
+                    href="/admin/vendedores"
+                    className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-stamp/10 px-2.5 py-1 text-xs font-semibold text-stamp hover:bg-stamp/15"
+                    title="Este item aparece na loja sem botão de contato."
+                  >
+                    <PhoneOff className="size-3.5" aria-hidden="true" />
+                    Vendedor sem WhatsApp
+                  </Link>
+                )}
             </div>
             <div className="col-span-2 grid grid-cols-2 gap-3 md:col-span-1 md:flex">
               <label className="flex min-w-0 flex-col gap-1 text-xs text-muted md:w-36">

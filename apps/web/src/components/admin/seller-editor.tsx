@@ -94,11 +94,18 @@ function SellerCard({ storeId, seller }: { storeId: string; seller: Seller }) {
               }}
             />
           </label>
-          <p className="text-sm text-muted">
-            {seller.listingCount === 1
-              ? "1 anúncio"
-              : `${seller.listingCount} anúncios`}
-          </p>
+          <div className="min-w-0">
+            <p className="text-sm text-muted">
+              {seller.listingCount === 1
+                ? "1 anúncio"
+                : `${seller.listingCount} anúncios`}
+            </p>
+            {!seller.whatsappNumber && (
+              <p className="mt-0.5 text-sm font-semibold text-stamp">
+                Sem WhatsApp: os anúncios aparecem sem botão de contato.
+              </p>
+            )}
+          </div>
         </div>
         <Field label="Nome que aparece na loja" htmlFor={`${idPrefix}-name`}>
           <input

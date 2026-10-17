@@ -4,32 +4,49 @@ import Link from "next/link";
 import { ListingRows } from "@/components/admin/listing-rows";
 import { requireAdmin } from "@/lib/admin/current-store";
 import { adminGet } from "@/lib/admin/server-api";
-import type { AdminListingSummary, DashboardCounts } from "@/lib/admin/types";
+import {
+  dashboardHref,
+  findStatusFilter,
+  STATUS_FILTERS,
+} from "@/lib/admin/status-filter";
+import type {
+  AdminListingSummary,
+  DashboardCounts,
+  Seller,
+} from "@/lib/admin/types";
+import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Anúncios" };
-
-const COUNTS: { key: keyof DashboardCounts; label: string }[] = [
-  { key: "published", label: "Publicados" },
-  { key: "available", label: "Disponíveis" },
-  { key: "reserved", label: "Reservados" },
-  { key: "sold", label: "Vendidos" },
-  { key: "draft", label: "Rascunhos" },
-  { key: "archived", label: "Arquivados" },
-];
 
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; status?: string }>;
 }) {
   const { store } = await requireAdmin();
-  const q = ((await searchParams).q ?? "").trim().slice(0, 100);
-  const [counts, listings] = await Promise.all([
+  const query = await searchParams;
+  const q = (query.q ?? "").trim().slice(0, 100);
+  const status = findStatusFilter(query.status);
+  const [counts, listings, sellers] = await Promise.all([
     adminGet<DashboardCounts>(`/stores/${store.id}/dashboard`),
     adminGet<{ items: AdminListingSummary[] }>(
       `/stores/${store.id}/listings${q ? `?q=${encodeURIComponent(q)}` : ""}`,
     ),
+    adminGet<{ items: Seller[] }>(`/stores/${store.id}/sellers`),
   ]);
+  const shown = (listings?.items ?? []).filter(
+    (listing) => !status || status.matches(listing),
+  );
+  const unreachableSellerIds = (sellers?.items ?? [])
+    .filter((seller) => !seller.whatsappNumber)
+    .map((seller) => seller.id);
+  const tab = (active: boolean) =>
+    cn(
+      "inline-flex h-11 shrink-0 items-center gap-2 rounded-full px-4 text-sm font-semibold whitespace-nowrap",
+      active
+        ? "bg-ink text-surface"
+        : "border border-line bg-surface text-ink-soft hover:border-ink/40",
+    );
 
   return (
     <>
@@ -45,22 +62,51 @@ export default async function DashboardPage({
       </div>
 
       {counts && (
-        <dl className="mt-6 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-line bg-line sm:grid-cols-3 lg:grid-cols-6">
-          {COUNTS.map(({ key, label }) => (
-            <div key={key} className="bg-surface px-4 py-3">
-              <dt className="text-sm text-muted">{label}</dt>
-              <dd
-                className="mt-1 text-2xl font-extrabold"
-                data-testid={`count-${key}`}
+        <nav
+          aria-label="Filtrar por situação"
+          className="-mx-4 mt-6 overflow-x-auto px-4 scrollbar-none sm:mx-0 sm:px-0"
+        >
+          <ul className="flex gap-2 py-1">
+            <li>
+              <Link
+                href={dashboardHref(null, q)}
+                className={tab(status === null)}
+                aria-current={status === null ? "page" : undefined}
               >
-                {counts[key]}
-              </dd>
-            </div>
-          ))}
-        </dl>
+                Todos
+                <span
+                  className={status === null ? "text-surface/70" : "text-muted"}
+                >
+                  {counts.published + counts.draft + counts.archived}
+                </span>
+              </Link>
+            </li>
+            {STATUS_FILTERS.map((filter) => {
+              const active = status?.slug === filter.slug;
+              return (
+                <li key={filter.slug}>
+                  <Link
+                    href={dashboardHref(filter.slug, q)}
+                    className={tab(active)}
+                    aria-current={active ? "page" : undefined}
+                  >
+                    {filter.label}
+                    <span
+                      className={active ? "text-surface/70" : "text-muted"}
+                      data-testid={`count-${filter.count}`}
+                    >
+                      {counts[filter.count]}
+                    </span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
       )}
 
-      <form action="/admin" method="get" className="relative mt-8 max-w-md">
+      <form action="/admin" method="get" className="relative mt-6 max-w-md">
+        {status && <input type="hidden" name="status" value={status.slug} />}
         <label htmlFor="admin-search" className="sr-only">
           Buscar anúncios pelo título
         </label>
@@ -79,13 +125,19 @@ export default async function DashboardPage({
       </form>
 
       <div className="mt-4">
-        {listings && listings.items.length > 0 ? (
-          <ListingRows storeId={store.id} listings={listings.items} />
+        {shown.length > 0 ? (
+          <ListingRows
+            storeId={store.id}
+            listings={shown}
+            unreachableSellerIds={unreachableSellerIds}
+          />
         ) : (
           <p className="rounded-xl border border-dashed border-line bg-surface px-6 py-10 text-center text-ink-soft">
             {q
-              ? `Nenhum anúncio com "${q}" no título.`
-              : "Nenhum anúncio ainda. Comece pelo botão Novo anúncio."}
+              ? `Nenhum anúncio${status ? ` em ${status.label}` : ""} com "${q}" no título.`
+              : status
+                ? `Nenhum anúncio em ${status.label}.`
+                : "Nenhum anúncio ainda. Comece pelo botão Novo anúncio."}
           </p>
         )}
       </div>
