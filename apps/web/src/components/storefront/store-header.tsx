@@ -18,12 +18,11 @@ export function StoreHeader({
   if (compact) {
     return (
       <header className="mx-auto max-w-6xl px-4 pt-5 pb-1 sm:px-6 sm:pt-8 lg:px-8">
-        <Link
-          href="/"
-          className="text-lg font-extrabold tracking-[-0.01em] hover:underline"
-        >
-          {store.name}
-        </Link>
+        <h1 className="text-lg font-extrabold tracking-[-0.01em]">
+          <Link href="/" className="hover:underline">
+            {store.name}
+          </Link>
+        </h1>
       </header>
     );
   }

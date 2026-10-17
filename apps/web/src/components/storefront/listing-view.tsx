@@ -31,7 +31,7 @@ export function ListingView({ listing }: { listing: ListingDetail }) {
     <>
       <StatusStamp
         availability={listing.availability}
-        className="absolute top-4 right-4 text-xl"
+        className="pointer-events-none absolute top-4 right-4 text-xl"
       />
       <PriceSticker
         priceCents={listing.priceCents}

@@ -11,7 +11,7 @@ export function ActiveFilters({ chips }: { chips: FilterChip[] }) {
       aria-label="Filtros ativos"
     >
       {chips.map((chip) => (
-        <li key={chip.label}>
+        <li key={chip.href}>
           <Link
             href={chip.href}
             className="inline-flex h-9 items-center gap-1.5 rounded-full bg-ink/5 pr-2.5 pl-3.5 text-sm font-medium hover:bg-ink/10"

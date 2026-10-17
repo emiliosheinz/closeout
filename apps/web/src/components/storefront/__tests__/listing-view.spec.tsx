@@ -88,6 +88,7 @@ describe("ListingView", () => {
 
   it("tells which photo is showing out of how many", () => {
     // jsdom has no layout engine, so it ships no ResizeObserver.
+    const original = globalThis.ResizeObserver;
     globalThis.ResizeObserver = class {
       observe() {}
       disconnect() {}
@@ -100,11 +101,15 @@ describe("ListingView", () => {
       width: 1600,
       height: 1200,
     });
-    render(
-      <ListingView
-        listing={{ ...base, images: [image(1), image(2), image(3)] }}
-      />,
-    );
-    expect(screen.getByText("1 / 3")).toBeInTheDocument();
+    try {
+      render(
+        <ListingView
+          listing={{ ...base, images: [image(1), image(2), image(3)] }}
+        />,
+      );
+      expect(screen.getByText("1 / 3")).toBeInTheDocument();
+    } finally {
+      globalThis.ResizeObserver = original;
+    }
   });
 });

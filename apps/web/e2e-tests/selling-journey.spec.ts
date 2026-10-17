@@ -50,7 +50,7 @@ test.describe
       await expect(page).toHaveURL(/q=luminaria\+de\+teste/);
       await expect(page.getByTestId("results-count")).toHaveText("1 item");
 
-      await page.getByRole("link", { name: TITLE }).click();
+      await page.getByRole("link", { name: TITLE, exact: true }).click();
       await expect(
         page.getByRole("heading", { name: TITLE, level: 1 }),
       ).toBeVisible();
@@ -68,7 +68,7 @@ test.describe
 
     test("the item page carries link-preview metadata", async ({ page }) => {
       await page.goto(`/?q=${encodeURIComponent(TITLE)}`);
-      await page.getByRole("link", { name: TITLE }).click();
+      await page.getByRole("link", { name: TITLE, exact: true }).click();
       await expect(page.locator('meta[property="og:title"]')).toHaveAttribute(
         "content",
         TITLE,
@@ -114,9 +114,11 @@ test.describe
       ).toBeVisible();
 
       await visitor.goto("/");
-      await expect(visitor.getByRole("link", { name: TITLE })).toHaveCount(0);
+      await expect(
+        visitor.getByRole("link", { name: TITLE, exact: true }),
+      ).toHaveCount(0);
       await visitor.goto("/?disponibilidade=vendido");
-      await visitor.getByRole("link", { name: TITLE }).click();
+      await visitor.getByRole("link", { name: TITLE, exact: true }).click();
       await expect(
         visitor.getByText("Este item já foi vendido.").first(),
       ).toBeVisible();

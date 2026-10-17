@@ -33,7 +33,10 @@ export function BackToCatalog() {
   const [href, setHref] = useState("/");
   useEffect(() => {
     const remembered = read();
-    if (remembered?.startsWith("/")) setHref(remembered);
+    // Only same-site paths; "//host" would leave the site.
+    if (remembered?.startsWith("/") && !remembered.startsWith("//")) {
+      setHref(remembered);
+    }
   }, []);
   return (
     <Link
