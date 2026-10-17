@@ -117,3 +117,10 @@ test("pages carry the security headers", async ({ page }) => {
   expect(headers["referrer-policy"]).toBe("strict-origin-when-cross-origin");
   expect(headers["permissions-policy"]).toContain("camera=()");
 });
+
+test("the image optimizer endpoint is disabled", async ({ page }) => {
+  const response = await page.request.get(
+    "/_next/image?url=%2Fmedia%2Fx.webp&w=64&q=75",
+  );
+  expect(response.status()).toBe(404);
+});

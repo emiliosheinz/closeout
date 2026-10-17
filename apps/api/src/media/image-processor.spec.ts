@@ -47,4 +47,33 @@ describe("processImage", () => {
       "og.jpg",
     ]);
   });
+
+  it.each([
+    [2000, 1000, 640, 320],
+    [400, 300, 400, 300],
+  ])("builds a %ix%i source's sm variant as webp, %i wide, never enlarged", async (width, height, smWidth, smHeight) => {
+    const result = await processImage(await encoded("jpeg", width, height));
+    const sm = result.variants.find((v) => v.suffix === "sm");
+    const meta = await sharp(sm?.data).metadata();
+    expect([meta.format, meta.width, meta.height]).toEqual([
+      "webp",
+      smWidth,
+      smHeight,
+    ]);
+  });
+
+  it("applies camera orientation once and strips it from the sm variant", async () => {
+    const rotated = await sharp({
+      create: { width: 2000, height: 1000, channels: 3, background: "#456" },
+    })
+      .jpeg()
+      .withMetadata({ orientation: 6 })
+      .toBuffer();
+    const result = await processImage(rotated);
+    const sm = result.variants.find((v) => v.suffix === "sm");
+    const meta = await sharp(sm?.data).metadata();
+    expect([meta.width, meta.height]).toEqual([640, 1280]);
+    expect(meta.orientation).toBeUndefined();
+    expect(meta.exif).toBeUndefined();
+  });
 });

@@ -9,7 +9,12 @@ import { InjectRepository } from "@nestjs/typeorm";
 import type { Repository } from "typeorm";
 import { User } from "../entities/user.entity";
 import { LoginRateLimiter } from "./login-rate-limiter";
-import { getDummyHash, verifyPassword } from "./passwords";
+import {
+  getDummyHash,
+  hashPassword,
+  needsRehash,
+  verifyPassword,
+} from "./passwords";
 import { SessionsService } from "./sessions.service";
 
 const INVALID_CREDENTIALS = "E-mail ou senha inválidos.";
@@ -54,6 +59,14 @@ export class AuthService {
     }
 
     this.limiter.forgiveSuccess(email, clientIp);
+    if (needsRehash(user.passwordHash)) {
+      // Matching on the old hash keeps a concurrent password reset from being
+      // overwritten with the password it just replaced.
+      await this.users.update(
+        { id: user.id, passwordHash: user.passwordHash },
+        { passwordHash: await hashPassword(password) },
+      );
+    }
     const { rawToken, expiresAt } = await this.sessions.mint(user.id);
     return { sessionToken: rawToken, expiresAt };
   }

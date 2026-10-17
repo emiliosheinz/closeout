@@ -4,8 +4,13 @@ import { requireEnv } from "../env";
 import { SESSION_COOKIE_NAME } from "./session-cookie";
 import type { Me } from "./types";
 
-/** Header carrying the shared secret on server-to-server calls. */
-export const INTERNAL_SECRET_HEADER = "x-internal-secret";
+export { INTERNAL_SECRET_HEADER } from "../internal-headers";
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export function isUuid(value: string): boolean {
+  return UUID.test(value);
+}
 
 export function apiUrl(path: string): string {
   return `${requireEnv("API_BASE_URL").replace(/\/$/, "")}${path}`;

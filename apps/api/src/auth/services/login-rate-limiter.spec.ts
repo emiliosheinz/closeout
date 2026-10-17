@@ -43,4 +43,33 @@ describe("LoginRateLimiter", () => {
     }
     expect(limiter.isBlocked("a@x.com", "10.9.9.9", 0)).toBe(false);
   });
+
+  it("blocks one IP after thirty failures across rotating emails", () => {
+    const limiter = new LoginRateLimiter();
+    for (let i = 0; i < 29; i++) {
+      limiter.recordFailure(`u${i}@x.com`, "9.9.9.9", 0);
+    }
+    expect(limiter.isBlocked("new@x.com", "9.9.9.9", 0)).toBe(false);
+    limiter.recordFailure("u30@x.com", "9.9.9.9", 0);
+    expect(limiter.isBlocked("fresh@x.com", "9.9.9.9", 0)).toBe(true);
+    expect(limiter.isBlocked("fresh@x.com", "8.8.8.8", 0)).toBe(false);
+  });
+
+  it("unblocks an IP once the window has passed", () => {
+    const limiter = new LoginRateLimiter();
+    for (let i = 0; i < 30; i++) {
+      limiter.recordFailure(`u${i}@x.com`, "9.9.9.9", 0);
+    }
+    expect(limiter.isBlocked("x@x.com", "9.9.9.9", 15 * MINUTE - 1)).toBe(true);
+    expect(limiter.isBlocked("x@x.com", "9.9.9.9", 15 * MINUTE)).toBe(false);
+  });
+
+  it("does not count successful logins against the IP budget", () => {
+    const limiter = new LoginRateLimiter();
+    for (let i = 0; i < 30; i++) {
+      limiter.recordFailure(`u${i}@x.com`, "9.9.9.9", 0);
+      limiter.forgiveSuccess(`u${i}@x.com`, "9.9.9.9", 0);
+    }
+    expect(limiter.isBlocked("x@x.com", "9.9.9.9", 0)).toBe(false);
+  });
 });

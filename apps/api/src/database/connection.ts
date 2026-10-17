@@ -2,8 +2,22 @@ import path from "node:path";
 import { DataSource, type DataSourceOptions } from "typeorm";
 import { ENTITIES } from "./entities";
 
-/** Connection options shared by the Nest app, the CLI and migrations. */
+/**
+ * Connection options for the Nest app and the operator CLI, with pool guards
+ * against runaway queries and abandoned transactions.
+ */
 export function dataSourceOptions(): DataSourceOptions {
+  return {
+    ...baseOptions(),
+    extra: {
+      statement_timeout: 10_000,
+      idle_in_transaction_session_timeout: 30_000,
+      connectionTimeoutMillis: 5_000,
+    },
+  };
+}
+
+function baseOptions(): DataSourceOptions {
   return {
     type: "postgres",
     host: process.env.POSTGRES_HOST,
@@ -19,4 +33,5 @@ export function dataSourceOptions(): DataSourceOptions {
   };
 }
 
-export const AppDataSource = new DataSource(dataSourceOptions());
+// Used by the migration CLI: no statement_timeout, migrations can run long.
+export const AppDataSource = new DataSource(baseOptions());
