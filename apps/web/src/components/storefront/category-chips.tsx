@@ -28,9 +28,9 @@ export function CategoryChips({
   return (
     <nav
       aria-label="Categorias"
-      className="-mx-4 overflow-x-auto px-4 scrollbar-none sm:mx-0 sm:px-0"
+      className="-mx-4 -my-1.5 overflow-x-auto px-4 py-1.5 scrollbar-none sm:-mx-1.5 sm:px-1.5"
     >
-      <ul className="flex gap-2 py-1">
+      <ul className="flex gap-2">
         <li>
           <Link
             href={catalogHref(withFilters(filters, { category: null }))}

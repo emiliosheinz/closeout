@@ -50,7 +50,7 @@ test.describe
       await expect(page).toHaveURL(/q=luminaria\+de\+teste/);
       await expect(page.getByTestId("results-count")).toHaveText("1 item");
 
-      await page.getByRole("link", { name: TITLE }).click();
+      await page.getByRole("link", { name: TITLE, exact: true }).click();
       await expect(
         page.getByRole("heading", { name: TITLE, level: 1 }),
       ).toBeVisible();
@@ -68,7 +68,7 @@ test.describe
 
     test("the item page carries link-preview metadata", async ({ page }) => {
       await page.goto(`/?q=${encodeURIComponent(TITLE)}`);
-      await page.getByRole("link", { name: TITLE }).click();
+      await page.getByRole("link", { name: TITLE, exact: true }).click();
       await expect(page.locator('meta[property="og:title"]')).toHaveAttribute(
         "content",
         TITLE,
@@ -86,6 +86,59 @@ test.describe
         "href",
         page.url(),
       );
+    });
+
+    test("an item sold by two people asks the buyer whom to message", async ({
+      page,
+      browser,
+    }) => {
+      const partner = `Parceira ${Date.now()}`;
+      await signIn(page);
+      await page.goto("/admin/vendedores");
+      await hydrated(page);
+      await page.getByRole("button", { name: "Adicionar vendedor" }).click();
+      const card = page.getByRole("listitem").filter({
+        has: page.getByRole("textbox", { name: "Nome que aparece na loja" }),
+        hasText: "0 anúncios",
+      });
+      await expect(card.last()).toBeVisible();
+      await card.last().getByLabel("Nome que aparece na loja").fill(partner);
+      await card.last().getByLabel("WhatsApp").fill("+55 21 97777-0000");
+      await card.last().getByRole("button", { name: "Salvar contato" }).click();
+      await expect(card.last().getByText("Contato salvo.")).toBeVisible();
+
+      await page.goto("/admin");
+      await findInAdmin(page, TITLE);
+      await page
+        .getByTestId("admin-listing-row")
+        .filter({ hasText: TITLE })
+        .getByRole("link", { name: `Editar ${TITLE}` })
+        .click();
+      await hydrated(page);
+      await page.getByRole("checkbox", { name: partner }).check();
+      await page.getByRole("button", { name: "Salvar alterações" }).click();
+      await expect(page.getByText("Alterações salvas.")).toBeVisible();
+
+      const visitor = await browser.newPage();
+      await visitor.goto(`/?q=${encodeURIComponent(TITLE)}`);
+      await visitor.getByRole("link", { name: TITLE, exact: true }).click();
+      await hydrated(visitor);
+      await visitor
+        .getByRole("button", { name: "Chamar no WhatsApp" })
+        .last()
+        .click();
+      const dialog = visitor.getByRole("dialog", {
+        name: "Com quem você quer falar?",
+      });
+      const numbers = await dialog
+        .getByRole("link")
+        .evaluateAll((links) =>
+          links.map(
+            (link) => new URL(link.getAttribute("href") ?? "").pathname,
+          ),
+        );
+      expect(numbers.sort()).toEqual([`/${ADMIN_WHATSAPP}`, "/5521977770000"]);
+      await visitor.close();
     });
 
     test("marking it reserved and then sold shows on the storefront", async ({
@@ -114,9 +167,11 @@ test.describe
       ).toBeVisible();
 
       await visitor.goto("/");
-      await expect(visitor.getByRole("link", { name: TITLE })).toHaveCount(0);
+      await expect(
+        visitor.getByRole("link", { name: TITLE, exact: true }),
+      ).toHaveCount(0);
       await visitor.goto("/?disponibilidade=vendido");
-      await visitor.getByRole("link", { name: TITLE }).click();
+      await visitor.getByRole("link", { name: TITLE, exact: true }).click();
       await expect(
         visitor.getByText("Este item já foi vendido.").first(),
       ).toBeVisible();

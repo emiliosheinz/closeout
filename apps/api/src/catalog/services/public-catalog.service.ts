@@ -161,7 +161,7 @@ export class PublicCatalogService {
     const store = await this.findStore(storeSlug);
     const listing = await this.listings.findOne({
       where: { storeId: store.id, slug: listingSlug, publication: "published" },
-      relations: { category: true, seller: true, images: true },
+      relations: { category: true, sellers: { seller: true }, images: true },
       order: { images: { position: "ASC" } },
     });
     if (!listing) throw new NotFoundException();

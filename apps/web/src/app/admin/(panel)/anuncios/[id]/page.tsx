@@ -1,3 +1,4 @@
+import { ArrowLeft } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -42,11 +43,12 @@ export default async function EditListingPage({
     <div className="max-w-3xl">
       <Link
         href="/admin"
-        className="text-sm font-semibold text-ink-soft hover:text-ink"
+        className="inline-flex h-11 items-center gap-2 text-sm font-semibold text-ink-soft hover:text-ink"
       >
+        <ArrowLeft className="size-4" aria-hidden="true" />
         Voltar aos anúncios
       </Link>
-      <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
+      <div className="mt-1 flex flex-wrap items-end justify-between gap-3">
         <h1 className="text-3xl font-extrabold">{listing.title}</h1>
         <a
           href={
@@ -93,7 +95,7 @@ export default async function EditListingPage({
           storeId={store.id}
           categories={options.categories}
           sellers={options.sellers}
-          defaultSellerId={listing.seller.id}
+          defaultSellerId={null}
           listing={listing}
         />
       </div>
