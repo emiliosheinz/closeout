@@ -1,3 +1,9 @@
+import Link from "next/link";
+import {
+  catalogHref,
+  DEFAULT_FILTERS,
+  withFilters,
+} from "@/lib/catalog/params";
 import type { ListingDetail } from "@/lib/catalog/types";
 import {
   AVAILABILITY_LABELS,
@@ -21,48 +27,52 @@ export function ListingView({ listing }: { listing: ListingDetail }) {
     ? listingContactUrl(listing.seller.whatsappNumber, listing.title, url)
     : null;
   const sold = listing.availability === "sold";
+  const badges = (
+    <>
+      <StatusStamp
+        availability={listing.availability}
+        className="absolute top-4 right-4 text-xl"
+      />
+      <PriceSticker
+        priceCents={listing.priceCents}
+        size="lg"
+        className="pointer-events-none absolute bottom-3 left-3 sm:bottom-4 sm:left-4"
+        decorative
+      />
+    </>
+  );
 
   return (
     <>
       <article className="mt-2 lg:grid lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:gap-12">
-        <div className="relative">
-          {listing.images.length > 0 ? (
-            <Gallery
-              images={listing.images}
-              title={listing.title}
-              sold={sold}
-            />
-          ) : (
-            <div className="aspect-[4/5] overflow-hidden rounded-xl ring-1 ring-line sm:aspect-[5/4] lg:aspect-[4/5]">
+        {listing.images.length > 0 ? (
+          <Gallery images={listing.images} title={listing.title} sold={sold}>
+            {badges}
+          </Gallery>
+        ) : (
+          <div className="relative aspect-[4/5] rounded-xl ring-1 ring-line sm:aspect-[5/4] lg:aspect-[4/5]">
+            <div className="size-full overflow-hidden rounded-xl">
               <PhotoPlaceholder />
             </div>
-          )}
-          <StatusStamp
-            availability={listing.availability}
-            className="absolute top-4 right-4 text-xl"
-          />
-        </div>
-
-        <div className="mt-8 lg:sticky lg:top-8 lg:mt-0 lg:self-start">
-          <div className="flex items-start gap-5">
-            <PriceSticker
-              priceCents={listing.priceCents}
-              size="lg"
-              className="mt-1"
-              decorative
-            />
-            <div className="min-w-0">
-              <p className="text-sm font-medium text-muted">
-                {listing.category.name}
-              </p>
-              <h1 className="mt-1 text-3xl leading-tight font-extrabold tracking-[-0.015em] text-balance break-words sm:text-4xl">
-                {listing.title}
-              </h1>
-              <p className="mt-2 text-lg font-semibold">
-                {formatPrice(listing.priceCents)}
-              </p>
-            </div>
+            {badges}
           </div>
+        )}
+
+        <div className="mt-6 lg:sticky lg:top-8 lg:mt-0 lg:self-start">
+          <Link
+            href={catalogHref(
+              withFilters(DEFAULT_FILTERS, { category: listing.category.slug }),
+            )}
+            className="text-sm font-medium text-muted underline decoration-ink/20 underline-offset-4 hover:text-ink"
+          >
+            {listing.category.name}
+          </Link>
+          <h1 className="mt-1 text-3xl leading-tight font-extrabold tracking-[-0.015em] text-balance break-words sm:text-4xl">
+            {listing.title}
+          </h1>
+          <p className="mt-2 text-xl font-bold">
+            {formatPrice(listing.priceCents)}
+          </p>
 
           <dl className="mt-6 grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-line bg-line text-sm">
             <div className="bg-surface px-4 py-3">

@@ -76,4 +76,35 @@ describe("ListingView", () => {
     ).toBeGreaterThan(0);
     expect(screen.queryByTestId("whatsapp-contact")).toBeNull();
   });
+
+  it("shows the price once and links the category to its catalog view", () => {
+    render(<ListingView listing={{ ...base, priceCents: 45000 }} />);
+    expect(screen.getAllByText("R$ 450,00")).toHaveLength(1);
+    expect(screen.getByRole("link", { name: "Móveis" })).toHaveAttribute(
+      "href",
+      "/?categoria=moveis",
+    );
+  });
+
+  it("tells which photo is showing out of how many", () => {
+    // jsdom has no layout engine, so it ships no ResizeObserver.
+    globalThis.ResizeObserver = class {
+      observe() {}
+      disconnect() {}
+      unobserve() {}
+    };
+    const image = (n: number) => ({
+      sm: `/media/${n}-sm.webp`,
+      lg: `/media/${n}-lg.webp`,
+      og: `/media/${n}-og.jpg`,
+      width: 1600,
+      height: 1200,
+    });
+    render(
+      <ListingView
+        listing={{ ...base, images: [image(1), image(2), image(3)] }}
+      />,
+    );
+    expect(screen.getByText("1 / 3")).toBeInTheDocument();
+  });
 });

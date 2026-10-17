@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { ActiveFilters } from "@/components/storefront/active-filters";
+import { RememberCatalogView } from "@/components/storefront/catalog-return";
 import { CategoryChips } from "@/components/storefront/category-chips";
 import { EmptyState } from "@/components/storefront/empty-state";
 import { FilterForm } from "@/components/storefront/filter-form";
@@ -81,6 +82,7 @@ export default async function CatalogPage({ searchParams }: PageProps) {
       .find((href) => href !== null) ?? null;
   return (
     <>
+      <RememberCatalogView href={catalogHref(filters)} />
       <StoreHeader store={store} compact={filtered || filters.page > 1} />
       <main
         id="catalogo"
