@@ -45,7 +45,8 @@ export class UploadErrorsFilter implements ExceptionFilter {
         statusCode: status,
         message:
           typeof message === "string"
-            ? (translated[message] ?? message)
+            ? // Nest appends " - <field>" to some Multer messages.
+              (translated[message.split(" - ")[0] ?? message] ?? message)
             : message,
         error: body.error,
       });

@@ -109,6 +109,15 @@ describe("seller profiles", () => {
     await request(server).get(first.body.avatarUrl).expect(404);
   });
 
+  it("answers an avatar upload with more than one file in Portuguese", async () => {
+    const res = await client()
+      .post(`${base()}/${admin.sellerId}/avatar`)
+      .attach("file", await photo("#111"), "a.jpg")
+      .attach("file", await photo("#222"), "b.jpg")
+      .expect(400);
+    expect(res.body.message).toBe("Envie uma foto por vez.");
+  });
+
   it("refuses avatar uploads for another store's seller", async () => {
     const other = await createStoreWithAdmin(ctx, "loja-b");
     await as(ctx.app, other.cookie)

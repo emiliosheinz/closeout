@@ -259,6 +259,14 @@ describe("listing administration", () => {
       ]);
     });
 
+    it("refuses previews without a session", async () => {
+      const listing = await createListing({ description: "Segredo" });
+      const res = await request(ctx.app.getHttpServer())
+        .get(`${base()}/${listing.id}/preview`)
+        .expect(401);
+      expect(JSON.stringify(res.body)).not.toContain("Segredo");
+    });
+
     it("renders a preview of a draft", async () => {
       const listing = await createListing({ description: "Seis lugares" });
       const res = await client()

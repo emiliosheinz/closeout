@@ -164,11 +164,17 @@ describe("admin authentication", () => {
       .expect(201);
   });
 
-  it("exposes no unauthenticated write route other than login", () => {
-    const writes = registeredRoutes(ctx.app).filter(
-      (route) => route.method !== "GET" && !route.guarded,
-    );
-    expect(writes.map((route) => `${route.method} ${route.path}`)).toEqual([
+  it("guards every route except the public catalog, media, health and login", () => {
+    const open = registeredRoutes(ctx.app)
+      .filter((route) => !route.guarded)
+      .map((route) => `${route.method} ${route.path}`)
+      .sort();
+    expect(open).toEqual([
+      "GET /health",
+      "GET /media/:file",
+      "GET /public/stores/:storeSlug",
+      "GET /public/stores/:storeSlug/listings",
+      "GET /public/stores/:storeSlug/listings/:listingSlug",
       "POST /auth/login",
     ]);
   });

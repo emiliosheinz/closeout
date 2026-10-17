@@ -107,6 +107,44 @@ describe("public catalog", () => {
     ).toEqual(["Caro"]);
   });
 
+  it("combines search, filters and sorting in one query", async () => {
+    await publish({
+      title: "Mesa de jantar",
+      category: "moveis",
+      condition: "good",
+      priceCents: 30000,
+    });
+    await publish({
+      title: "Mesa de centro",
+      category: "moveis",
+      condition: "good",
+      priceCents: 10000,
+    });
+    await publish({
+      title: "Mesa dobrável",
+      category: "moveis",
+      condition: "fair",
+      priceCents: 5000,
+    });
+    await publish({
+      title: "Mesa de som",
+      category: "eletronicos",
+      condition: "good",
+      priceCents: 1000,
+    });
+    await publish({
+      title: "Cadeira",
+      category: "moveis",
+      condition: "good",
+      priceCents: 2000,
+    });
+    expect(
+      await titles(
+        "?q=mesa&category=moveis&condition=good&maxPrice=40000&sort=price_asc",
+      ),
+    ).toEqual(["Mesa de centro", "Mesa de jantar"]);
+  });
+
   it("sorts by price with unpriced listings last, and by recency", async () => {
     const day = (n: number) => new Date(Date.UTC(2026, 0, n));
     await publish({ title: "Médio", priceCents: 5000, publishedAt: day(1) });
