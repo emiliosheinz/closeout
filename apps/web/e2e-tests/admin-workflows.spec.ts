@@ -44,8 +44,8 @@ test.describe
       await page.getByLabel("Nome do item").fill(`${TITLE} revisada`);
       await page.getByRole("button", { name: "Salvar e publicar" }).click();
       await expect(
-      page.getByText("Adicione ao menos uma foto antes de publicar."),
-    ).toBeVisible();
+        page.getByText("Adicione ao menos uma foto antes de publicar."),
+      ).toBeVisible();
       await expect(page.getByLabel("Nome do item")).toHaveValue(
         `${TITLE} revisada`,
       );

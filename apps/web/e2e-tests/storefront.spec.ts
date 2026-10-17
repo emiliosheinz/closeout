@@ -28,6 +28,41 @@ test("an unmatched search offers a way back to every item", async ({
   await expect(page).toHaveURL(/\/$/);
 });
 
+test("a page number past the end returns to the first page", async ({
+  page,
+}) => {
+  await page.goto("/?categoria=moveis&pagina=999");
+  await expect(page).toHaveURL(/\/\?categoria=moveis$/);
+  await expect(page.getByTestId("results-count")).toBeVisible();
+});
+
+test("search, category and sort combine and show in the controls", async ({
+  page,
+}) => {
+  await page.goto("/?q=mesa&categoria=moveis&ordem=menor-preco");
+  await expect(
+    page.getByRole("searchbox", { name: "Buscar itens" }),
+  ).toHaveValue("mesa");
+  await expect(page.getByRole("link", { name: /^Móveis/ })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
+  await expect(
+    page
+      .getByRole("complementary", { name: "Filtros" })
+      .getByRole("radio", { name: "Menor preço" }),
+  ).toBeChecked();
+});
+
+test("an unauthenticated preview link sends the visitor to sign in", async ({
+  page,
+}) => {
+  await page.goto(
+    "/admin/anuncios/00000000-0000-0000-0000-000000000000/previa",
+  );
+  await expect(page).toHaveURL(/\/admin\/entrar$/);
+});
+
 test("broken catalog URLs fall back to defaults instead of failing", async ({
   page,
 }) => {
