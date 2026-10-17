@@ -1,9 +1,32 @@
 import { MessageCircle } from "lucide-react";
+import Link from "next/link";
 import type { StoreInfo } from "@/lib/catalog/types";
 import { pluralize } from "@/lib/format";
 import { sellerContactUrl } from "@/lib/whatsapp";
 
-export function StoreHeader({ store }: { store: StoreInfo }) {
+/**
+ * Full introduction on the plain catalog; a one-line header once the visitor
+ * is searching, filtering or paging, so results start near the top.
+ */
+export function StoreHeader({
+  store,
+  compact = false,
+}: {
+  store: StoreInfo;
+  compact?: boolean;
+}) {
+  if (compact) {
+    return (
+      <header className="mx-auto max-w-6xl px-4 pt-5 pb-1 sm:px-6 sm:pt-8 lg:px-8">
+        <Link
+          href="/"
+          className="text-lg font-extrabold tracking-[-0.01em] hover:underline"
+        >
+          {store.name}
+        </Link>
+      </header>
+    );
+  }
   const { available, reserved } = store.counts;
   const sellers = store.sellers.flatMap((seller) => {
     const href = sellerContactUrl(seller.whatsappNumber, store.name);

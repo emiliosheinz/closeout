@@ -1,3 +1,8 @@
+import {
+  AVAILABILITY_FILTER_LABELS,
+  CONDITION_LABELS,
+  formatStickerPrice,
+} from "../format";
 import type { Condition } from "./types";
 
 /*
@@ -180,6 +185,52 @@ export function activeFilterCount(filters: CatalogFilters): number {
 
 export function hasActiveFilters(filters: CatalogFilters): boolean {
   return activeFilterCount(filters) > 0 || filters.q !== "";
+}
+
+export interface FilterChip {
+  label: string;
+  /** The current view without this filter. */
+  href: string;
+}
+
+/** One removable chip per active filter, in the order the controls show them. */
+export function activeFilterChips(
+  filters: CatalogFilters,
+  categoryName: (slug: string) => string | undefined,
+): FilterChip[] {
+  // The sticker format would print a zero bound as "Grátis".
+  const reais = (value: number) =>
+    value === 0 ? "R$ 0" : formatStickerPrice(value * 100);
+  const { minPrice, maxPrice } = filters;
+  const price =
+    minPrice !== null && maxPrice !== null
+      ? `${reais(minPrice)} a ${reais(maxPrice)}`
+      : maxPrice !== null
+        ? `Até ${reais(maxPrice)}`
+        : minPrice !== null
+          ? `A partir de ${reais(minPrice)}`
+          : null;
+  const chips: [string | null, Partial<CatalogFilters>][] = [
+    [filters.q ? `“${filters.q}”` : null, { q: "" }],
+    [
+      filters.category && (categoryName(filters.category) ?? filters.category),
+      { category: null },
+    ],
+    [
+      filters.condition && CONDITION_LABELS[filters.condition],
+      { condition: null },
+    ],
+    [
+      filters.availability === "listed"
+        ? null
+        : AVAILABILITY_FILTER_LABELS[filters.availability],
+      { availability: "listed" },
+    ],
+    [price, { minPrice: null, maxPrice: null }],
+  ];
+  return chips.flatMap(([label, patch]) =>
+    label ? [{ label, href: catalogHref(withFilters(filters, patch)) }] : [],
+  );
 }
 
 /** URL value for each option, used by plain GET forms. */
