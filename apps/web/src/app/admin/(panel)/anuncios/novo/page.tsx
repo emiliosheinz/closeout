@@ -1,3 +1,4 @@
+import { ArrowLeft } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ListingForm } from "@/components/admin/listing-form";
@@ -15,11 +16,12 @@ export default async function NewListingPage() {
     <div className="max-w-2xl">
       <Link
         href="/admin"
-        className="text-sm font-semibold text-ink-soft hover:text-ink"
+        className="inline-flex h-11 items-center gap-2 text-sm font-semibold text-ink-soft hover:text-ink"
       >
+        <ArrowLeft className="size-4" aria-hidden="true" />
         Voltar aos anúncios
       </Link>
-      <h1 className="mt-2 text-3xl font-extrabold">Novo anúncio</h1>
+      <h1 className="mt-1 text-3xl font-extrabold">Novo anúncio</h1>
       <p className="mt-1 text-ink-soft">
         Só o nome é obrigatório. Ele fica como rascunho até você publicar.
       </p>

@@ -169,6 +169,73 @@ export function ListingForm({
       className="flex flex-col gap-6"
       noValidate
     >
+      {!editing && (
+        <Field
+          label="Fotos"
+          htmlFor="photos"
+          hint="Comece pelas fotos: são elas que vendem. Escolha várias de uma vez; a primeira vira a capa."
+        >
+          <div className="flex items-center gap-3">
+            <span className="relative inline-flex h-11 items-center gap-2 rounded-full bg-ink px-5 text-sm font-semibold text-surface has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-focus">
+              <ImagePlus className="size-4" aria-hidden="true" />
+              Escolher fotos
+              <input
+                id="photos"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                multiple
+                onChange={(e) => {
+                  setFiles(
+                    [...files, ...Array.from(e.target.files ?? [])].slice(
+                      0,
+                      20,
+                    ),
+                  );
+                  e.target.value = "";
+                }}
+                className="absolute inset-0 cursor-pointer opacity-0"
+              />
+            </span>
+            <span className="text-sm text-muted">
+              {files.length === 0
+                ? "Nenhuma foto escolhida"
+                : files.length === 1
+                  ? "1 foto"
+                  : `${files.length} fotos`}
+            </span>
+          </div>
+          {previews.length > 0 && (
+            <ul className="mt-3 grid grid-cols-4 gap-2 sm:grid-cols-6">
+              {previews.map((preview, index) => (
+                <li key={preview.url} className="relative">
+                  {/* biome-ignore lint/performance/noImgElement: local object URL preview. */}
+                  <img
+                    src={preview.url}
+                    alt={`Foto ${index + 1} selecionada`}
+                    className="aspect-square w-full rounded-md object-cover"
+                  />
+                  {index === 0 && (
+                    <span className="absolute bottom-1 left-1 rounded bg-ink/80 px-1.5 text-xs font-semibold text-surface">
+                      Capa
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setFiles(files.filter((_, i) => i !== index))
+                    }
+                    aria-label={`Remover foto ${index + 1}`}
+                    className="absolute top-1 right-1 inline-flex size-11 items-center justify-center rounded-full bg-surface/90 shadow"
+                  >
+                    <X className="size-4" aria-hidden="true" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Field>
+      )}
+
       <Field label="Nome do item" htmlFor="title" error={errors.title}>
         <input
           id="title"
@@ -186,7 +253,7 @@ export function ListingForm({
           label="Preço (R$)"
           htmlFor="price"
           error={errors.price}
-          hint="Deixe vazio para receber propostas (preço a combinar)."
+          hint="Sem preço definido? Marque a opção e receba propostas."
         >
           <input
             id="price"
@@ -344,73 +411,6 @@ export function ListingForm({
           </button>
         )}
       </fieldset>
-
-      {!editing && (
-        <Field
-          label="Fotos"
-          htmlFor="photos"
-          hint="Escolha várias de uma vez. A primeira vira a capa; dá para reordenar depois."
-        >
-          <div className="flex items-center gap-3">
-            <span className="relative inline-flex h-11 items-center gap-2 rounded-full bg-ink px-5 text-sm font-semibold text-surface has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-focus">
-              <ImagePlus className="size-4" aria-hidden="true" />
-              Escolher fotos
-              <input
-                id="photos"
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                multiple
-                onChange={(e) => {
-                  setFiles(
-                    [...files, ...Array.from(e.target.files ?? [])].slice(
-                      0,
-                      20,
-                    ),
-                  );
-                  e.target.value = "";
-                }}
-                className="absolute inset-0 cursor-pointer opacity-0"
-              />
-            </span>
-            <span className="text-sm text-muted">
-              {files.length === 0
-                ? "Nenhuma foto escolhida"
-                : files.length === 1
-                  ? "1 foto"
-                  : `${files.length} fotos`}
-            </span>
-          </div>
-          {previews.length > 0 && (
-            <ul className="mt-3 grid grid-cols-4 gap-2 sm:grid-cols-6">
-              {previews.map((preview, index) => (
-                <li key={preview.url} className="relative">
-                  {/* biome-ignore lint/performance/noImgElement: local object URL preview. */}
-                  <img
-                    src={preview.url}
-                    alt={`Foto ${index + 1} selecionada`}
-                    className="aspect-square w-full rounded-md object-cover"
-                  />
-                  {index === 0 && (
-                    <span className="absolute bottom-1 left-1 rounded bg-ink/80 px-1.5 text-xs font-semibold text-surface">
-                      Capa
-                    </span>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setFiles(files.filter((_, i) => i !== index))
-                    }
-                    aria-label={`Remover foto ${index + 1}`}
-                    className="absolute top-1 right-1 inline-flex size-11 items-center justify-center rounded-full bg-surface/90 shadow"
-                  >
-                    <X className="size-4" aria-hidden="true" />
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Field>
-      )}
 
       {editing && (
         <div className="grid gap-6 sm:grid-cols-2">
