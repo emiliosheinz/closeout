@@ -116,3 +116,31 @@ export function photo(
     .jpeg()
     .toBuffer();
 }
+
+/** Insert a listing row directly, bypassing the API rules under test elsewhere. */
+export async function insertListing(
+  dataSource: DataSource,
+  admin: Admin,
+  state: {
+    title?: string;
+    publication?: "draft" | "published" | "archived";
+    availability?: "available" | "reserved" | "sold";
+  } = {},
+): Promise<string> {
+  const title = state.title ?? "Item";
+  const [row] = await dataSource.query(
+    `INSERT INTO listings (store_id, seller_id, category_id, slug, title, condition, availability, publication, published_at)
+     VALUES ($1, $2, $3, $4, $5, 'good', $6, $7, CASE WHEN $7 = 'published' THEN now() END)
+     RETURNING id`,
+    [
+      admin.storeId,
+      admin.sellerId,
+      admin.categoryId,
+      `${title.toLowerCase().replace(/\W+/g, "-")}-${Math.random().toString(36).slice(2, 8)}`,
+      title,
+      state.availability ?? "available",
+      state.publication ?? "draft",
+    ],
+  );
+  return row.id;
+}
