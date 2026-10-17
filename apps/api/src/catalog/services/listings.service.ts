@@ -11,6 +11,7 @@ import { Seller } from "@/sellers/entities/seller.entity";
 import { Category } from "@/stores/entities/category.entity";
 import { type AdminImage, toAdminImage } from "../admin-mappers";
 import { Listing } from "../entities/listing.entity";
+import { ListingImage } from "../entities/listing-image.entity";
 import { ListingSeller } from "../entities/listing-seller.entity";
 import { canPublish, PUBLISH_REQUIRES_PHOTO } from "../listing-rules";
 import type {
@@ -88,10 +89,8 @@ export class ListingsService {
       .innerJoinAndSelect("l.category", "category")
       .leftJoinAndSelect("l.sellers", "listingSeller")
       .leftJoinAndSelect("listingSeller.seller", "seller")
-      .leftJoinAndSelect("l.images", "image")
       .where("l.store_id = :storeId", { storeId })
-      .orderBy("l.updated_at", "DESC")
-      .addOrderBy("image.position", "ASC");
+      .orderBy("l.updated_at", "DESC");
     if (q) {
       query.andWhere(
         `unaccent(lower(l.title)) LIKE '%' || unaccent(lower(:q)) || '%' ESCAPE '\\'`,
@@ -99,7 +98,24 @@ export class ListingsService {
       );
     }
     const rows = await query.getMany();
-    return rows.map(toSummary);
+    if (rows.length === 0) return [];
+    const stats = await this.dataSource
+      .getRepository(ListingImage)
+      .createQueryBuilder("i")
+      .select("i.listing_id", "listingId")
+      .addSelect("COUNT(*)::int", "count")
+      .addSelect(
+        "(array_agg(i.storage_key ORDER BY i.position))[1]",
+        "coverKey",
+      )
+      .where("i.listing_id IN (:...ids)", { ids: rows.map((row) => row.id) })
+      .groupBy("i.listing_id")
+      .getRawMany<{ listingId: string; count: number; coverKey: string }>();
+    const byListing = new Map(stats.map((row) => [row.listingId, row]));
+    return rows.map((row) => {
+      const stat = byListing.get(row.id);
+      return toSummary(row, stat?.coverKey ?? null, stat?.count ?? 0);
+    });
   }
 
   /** Counts for the admin dashboard; availability covers published listings only. */
@@ -323,8 +339,11 @@ function definedOnly(patch: Omit<ListingInput, "sellerIds">): Partial<Listing> {
   ) as Partial<Listing>;
 }
 
-function toSummary(listing: Listing): AdminListingSummary {
-  const cover = listing.images[0];
+function toSummary(
+  listing: Listing,
+  coverKey: string | null,
+  imageCount: number,
+): AdminListingSummary {
   return {
     id: listing.id,
     slug: listing.slug,
@@ -338,15 +357,19 @@ function toSummary(listing: Listing): AdminListingSummary {
       id: seller.id,
       displayName: seller.displayName,
     })),
-    coverUrl: cover ? mediaUrls(cover.storageKey).sm : null,
-    imageCount: listing.images.length,
+    coverUrl: coverKey ? mediaUrls(coverKey).sm : null,
+    imageCount,
     updatedAt: listing.updatedAt.toISOString(),
   };
 }
 
 function toDetail(listing: Listing): AdminListingDetail {
   return {
-    ...toSummary(listing),
+    ...toSummary(
+      listing,
+      listing.images[0]?.storageKey ?? null,
+      listing.images.length,
+    ),
     description: listing.description,
     attributes: listing.attributes,
     images: listing.images.map(toAdminImage),

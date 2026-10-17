@@ -51,8 +51,9 @@ export async function processImage(input: Buffer): Promise<ProcessedImage> {
       .resize({ width: 1600, withoutEnlargement: true })
       .webp({ quality: 82 })
       .toBuffer({ resolveWithObject: true });
-    const small = await source()
-      .rotate()
+    // Derived from the already-oriented, EXIF-free lg buffer: cheaper than
+    // decoding the full-resolution source again.
+    const small = await sharp(large.data)
       .resize({ width: 640, withoutEnlargement: true })
       .webp({ quality: 78 })
       .toBuffer();

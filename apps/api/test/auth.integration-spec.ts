@@ -1,3 +1,4 @@
+import { randomBytes, scrypt } from "node:crypto";
 import request from "supertest";
 import {
   as,
@@ -14,7 +15,10 @@ import {
 describe("admin authentication", () => {
   let ctx: TestContext;
   const server = () => ctx.app.getHttpServer();
-  const attempt = (email: string, password: string, ip = "203.0.113.7") =>
+  // Fresh default IP per test: the limiter lives for the whole app instance.
+  let testIp = "";
+  let testCount = 0;
+  const attempt = (email: string, password: string, ip = testIp) =>
     request(server())
       .post("/auth/login")
       .set("x-internal-secret", INTERNAL_SECRET)
@@ -24,7 +28,10 @@ describe("admin authentication", () => {
   beforeAll(async () => {
     ctx = await createTestApp();
   });
-  beforeEach(() => resetDatabase(ctx.dataSource));
+  beforeEach(() => {
+    testIp = `203.0.113.${++testCount}`;
+    return resetDatabase(ctx.dataSource);
+  });
   afterAll(() => ctx.app.close());
 
   it("stores the password as a salted scrypt hash", async () => {
@@ -66,6 +73,15 @@ describe("admin authentication", () => {
     const blocked = await attempt("limite@example.com", PASSWORD).expect(429);
     expect(blocked.body.message).toMatch(/Muitas tentativas/);
     await attempt("limite@example.com", PASSWORD, "198.51.100.1").expect(200);
+  });
+
+  it("returns 429 to an IP after thirty failures across rotating emails, even with valid credentials", async () => {
+    await createStoreWithAdmin(ctx, "rotacao");
+    for (let i = 0; i < 30; i++) {
+      await attempt(`ninguem-${i}@example.com`, "wrong").expect(401);
+    }
+    await attempt("rotacao@example.com", PASSWORD).expect(429);
+    await attempt("rotacao@example.com", PASSWORD, "198.51.100.2").expect(200);
   });
 
   it("refuses a wrong internal secret on login and on origin-less writes", async () => {
@@ -177,5 +193,70 @@ describe("admin authentication", () => {
       "GET /public/stores/:storeSlug/listings/:listingSlug",
       "POST /auth/login",
     ]);
+  });
+
+  it("upgrades a stored hash with older parameters on successful login", async () => {
+    await createStoreWithAdmin(ctx, "antigo");
+    const salt = randomBytes(16);
+    const key = await new Promise<Buffer>((resolve, reject) =>
+      scrypt(
+        PASSWORD,
+        salt,
+        64,
+        { N: 2 ** 15, r: 8, p: 1, maxmem: 256 * 2 ** 15 * 8 },
+        (err, derived) => (err ? reject(err) : resolve(derived)),
+      ),
+    );
+    const legacy = `scrypt$32768$8$1$${salt.toString("base64")}$${key.toString("base64")}`;
+    await ctx.dataSource.query(
+      `UPDATE users SET password_hash = $1 WHERE email = 'antigo@example.com'`,
+      [legacy],
+    );
+
+    await attempt("antigo@example.com", PASSWORD, "198.51.100.20").expect(200);
+    const [row] = await ctx.dataSource.query(
+      `SELECT password_hash FROM users WHERE email = 'antigo@example.com'`,
+    );
+    expect(row.password_hash).not.toBe(legacy);
+    expect(row.password_hash).toMatch(/^scrypt\$32768\$8\$3\$/);
+    await attempt("antigo@example.com", PASSWORD, "198.51.100.20").expect(200);
+    await attempt("antigo@example.com", "wrong", "198.51.100.20").expect(401);
+  });
+
+  it("drops the user's expired and revoked sessions when a new one is minted", async () => {
+    const a = await createStoreWithAdmin(ctx, "sessoes-a");
+    await createStoreWithAdmin(ctx, "sessoes-b");
+    const insert = (
+      email: string,
+      hash: string,
+      expires: string,
+      revoked: string,
+    ) =>
+      ctx.dataSource.query(
+        `INSERT INTO sessions (user_id, token_hash, expires_at, revoked_at)
+         SELECT id, $2, ${expires}, ${revoked} FROM users WHERE email = $1`,
+        [email, hash],
+      );
+    const past = "now() - interval '1 day'";
+    const future = "now() + interval '1 day'";
+    await insert("sessoes-a@example.com", "a-expired", past, "NULL");
+    await insert("sessoes-a@example.com", "a-revoked", future, "now()");
+    await insert("sessoes-b@example.com", "b-expired", past, "NULL");
+    await insert("sessoes-b@example.com", "b-revoked", future, "now()");
+
+    await attempt(a.email, PASSWORD, "198.51.100.30").expect(200);
+
+    const rows = await ctx.dataSource.query(
+      `SELECT token_hash FROM sessions WHERE token_hash LIKE '%-expired' OR token_hash LIKE '%-revoked'`,
+    );
+    expect(
+      rows.map((row: { token_hash: string }) => row.token_hash).sort(),
+    ).toEqual(["b-expired", "b-revoked"]);
+    const [{ count }] = await ctx.dataSource.query(
+      `SELECT count(*)::int AS count FROM sessions s JOIN users u ON u.id = s.user_id
+       WHERE u.email = 'sessoes-a@example.com' AND s.revoked_at IS NULL AND s.expires_at > now()`,
+    );
+    expect(count).toBe(2);
+    await as(ctx.app, a.cookie).get("/me").expect(200);
   });
 });

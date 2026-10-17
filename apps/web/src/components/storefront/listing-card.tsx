@@ -10,9 +10,11 @@ import { StatusStamp } from "./status-stamp";
 export function ListingCard({
   listing,
   priority = false,
+  fetchPriority,
 }: {
   listing: ListingSummary;
   priority?: boolean;
+  fetchPriority?: "high";
 }) {
   const sold = listing.availability === "sold";
   return (
@@ -29,6 +31,7 @@ export function ListingCard({
               height={listing.cover.height}
               alt={`Foto de ${listing.title}`}
               loading={priority ? "eager" : "lazy"}
+              fetchPriority={fetchPriority}
               decoding="async"
               className={cn(
                 "size-full object-cover transition-transform duration-500 group-hover:scale-[1.03]",

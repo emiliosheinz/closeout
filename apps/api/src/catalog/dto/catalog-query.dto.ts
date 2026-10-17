@@ -9,6 +9,7 @@ import {
   ValidateIf,
 } from "class-validator";
 import { CONDITIONS, type Condition } from "../listing-types";
+import { MAX_PRICE_CENTS } from "./listing.dto";
 
 const isDefined = (_: unknown, value: unknown) => value !== undefined;
 
@@ -54,12 +55,14 @@ export class CatalogQueryDto {
   @Type(() => Number)
   @IsInt()
   @Min(0)
+  @Max(MAX_PRICE_CENTS)
   declare minPrice?: number;
 
   @ValidateIf(isDefined)
   @Type(() => Number)
   @IsInt()
   @Min(0)
+  @Max(MAX_PRICE_CENTS)
   declare maxPrice?: number;
 
   @ValidateIf(isDefined)

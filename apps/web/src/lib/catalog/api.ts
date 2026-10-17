@@ -1,16 +1,30 @@
 import { requireEnv } from "../env";
 import { storeSlug } from "../site";
-import { type CatalogFilters, toApiQuery } from "./params";
+import { type CatalogFilters, hasActiveFilters, toApiQuery } from "./params";
 import type { ListingDetail, ListingPage, StoreInfo } from "./types";
 
 export const PAGE_SIZE = 24;
 
-async function getPublic<T>(path: string): Promise<T | null> {
+/** Tag on every cached catalog response; admin writes expire it. */
+export const CATALOG_CACHE_TAG = "catalog";
+/** Backstop for changes made outside the admin, such as operator scripts. */
+const CATALOG_REVALIDATE_SECONDS = 300;
+
+const CACHED: RequestInit = {
+  next: { revalidate: CATALOG_REVALIDATE_SECONDS, tags: [CATALOG_CACHE_TAG] },
+};
+// Only the first page of the plain catalog is cached: searches, filters and
+// deep pages would let any visitor add cache entries at will.
+const UNCACHED: RequestInit = { cache: "no-store" };
+
+async function getPublic<T>(
+  path: string,
+  init: RequestInit = CACHED,
+): Promise<T | null> {
   const base = requireEnv("API_BASE_URL").replace(/\/$/, "");
   const response = await fetch(
     `${base}/public/stores/${encodeURIComponent(storeSlug())}${path}`,
-    // Admins expect edits to show up on the next page load.
-    { cache: "no-store" },
+    init,
   );
   if (response.status === 404) return null;
   if (!response.ok) {
@@ -29,6 +43,7 @@ export async function getListings(
 ): Promise<ListingPage> {
   const page = await getPublic<ListingPage>(
     `/listings?${toApiQuery(filters, pageSize)}`,
+    hasActiveFilters(filters) || filters.page > 1 ? UNCACHED : CACHED,
   );
   if (!page) throw new Error(`Store ${storeSlug()} not found`);
   return page;

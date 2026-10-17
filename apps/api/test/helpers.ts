@@ -15,7 +15,7 @@ import { configureApp } from "@/configure-app";
 import { StoresService } from "@/stores/services/stores.service";
 
 export const ORIGIN = "http://storefront.test";
-export const INTERNAL_SECRET = "integration-test-secret";
+export const INTERNAL_SECRET = "integration-test-secret-0123456789abcdef";
 export const PASSWORD = "correct horse battery";
 
 export interface TestContext {
