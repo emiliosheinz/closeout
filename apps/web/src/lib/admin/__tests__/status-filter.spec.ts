@@ -13,7 +13,7 @@ const listing = (
   availability,
   publication,
   category: { id: "c", name: "Móveis" },
-  seller: { id: "s", displayName: "Ana" },
+  sellers: [{ id: "s", displayName: "Ana" }],
   coverUrl: null,
   imageCount: 0,
   updatedAt: "2026-10-17T12:00:00.000Z",

@@ -38,11 +38,12 @@ export interface ListingDetail extends ListingSummary {
   description: string;
   attributes: ListingAttribute[];
   images: PublicImage[];
-  seller: {
+  /** Alphabetical; numbers are null unless the item can be contacted. */
+  sellers: {
     name: string;
     avatarUrl: string | null;
     whatsappNumber: string | null;
-  };
+  }[];
   canContact: boolean;
   publishedAt: string | null;
   updatedAt: string;

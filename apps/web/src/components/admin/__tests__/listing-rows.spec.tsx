@@ -8,7 +8,7 @@ jest.mock("next/navigation", () => ({
 
 const row = (
   id: string,
-  sellerId: string,
+  sellerIds: string[],
   publication: AdminListingSummary["publication"] = "published",
 ): AdminListingSummary => ({
   id,
@@ -19,7 +19,7 @@ const row = (
   availability: "available",
   publication,
   category: { id: "c", name: "Móveis" },
-  seller: { id: sellerId, displayName: sellerId },
+  sellers: sellerIds.map((id) => ({ id, displayName: id })),
   coverUrl: null,
   imageCount: 1,
   updatedAt: "2026-10-17T12:00:00.000Z",
@@ -31,9 +31,10 @@ describe("ListingRows", () => {
       <ListingRows
         storeId="store"
         listings={[
-          row("a", "no-phone"),
-          row("b", "with-phone"),
-          row("c", "no-phone", "draft"),
+          row("a", ["no-phone"]),
+          row("b", ["with-phone"]),
+          row("c", ["no-phone"], "draft"),
+          row("d", ["no-phone", "with-phone"]),
         ]}
         unreachableSellerIds={["no-phone"]}
       />,

@@ -9,10 +9,11 @@ import {
   AVAILABILITY_LABELS,
   CONDITION_LABELS,
   formatPrice,
+  joinNames,
 } from "@/lib/format";
 import { absoluteUrl, listingPath } from "@/lib/site";
 import { listingContactUrl } from "@/lib/whatsapp";
-import { ContactButton } from "./contact-button";
+import { ContactAction, type SellerContact } from "./contact-action";
 import { Gallery } from "./gallery";
 import { ListingCard } from "./listing-card";
 import { PhotoPlaceholder } from "./photo-placeholder";
@@ -23,9 +24,18 @@ import { StatusStamp } from "./status-stamp";
 /** Item detail, shared by the public page and the admin preview. */
 export function ListingView({ listing }: { listing: ListingDetail }) {
   const url = absoluteUrl(listingPath(listing.slug));
-  const contactUrl = listing.canContact
-    ? listingContactUrl(listing.seller.whatsappNumber, listing.title, url)
-    : null;
+  const contacts: SellerContact[] = listing.canContact
+    ? listing.sellers.flatMap((seller) => {
+        const href = listingContactUrl(
+          seller.whatsappNumber,
+          listing.title,
+          url,
+        );
+        return href
+          ? [{ name: seller.name, avatarUrl: seller.avatarUrl, href }]
+          : [];
+      })
+    : [];
   const sold = listing.availability === "sold";
   const badges = (
     <>
@@ -89,7 +99,9 @@ export function ListingView({ listing }: { listing: ListingDetail }) {
             </div>
             <div className="bg-surface px-4 py-3">
               <dt className="text-muted">Quem vende</dt>
-              <dd className="mt-0.5 font-semibold">{listing.seller.name}</dd>
+              <dd className="mt-0.5 font-semibold">
+                {joinNames(listing.sellers.map((seller) => seller.name))}
+              </dd>
             </div>
             {listing.attributes.map((attribute) => (
               <div
@@ -106,7 +118,7 @@ export function ListingView({ listing }: { listing: ListingDetail }) {
           </dl>
 
           <div className="mt-6 hidden lg:block">
-            <Contact listing={listing} contactUrl={contactUrl} />
+            <Contact listing={listing} contacts={contacts} />
           </div>
 
           {listing.description && (
@@ -142,7 +154,7 @@ export function ListingView({ listing }: { listing: ListingDetail }) {
       )}
 
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur lg:hidden">
-        <Contact listing={listing} contactUrl={contactUrl} compact />
+        <Contact listing={listing} contacts={contacts} compact />
       </div>
     </>
   );
@@ -150,11 +162,11 @@ export function ListingView({ listing }: { listing: ListingDetail }) {
 
 function Contact({
   listing,
-  contactUrl,
+  contacts,
   compact = false,
 }: {
   listing: ListingDetail;
-  contactUrl: string | null;
+  contacts: SellerContact[];
   compact?: boolean;
 }) {
   if (listing.availability === "sold") {
@@ -164,7 +176,7 @@ function Contact({
       </p>
     );
   }
-  if (!contactUrl) {
+  if (contacts.length === 0) {
     return (
       <p className="rounded-lg bg-ink/5 px-4 py-3 text-sm text-ink-soft">
         Contato indisponível no momento.
@@ -173,11 +185,7 @@ function Contact({
   }
   return (
     <div className={compact ? "flex flex-col gap-1.5" : "flex flex-col gap-2"}>
-      <ContactButton
-        href={contactUrl}
-        sellerName={listing.seller.name}
-        className="w-full"
-      />
+      <ContactAction contacts={contacts} className="w-full" />
       {listing.availability === "reserved" && (
         <p className="text-center text-xs text-muted">
           Está reservado, mas você pode entrar na fila.

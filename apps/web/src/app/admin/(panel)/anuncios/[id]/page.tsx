@@ -95,7 +95,7 @@ export default async function EditListingPage({
           storeId={store.id}
           categories={options.categories}
           sellers={options.sellers}
-          defaultSellerId={listing.seller.id}
+          defaultSellerId={null}
           listing={listing}
         />
       </div>

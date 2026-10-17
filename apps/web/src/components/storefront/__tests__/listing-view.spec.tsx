@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import type { ListingDetail } from "@/lib/catalog/types";
 import { ListingView } from "../listing-view";
 
@@ -13,7 +13,7 @@ const base: ListingDetail = {
   description: "",
   attributes: [],
   images: [],
-  seller: { name: "Ana", avatarUrl: null, whatsappNumber: "5511988887777" },
+  sellers: [{ name: "Ana", avatarUrl: null, whatsappNumber: "5511988887777" }],
   canContact: true,
   publishedAt: null,
   updatedAt: "2026-10-17T12:00:00.000Z",
@@ -42,7 +42,7 @@ describe("ListingView", () => {
         listing={{
           ...base,
           canContact: false,
-          seller: { ...base.seller, whatsappNumber: null },
+          sellers: [{ name: "Ana", avatarUrl: null, whatsappNumber: null }],
         }}
       />,
     );
@@ -67,7 +67,7 @@ describe("ListingView", () => {
           ...base,
           availability: "sold",
           canContact: false,
-          seller: { ...base.seller, whatsappNumber: null },
+          sellers: [{ name: "Ana", avatarUrl: null, whatsappNumber: null }],
         }}
       />,
     );
@@ -111,5 +111,61 @@ describe("ListingView", () => {
     } finally {
       globalThis.ResizeObserver = original;
     }
+  });
+
+  it("asks which seller to message when several people sell the item", () => {
+    render(
+      <ListingView
+        listing={{
+          ...base,
+          sellers: [
+            { name: "Ana", avatarUrl: null, whatsappNumber: "5511988887777" },
+            { name: "Bia", avatarUrl: null, whatsappNumber: "5521977771234" },
+          ],
+        }}
+      />,
+    );
+    expect(screen.getByText("Ana e Bia")).toBeInTheDocument();
+    expect(document.querySelector('a[href^="https://wa.me"]')).toBeNull();
+
+    const [action] = screen.getAllByRole("button", {
+      name: "Chamar no WhatsApp",
+    });
+    if (!action) throw new Error("contact action missing");
+    fireEvent.click(action);
+
+    const dialog = screen.getByRole("dialog", {
+      name: "Com quem você quer falar?",
+    });
+    const links = within(dialog).getAllByRole("link");
+    expect(links.map((link) => link.textContent)).toEqual([
+      "Chamar AnaWhatsApp",
+      "Chamar BiaWhatsApp",
+    ]);
+    expect(links[0]?.getAttribute("href")).toMatch(
+      /^https:\/\/wa\.me\/5511988887777\?text=/,
+    );
+    expect(links[1]?.getAttribute("href")).toMatch(
+      /^https:\/\/wa\.me\/5521977771234\?text=/,
+    );
+  });
+
+  it("opens the only reachable seller directly, without asking", () => {
+    render(
+      <ListingView
+        listing={{
+          ...base,
+          sellers: [
+            { name: "Ana", avatarUrl: null, whatsappNumber: null },
+            { name: "Bia", avatarUrl: null, whatsappNumber: "5521977771234" },
+          ],
+        }}
+      />,
+    );
+    const [link] = screen.getAllByTestId("whatsapp-contact");
+    expect(link?.getAttribute("href")).toMatch(
+      /^https:\/\/wa\.me\/5521977771234\?text=/,
+    );
+    expect(link).toHaveTextContent("Chamar Bia no WhatsApp");
   });
 });

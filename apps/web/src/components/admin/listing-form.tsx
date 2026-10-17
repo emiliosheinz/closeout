@@ -34,6 +34,7 @@ interface ListingFormProps {
 
 interface FormErrors {
   title?: string;
+  sellers?: string;
   price?: string;
   form?: string;
 }
@@ -59,9 +60,11 @@ export function ListingForm({
   const [categoryId, setCategoryId] = useState(
     listing?.category.id ?? categories[0]?.id ?? "",
   );
-  const [sellerId, setSellerId] = useState(
-    listing?.seller.id ?? defaultSellerId ?? sellers[0]?.id ?? "",
-  );
+  const [sellerIds, setSellerIds] = useState<string[]>(() => {
+    if (listing) return listing.sellers.map((seller) => seller.id);
+    const first = defaultSellerId ?? sellers[0]?.id;
+    return first ? [first] : [];
+  });
   const [price, setPrice] = useState(centsToInput(listing?.priceCents ?? null));
   const [noPrice, setNoPrice] = useState(
     editing ? listing.priceCents === null : false,
@@ -96,6 +99,9 @@ export function ListingForm({
   function validate(): { priceCents: number | null } | null {
     const next: FormErrors = {};
     if (!title.trim()) next.title = "Dê um nome ao item.";
+    if (sellerIds.length === 0) {
+      next.sellers = "Escolha ao menos uma pessoa para receber as mensagens.";
+    }
     let priceCents: number | null = null;
     if (!noPrice && price.trim() !== "") {
       priceCents = parsePriceToCents(price);
@@ -115,7 +121,7 @@ export function ListingForm({
       title: title.trim(),
       description: description.trim(),
       categoryId,
-      sellerId,
+      sellerIds,
       priceCents: valid.priceCents,
       condition,
       attributes: attributes.filter((a) => a.label.trim() && a.value.trim()),
@@ -328,25 +334,41 @@ export function ListingForm({
         />
       </Field>
 
-      <Field
-        label="Quem vende"
-        htmlFor="seller"
-        hint="Quem recebe as mensagens no WhatsApp."
-      >
-        <select
-          id="seller"
-          value={sellerId}
-          onChange={(e) => setSellerId(e.target.value)}
-          className={inputClass}
-        >
+      <fieldset aria-describedby="sellers-hint">
+        <legend className="text-sm font-semibold">Quem vende</legend>
+        <p id="sellers-hint" className="mt-1 text-xs text-muted">
+          Quem recebe as mensagens no WhatsApp. Com mais de uma pessoa, o
+          comprador escolhe com quem falar.
+        </p>
+        <div className="mt-2 flex flex-wrap gap-2">
           {sellers.map((seller) => (
-            <option key={seller.id} value={seller.id}>
+            <label
+              key={seller.id}
+              className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border border-line bg-surface px-3.5 text-sm has-[:checked]:border-ink has-[:checked]:bg-ink has-[:checked]:text-surface has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-focus"
+            >
+              <input
+                type="checkbox"
+                checked={sellerIds.includes(seller.id)}
+                onChange={(e) =>
+                  setSellerIds(
+                    e.target.checked
+                      ? [...sellerIds, seller.id]
+                      : sellerIds.filter((id) => id !== seller.id),
+                  )
+                }
+                className="size-4 accent-surface"
+              />
               {seller.displayName}
               {seller.whatsappNumber ? "" : " (sem WhatsApp)"}
-            </option>
+            </label>
           ))}
-        </select>
-      </Field>
+        </div>
+        {errors.sellers && (
+          <p role="alert" className="mt-1.5 text-sm font-medium text-stamp">
+            {errors.sellers}
+          </p>
+        )}
+      </fieldset>
 
       <fieldset>
         <legend className="text-sm font-semibold">Detalhes (opcional)</legend>

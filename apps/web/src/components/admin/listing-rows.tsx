@@ -14,6 +14,7 @@ import {
 import {
   AVAILABILITY_LABELS,
   formatPrice,
+  joinNames,
   PUBLICATION_LABELS,
 } from "@/lib/format";
 import { listingPath } from "@/lib/site";
@@ -34,7 +35,7 @@ export function ListingRows({
 }: {
   storeId: string;
   listings: AdminListingSummary[];
-  /** Sellers without a WhatsApp number: their items show no contact button. */
+  /** Sellers without a WhatsApp number; an item none of whose sellers has one shows no contact button. */
   unreachableSellerIds?: string[];
 }) {
   const router = useRouter();
@@ -136,12 +137,17 @@ export function ListingRows({
                   {formatPrice(listing.priceCents)}
                 </span>
                 <span>
-                  {listing.category.name}, por {listing.seller.displayName}
+                  {listing.category.name}, por{" "}
+                  {joinNames(
+                    listing.sellers.map((seller) => seller.displayName),
+                  )}
                 </span>
               </p>
               {listing.publication === "published" &&
                 listing.availability !== "sold" &&
-                unreachableSellerIds.includes(listing.seller.id) && (
+                listing.sellers.every((seller) =>
+                  unreachableSellerIds.includes(seller.id),
+                ) && (
                   <Link
                     href="/admin/vendedores"
                     className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-stamp/10 px-2.5 py-1 text-xs font-semibold text-stamp hover:bg-stamp/15"

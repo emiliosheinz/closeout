@@ -37,7 +37,7 @@ export interface AdminListingSummary {
   availability: Availability;
   publication: Publication;
   category: { id: string; name: string };
-  seller: { id: string; displayName: string };
+  sellers: { id: string; displayName: string }[];
   coverUrl: string | null;
   imageCount: number;
   updatedAt: string;
