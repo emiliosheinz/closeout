@@ -1,4 +1,4 @@
-name: Checks
+name: Pull request checks
 
 # Pull request gate: lint and format, types, unit and integration tests,
 # migration drift, commit messages, workflow files, production image builds
@@ -42,7 +42,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Set up toolchain
+      - name: Set up Node, pnpm and dependencies
         uses: ./.github/actions/setup-toolchain
 
       - name: ${{ matrix.name }}
@@ -90,7 +90,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Set up toolchain
+      - name: Set up Node, pnpm and dependencies
         uses: ./.github/actions/setup-toolchain
 
       - name: ${{ matrix.name }}
@@ -111,7 +111,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Set up toolchain
+      - name: Set up Node, pnpm and dependencies
         uses: ./.github/actions/setup-toolchain
 
       # The range is resolved on its own line so a git error fails the step
@@ -148,7 +148,7 @@ jobs:
           rhysd/actionlint:1.7.12@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667
           -color
 
-  # Mirrors the images job in warm-caches.yml: keep the target and cache scope
+  # Mirrors the images job in warm-main-caches.yml: keep the target and cache scope
   # identical, or pull requests silently build cold.
   images:
     name: Build ${{ matrix.name }} image
@@ -172,7 +172,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
-      # Restore only: warm-caches.yml is the sole cache writer.
+      # Restore only: warm-main-caches.yml is the sole cache writer.
       - name: Build the production image
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:

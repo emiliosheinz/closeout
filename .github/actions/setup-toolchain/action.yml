@@ -1,10 +1,10 @@
-name: Set up toolchain
+name: Set up Node, pnpm and dependencies
 description: Node and pnpm at the repo's versions, a cached frozen install and the shared config build.
 
 inputs:
   save-cache:
     description: >-
-      Save the pnpm store after install. Only warm-caches.yml sets this, so
+      Save the pnpm store after install. Only warm-main-caches.yml sets this, so
       pull requests never evict main's cache entries.
     default: "false"
 

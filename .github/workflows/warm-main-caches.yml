@@ -1,8 +1,8 @@
-name: Warm caches
+name: Warm main caches
 
 # Pull requests can read caches saved on main but never write their own, so
 # this workflow refreshes main's pnpm store and image layer caches after every
-# merge. Its job names must not match any Checks job name, or a push to main
+# merge. Its job names must not match any Pull request checks job name, or a push to main
 # could satisfy a required check.
 
 on:
@@ -19,7 +19,7 @@ permissions:
 
 jobs:
   dependencies:
-    name: Warm dependency cache
+    name: Dependencies
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -28,15 +28,15 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Set up toolchain and save the pnpm store
+      - name: Set up Node, pnpm and dependencies, and save the pnpm store
         uses: ./.github/actions/setup-toolchain
         with:
           save-cache: "true"
 
-  # Mirrors the images job in checks.yml: keep the target and cache scope
+  # Mirrors the images job in pull-request-checks.yml: keep the target and cache scope
   # identical, or pull requests silently build cold.
   images:
-    name: Warm ${{ matrix.name }} image cache
+    name: ${{ matrix.name }} image
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     strategy:

@@ -1,8 +1,7 @@
-name: Railway
+name: Deploy infrastructure
 
-# Plans .railway/railway.ts on pull requests; on main (production) and
-# verification (probe environment) it then applies. Railway holds each commit's
-# deploys until this run finishes. Every plan passes the data-store guard first.
+# Plans .railway/railway.ts against production on pull requests; on main it then
+# applies. Railway holds each commit's deploys until this run finishes. Every plan passes the data-store guard first.
 #
 # No concurrency group: GitHub cancels all but one pending run per group, which
 # would drop an apply. Railway rejects a plan whose environment has changed, so
@@ -10,16 +9,16 @@ name: Railway
 
 on:
   pull_request:
-    branches: [main, verification]
+    branches: [main]
     paths: &infra-paths
       - .railway/**
       - package.json
       - pnpm-lock.yaml
       - scripts/railway-plan-guard*
       - scripts/fixtures/railway-plan/**
-      - .github/workflows/railway.yml
+      - .github/workflows/deploy-infrastructure.yml
   push:
-    branches: [main, verification]
+    branches: [main]
     paths: *infra-paths
   workflow_dispatch:
     inputs:
@@ -36,26 +35,25 @@ env:
   RAILWAY_CLI_VERSION: 5.70.0
 
 jobs:
-  railway:
-    name: ${{ github.event_name == 'pull_request' && 'Plan' || 'Apply' }} ${{ (github.base_ref || github.ref_name) == 'main' && 'production' || 'verification' }}
+  deploy-infrastructure:
+    name: ${{ github.event_name == 'pull_request' && 'Preview' || 'Apply' }} production changes
     # Fork pull requests get no token, and no run.
     if: >-
       github.event_name == 'pull_request' &&
       github.event.pull_request.head.repo.full_name == github.repository ||
-      github.event_name != 'pull_request' &&
-      (github.ref_name == 'main' || github.ref_name == 'verification')
+      github.event_name != 'pull_request' && github.ref_name == 'main'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
-    # Pull requests use the plan-only environments; only pushes and manual
-    # runs reach the ones that apply.
-    environment: ${{ (github.base_ref || github.ref_name) == 'main' && 'production' || 'verification' }}${{ github.event_name == 'pull_request' && '-plan' || '' }}
+    # Pull requests use the plan-only environment; only pushes and manual runs
+    # on main reach the one that applies.
+    environment: ${{ github.event_name == 'pull_request' && 'production-plan' || 'production' }}
     steps:
       - name: Check out code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
-      - name: Set up toolchain
+      - name: Set up Node, pnpm and dependencies
         uses: ./.github/actions/setup-toolchain
 
       - name: Test the data-store guard

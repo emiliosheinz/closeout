@@ -81,18 +81,19 @@ shows "contato indisponível" instead of a WhatsApp button.
 
 ## Continuous integration
 
-`.github/workflows/checks.yml` ("Checks") runs on every non-draft pull request into
-`main`, and again on each new commit (a newer push cancels the older run). Drafts and
-PRs into other branches run nothing; marking a draft ready for review starts the run. A
-draft shows its checks as skipped, matrix checks under an unexpanded name; that is
-expected. Retargeting an open PR to `main` starts no run until its next push. A PR with
-merge conflicts against `main` gets no run at all: resolve the conflict to get checks.
+`.github/workflows/pull-request-checks.yml` ("Pull request checks") runs on every
+non-draft pull request into `main`, and again on each new commit (a newer push cancels
+the older run). Drafts and PRs into other branches run nothing; marking a draft ready
+for review starts the run. A draft shows its checks as skipped, matrix checks under an
+unexpanded name; that is expected. Retargeting an open PR to `main` starts no run until
+its next push. A PR with merge conflicts against `main` gets no run at all: resolve the
+conflict to get checks.
 
-Each check reports its own status, shown on the PR as `Checks / <name>`. A final
-`Ready to merge` check passes only when every check below passed, so it is the one
-status to require on `main`: **renaming it silently drops it from the required checks,
-and a new job must be added to its `needs` list or it will not block merging.** The
-commands below are exactly what CI runs.
+Each check reports its own status, shown on the PR as `Pull request checks / <name>`. A
+final `Ready to merge` check passes only when every check below passed, so it is the
+one status to require on `main`: **renaming it silently drops it from the required
+checks, and a new job must be added to its `needs` list or it will not block merging.**
+The commands below are exactly what CI runs.
 
 | Check | Reproduce locally |
 | --- | --- |
@@ -107,9 +108,9 @@ commands below are exactly what CI runs.
 | `Build web image` | `docker build -f apps/web/Dockerfile --target prod .` |
 | `End-to-end tests` | `bin/closeout e2e`. On failure or cancellation CI uploads `e2e-diagnostics` (HTML report, traces, every service log) for 7 days |
 
-`.github/workflows/warm-caches.yml` ("Warm caches") runs on every push to `main` and
-refreshes the dependency and image-layer caches that pull requests restore. It is the
-only workflow that saves caches and reports none of the names above.
+`.github/workflows/warm-main-caches.yml` ("Warm main caches") runs on every push to
+`main` and refreshes the dependency and image-layer caches that pull requests restore.
+It is the only workflow that saves caches and reports none of the names above.
 
 ### Required check on `main`
 
@@ -154,14 +155,13 @@ within 5 minutes. The cache is per instance.
 
 ### Overview
 
-Two environments in the Railway project "Closeout": `production` deploys `main`;
-`verification` deploys `verification` and exists only to probe changes before
-launch. Each has `web` (public), `api` (private network only), Postgres 18 and a
-private media bucket. There are no backups, which is why the data-store guard
+One environment, `production`, in the Railway project "Closeout", deploying `main`:
+`web` (public), `api` (private network only), Postgres 18 and a private media
+bucket. There are no backups, which is why the data-store guard
 refuses any plan that touches the database, the bucket or their volume.
 
 A push creates one deployment per service, held by Railway (Wait for CI) until the
-commit's checks finish. The Railway workflow plans `railway.ts`, runs the
+commit's checks finish. The Deploy infrastructure workflow plans `railway.ts`, runs the
 guard and applies. Then the deployments build; the api pre-deploy step runs pending
 migrations in one transaction under a Postgres advisory lock, and traffic moves only
 after `/health` passes. A failed migration, build or health check leaves the
@@ -169,37 +169,25 @@ previous deployment serving.
 
 ### First-time setup
 
-`verification` first, then `production`. Dashboard edits are staged: nothing is live
-until you click **Deploy Changes**.
+Dashboard edits are staged: nothing is live until you click **Deploy Changes**.
 
-1. GitHub Environments: `production` limited to `main`, `verification` limited to
-   `verification`, and `production-plan` / `verification-plan` unrestricted (pull
-   request plans run on `refs/pull/*`). Protect the `verification` branch like
-   `main`.
+1. GitHub Environments: `production` limited to `main`, and `production-plan`
+   unrestricted (pull request plans run on `refs/pull/*`).
 2. On GitHub (Settings > Applications > Railway > Configure), accept any pending
    permission request for the Railway app and give it this repository. Without it
    the source panel says "Auto deploy unavailable" and Wait for CI switches itself
    off.
 3. Usage limits: see "Usage limits".
-4. Railway project "Closeout" (New > Empty Project). Rename its default
-   environment to `verification`; later add `production` as an empty environment.
-5. Shared variables for the environment: `STORE_SLUG`, and `INTERNAL_API_SECRET`
+4. Railway project "Closeout" (New > Empty Project), its environment named
+   `production`.
+5. Shared variables: `STORE_SLUG`, and `INTERNAL_API_SECRET`
    from `openssl rand -hex 32`, sealed.
-6. An environment-scoped project token (Settings > Tokens), stored as
-   `RAILWAY_TOKEN` in both `<env>` and `<env>-plan` GitHub Environments
-   (`gh secret set RAILWAY_TOKEN --env <env>`, value on stdin).
-7. First apply. Once the workflow is on `main`, run the Railway workflow
-   manually on the environment's branch with **first-time-setup** checked: the guard
-   then also allows creating the database and the bucket. Before that (the first
-   environment), run the same steps locally with the CLI version pinned in
-   `.github/workflows/railway.yml`:
-
-   ```bash
-   export RAILWAY_TOKEN=...   # the environment token
-   npx -y @railway/cli@5.70.0 config plan --out plan.json
-   node scripts/railway-plan-guard.ts plan.json --setup
-   npx -y @railway/cli@5.70.0 config apply --plan plan.json --yes
-   ```
+6. A project token scoped to `production` (Settings > Tokens), stored as
+   `RAILWAY_TOKEN` in both the `production` and `production-plan` GitHub
+   Environments (`gh secret set RAILWAY_TOKEN --env <env>`, value on stdin).
+7. First apply: run the Deploy infrastructure workflow manually on `main` with
+   **first-time-setup** checked; the guard then also allows creating the database
+   and the bucket.
 8. Generate the web domain at once (web > Settings > Networking, port 3000).
    `PUBLIC_BASE_URL` references it; without it the api fails at boot with `Invalid
    URL` and web `/health` returns 503.
@@ -226,11 +214,11 @@ passes `--confirm-destructive`, so it cannot delete anything.
 - To remove a variable, delete it in Railway (or apply locally with
   `--confirm-destructive` after reading the plan), then remove it from the file. A
   push that only removes it from the file fails, and its deploys are skipped.
-- Never cancel a Railway workflow run. A cancelled or failed run skips that commit's
-  deploys for good; re-running does not revive them and `railway redeploy` redeploys
-  the last active commit. Push a new commit instead. The same applies to a failed
-  Warm caches run on `main` and to deploys whose checks are still unfinished after
-  2 hours.
+- Never cancel a Deploy infrastructure run. A cancelled or failed run skips that
+  commit's deploys for good; re-running does not revive them and `railway redeploy`
+  redeploys the last active commit. Push a new commit instead. The same applies to a
+  failed Warm main caches run on `main` and to deploys whose checks are still
+  unfinished after 2 hours.
 - A force-push may not trigger the workflow: run a plan afterwards.
 - `railway variable set/delete` takes effect on the next deploy only.
 
@@ -251,12 +239,6 @@ redeploy together. Admin sessions survive.
 Workspace > Usage > Set limits: email alert at $10, hard limit at $100. Both cover
 every project in the workspace. At the hard limit every workload goes offline;
 raise the limit, then redeploy anything Railway does not restart.
-
-### Tearing down verification
-
-Delete the `verification` environment in Railway (this deletes its database and
-bucket), revoke its token, delete the `verification` and `verification-plan` GitHub
-Environments and the `verification` branch.
 
 ## Towards multiple storefronts
 
