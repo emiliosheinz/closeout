@@ -4,8 +4,9 @@ name: Checks
 # migration drift, commit messages, workflow files, production image builds
 # and end-to-end tests. Every job skips draft pull requests.
 #
-# Job display names are the required-check contract: renaming one silently
-# drops it from branch protection. Keep them in sync with docs/development.md.
+# "Ready to merge" is the only required check: renaming it silently drops it
+# from branch protection, and every new job must join its needs list. Keep the
+# job names in sync with docs/development.md.
 
 on:
   pull_request:
@@ -226,3 +227,21 @@ jobs:
       - name: Tear down the e2e stack
         if: always()
         run: docker compose down -v --remove-orphans
+
+  # The one required check. It runs even when a dependency fails, because a
+  # skipped required check counts as passing; anything but success fails it.
+  ready-to-merge:
+    name: Ready to merge
+    if: ${{ always() && !github.event.pull_request.draft }}
+    needs: [node-checks, postgres-checks, commit-messages, workflow-files, images, e2e]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Require every check to pass
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "Results: $RESULTS"
+          for result in $RESULTS; do
+            [ "$result" = success ] || { echo "::error::A check ended as $result"; exit 1; }
+          done
