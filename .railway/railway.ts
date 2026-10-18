@@ -105,6 +105,7 @@ export default defineRailway((ctx, project) => {
       ...commonEnv,
       PORT: WEB_PORT,
       HOSTNAME: "::",
+      NEXT_TELEMETRY_DISABLED: "1",
       API_BASE_URL: `http://\${{api.RAILWAY_PRIVATE_DOMAIN}}:${API_PORT}`,
     },
   });
