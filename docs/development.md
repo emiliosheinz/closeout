@@ -147,11 +147,11 @@ Apply migrations before starting the API. The production API image holds only th
 compiled app, so run `pnpm turbo migration:run --filter=api` from a source checkout
 or the tooling image (`docker/Dockerfile.cli`) with the production `POSTGRES_*`
 variables. Put a reverse proxy (nginx, Caddy, a platform load balancer) in front of the web app
-and have it set `X-Forwarded-For` to the real client address
-(`proxy_set_header X-Forwarded-For $remote_addr;` in nginx). The login rate limiter
-keys on the last hop of that header: 10 failures per email and IP, 30 per email and
-30 per IP in 15 minutes. Without a proxy a client can forge it and only the per-email
-limit protects an account. If every request arrives with the same address (a proxy
+and have it set `X-Real-IP` to the real client address, overwriting any value the
+client sent (`proxy_set_header X-Real-IP $remote_addr;` in nginx; Railway's edge does
+this already). The login rate limiter keys on that header: 10 failures per email and
+IP, 30 per email and 30 per IP in 15 minutes. Without a proxy a client can forge it
+and only the per-email limit protects an account. If every request arrives with the same address (a proxy
 that does not set the header), the per-IP limit becomes shared: 30 failed logins from
 anyone block all logins for 15 minutes.
 
