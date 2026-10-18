@@ -101,7 +101,7 @@ the required-check contract:
 | `Build web image` | `docker build -f apps/web/Dockerfile --target prod .` |
 | `End-to-end tests` | `bin/closeout e2e`. On failure or cancellation CI uploads `e2e-diagnostics` (HTML report, traces, every service log) for 7 days |
 
-`.github/workflows/seed-caches.yml` ("Seed caches") runs on every push to `main` and refreshes the
+`.github/workflows/warm-caches.yml` ("Warm caches") runs on every push to `main` and refreshes the
 dependency and image-layer caches that pull requests restore. It is the only workflow
 that saves caches and reports none of the names above.
 

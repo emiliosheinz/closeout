@@ -6,7 +6,7 @@ description: >-
 inputs:
   save-cache:
     description: >-
-      Save the pnpm store after install. Only the main-branch seeding workflow
+      Save the pnpm store after install. Only the main-branch cache-warming workflow
       sets this, so pull requests never evict main's cache entries.
     default: "false"
 
