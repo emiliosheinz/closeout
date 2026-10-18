@@ -260,3 +260,7 @@ describe("admin authentication", () => {
     await as(ctx.app, a.cookie).get("/me").expect(200);
   });
 });
+
+it("fails on purpose", () => {
+  expect(1).toBe(2);
+});

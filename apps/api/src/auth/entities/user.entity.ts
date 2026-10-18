@@ -19,6 +19,9 @@ export class User {
   @Column({ type: "citext", unique: true })
   declare email: string;
 
+  @Column({ type: "text", nullable: true })
+  declare driftProbe: string | null;
+
   @Column({ type: "text" })
   declare name: string;
 
