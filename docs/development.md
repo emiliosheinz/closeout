@@ -77,30 +77,31 @@ shows "contato indisponível" instead of a WhatsApp button.
 
 ## Continuous integration
 
-`.github/workflows/ci.yml` runs on every non-draft pull request into `main`, and again
+`.github/workflows/ci.yml` ("Checks") runs on every non-draft pull request into `main`, and again
 on each new commit (a newer push cancels the older run). Drafts and PRs into other
 branches run nothing; marking a draft ready for review starts the run. A draft shows its
-checks as skipped, some under a placeholder such as `${{ matrix.check }}`; that is expected.
+checks as skipped, some under a placeholder such as `${{ matrix.name }}`; that is expected.
 Retargeting an open PR to `main` starts no run until its next push. A PR with merge
 conflicts against `main` gets no run at all: resolve the conflict to get checks.
 
-Each check reports its own status. These names are the required-check contract:
+Each check reports its own status, shown on the PR as `Checks / <name>`. These names are
+the required-check contract:
 **renaming one silently drops it from the required checks on `main`.**
 
-| Status | Reproduce locally |
+| Check | Reproduce locally |
 | --- | --- |
-| `check` | `bin/closeout pnpm check` (Biome lint rules, import order and formatting, whole repo; warnings fail too) |
-| `typecheck` | `bin/closeout pnpm typecheck` |
-| `unit` | `bin/closeout pnpm test` |
-| `integration` | `bin/closeout pnpm --filter api test:integration` |
-| `migration-drift` | `bin/closeout db migration:run && bin/closeout db migration:check` (fails and prints the SQL when entities and migrations disagree) |
-| `commitlint` | `git log -1 --format=%B <sha> \| bin/closeout pnpm --silent commitlint`, per commit. CI lints every non-merge commit in `origin/main..HEAD` |
-| `workflow-lint` | `docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.12@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667` |
-| `image-api` | `docker build -f apps/api/Dockerfile --target prod .` |
-| `image-web` | `docker build -f apps/web/Dockerfile --target prod .` |
-| `e2e` | `bin/closeout e2e`. On failure or cancellation CI uploads `e2e-diagnostics` (HTML report, traces, every service log) for 7 days |
+| `Lint and format` | `bin/closeout pnpm check` (Biome lint rules, import order and formatting, whole repo; warnings fail too) |
+| `Type check` | `bin/closeout pnpm typecheck` |
+| `Unit tests` | `bin/closeout pnpm test` |
+| `Integration tests` | `bin/closeout pnpm --filter api test:integration` |
+| `Migration drift` | `bin/closeout db migration:run && bin/closeout db migration:check` (fails and prints the SQL when entities and migrations disagree) |
+| `Commit messages` | `git log -1 --format=%B <sha> \| bin/closeout pnpm --silent commitlint`, per commit. CI lints every non-merge commit in `origin/main..HEAD` |
+| `Workflow files` | `docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.12@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667` |
+| `Build API image` | `docker build -f apps/api/Dockerfile --target prod .` |
+| `Build web image` | `docker build -f apps/web/Dockerfile --target prod .` |
+| `End-to-end tests` | `bin/closeout e2e`. On failure or cancellation CI uploads `e2e-diagnostics` (HTML report, traces, every service log) for 7 days |
 
-`.github/workflows/seed-cache.yml` runs on every push to `main` and refreshes the
+`.github/workflows/seed-cache.yml` ("Seed caches") runs on every push to `main` and refreshes the
 dependency and image-layer caches that pull requests restore. It is the only workflow
 that saves caches and reports none of the names above.
 
