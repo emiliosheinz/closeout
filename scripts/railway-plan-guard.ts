@@ -34,7 +34,7 @@ const ALLOWED: string[] = [];
 
 // Restated here rather than imported from .railway/railway.ts, so that editing
 // the declaration alone cannot also relax what a first apply may create.
-const POSTGRES_IMAGE = "ghcr.io/railwayapp-templates/postgres-ssl:17";
+const POSTGRES_IMAGE = "ghcr.io/railwayapp-templates/postgres-ssl:18";
 const DEPLOY_REGION = "us-east4-eqdc4a";
 const BUCKET_REGION = "iad";
 

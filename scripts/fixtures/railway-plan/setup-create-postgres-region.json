@@ -18,7 +18,7 @@
           "name": "postgres",
           "kind": "database",
           "engine": "postgres",
-          "image": "ghcr.io/railwayapp-templates/postgres-ssl:17",
+          "image": "ghcr.io/railwayapp-templates/postgres-ssl:18",
           "output": "DATABASE_URL",
           "defaultMountPath": "/var/lib/postgresql/data",
           "deploy": {

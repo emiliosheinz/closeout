@@ -64,7 +64,7 @@ jobs:
     # Service env cannot read the job env, so the credentials appear in both.
     services:
       postgres:
-        image: postgres:17-alpine
+        image: postgres:18-alpine
         env:
           POSTGRES_DB: closeout
           # Integration global setup creates and drops databases, so this

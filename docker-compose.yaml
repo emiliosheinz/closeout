@@ -15,7 +15,7 @@ x-postgres-env: &postgres-env
 
 services:
   postgres:
-    image: postgres:17-alpine
+    image: postgres:18-alpine
     environment:
       POSTGRES_DB: ${POSTGRES_DB:?required}
       POSTGRES_USER: ${POSTGRES_USER:?required}
@@ -23,7 +23,8 @@ services:
     ports:
       - "127.0.0.1:${POSTGRES_HOST_PORT:?required}:5432"
     volumes:
-      - db-data:/var/lib/postgresql/data
+      # The 18 image keeps its cluster in a versioned directory under this path.
+      - db-data:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s

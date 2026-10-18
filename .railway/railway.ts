@@ -37,11 +37,12 @@ export default defineRailway((ctx, project) => {
   const branch = ctx.isEnvironment("production") ? "main" : "verification";
   const source = github(REPO, { branch, checkSuites: true });
 
-  // The package's postgres() helper defaults to a newer major. A different
-  // major would start an empty cluster on the same volume, so the image is
-  // pinned to the major that compose and CI run.
+  // Railway creates the database from its own template whatever image is
+  // declared here, so this states that template exactly; any other value is
+  // a permanent diff the data-store guard rejects. Compose and CI run the
+  // same major.
   const postgres = database("postgres", "postgres", {
-    image: "ghcr.io/railwayapp-templates/postgres-ssl:17",
+    image: "ghcr.io/railwayapp-templates/postgres-ssl:18",
     output: "DATABASE_URL",
     defaultMountPath: "/var/lib/postgresql/data",
     region: REGION,
@@ -50,7 +51,6 @@ export default defineRailway((ctx, project) => {
   const media = bucket("media", { region: "iad" });
 
   const deploy = {
-    region: REGION,
     healthcheckPath: "/health",
     healthcheckTimeout: HEALTHCHECK_TIMEOUT_SECONDS,
     overlapSeconds: OVERLAP_SECONDS,
@@ -64,8 +64,12 @@ export default defineRailway((ctx, project) => {
     NODE_ENV: "production",
   };
 
+  // Railway stores the region per replica set, not as a deploy field.
+  const replicas = { [REGION]: 1 };
+
   const api = service("api", {
     source,
+    replicas,
     build: { builder: "DOCKERFILE", dockerfilePath: "apps/api/Dockerfile" },
     deploy: {
       ...deploy,
@@ -94,6 +98,7 @@ export default defineRailway((ctx, project) => {
 
   const web = service("web", {
     source,
+    replicas,
     build: { builder: "DOCKERFILE", dockerfilePath: "apps/web/Dockerfile" },
     deploy,
     env: {

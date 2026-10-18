@@ -113,11 +113,11 @@ describe("railway plan guard", () => {
 
     it("rejects creating the database with another Postgres major", () => {
       const { status, output } = guard(
-        fixture("setup-create-postgres-18.json"),
+        fixture("setup-create-postgres-17.json"),
         "--setup",
       );
       assert.equal(status, 1);
-      assert.match(output, /^database\.postgres: created with image .*:18/m);
+      assert.match(output, /^database\.postgres: created with image .*:17/m);
     });
 
     for (const [name, resource, region] of [

@@ -45,6 +45,11 @@ After generating a migration, run `migration:generate` again and expect "No chan
 it proves the entities and the schema agree. Extensions (`uuid-ossp`, `citext`,
 `unaccent`) are created by the initial migration.
 
+Postgres runs major 18, the same as production. A `db-data` volume created under 17
+will not start on 18: while still on 17, dump what you need (`docker compose exec
+postgres pg_dumpall -U closeout > dump.sql`), then remove the volume (`docker compose down` and `docker
+volume rm closeout_db-data`), start again, and restore with `psql` if you need the data.
+
 ## Administrators
 
 ```bash
