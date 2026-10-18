@@ -1,14 +1,14 @@
-name: Seed caches
+name: Warm caches
 
 # Pull requests can read caches saved on main but never write their own, so
-# this workflow refreshes main's entries after every merge. Its job names must
+# this workflow warms main's entries after every merge. Its job names must
 # stay out of the CI check names.
 
 on:
   push:
     branches: [main]
 
-# Never cancel: back-to-back merges must not leave main half-seeded.
+# Never cancel: back-to-back merges must not leave main half-warmed.
 concurrency:
   group: ${{ github.workflow }}
   cancel-in-progress: false
@@ -18,7 +18,7 @@ permissions:
 
 jobs:
   dependencies:
-    name: Seed dependency cache
+    name: Warm dependency cache
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -32,7 +32,7 @@ jobs:
           save-cache: "true"
 
   images:
-    name: Seed ${{ matrix.label }} image cache
+    name: Warm ${{ matrix.label }} image cache
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     strategy:
