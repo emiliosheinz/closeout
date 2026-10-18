@@ -148,9 +148,6 @@ importers:
       clsx:
         specifier: 2.1.1
         version: 2.1.1
-      left-pad:
-        specifier: 1.3.0
-        version: 1.3.0
       lucide-react:
         specifier: 1.14.0
         version: 1.14.0(react@19.2.6)
@@ -3428,10 +3425,6 @@ packages:
 
   jsonfile@6.2.1:
     resolution: {integrity: sha512-zwOTdL3rFQ/lRdBnntKVOX6k5cKJwEc1HdilT71BWEu7J41gXIB2MRp+vxduPSwZJPWBxEzv4yH1wYLJGUHX4Q==}
-
-  left-pad@1.3.0:
-    resolution: {integrity: sha512-XI5MPzVNApjAyhQzphX8BkmKsKUxD4LdyK24iZeQGinBN9yTQT3bFlCBy/aVx2HrNcqQGsdot8ghrjyrvMCoEA==}
-    deprecated: use String.prototype.padStart()
 
   leven@3.1.0:
     resolution: {integrity: sha512-qsda+H8jTaUaN/x5vzW2rzc+8Rw4TAQ/4KjB46IwK5VH+IlVeeeje/EoZRpiXvIqjFgK84QffqPztGI3VBLG1A==}
@@ -8185,8 +8178,6 @@ snapshots:
       universalify: 2.0.1
     optionalDependencies:
       graceful-fs: 4.2.11
-
-  left-pad@1.3.0: {}
 
   leven@3.1.0: {}
 
