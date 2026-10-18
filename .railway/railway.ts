@@ -11,12 +11,14 @@ const API_PORT = "8080";
 const REGION = "us-east4-eqdc4a";
 
 /**
- * `main` deploys to production, `verification` to the pre-release probe
- * environment. Secrets stay in Railway: shared variables and references only.
+ * `main` deploys to production. Secrets stay in Railway: shared variables and
+ * references only.
  */
 export default defineRailway((ctx, project) => {
-  const branch = ctx.isEnvironment("production") ? "main" : "verification";
-  const source = github("emiliosheinz/closeout", { branch, checkSuites: true });
+  const source = github("emiliosheinz/closeout", {
+    branch: "main",
+    checkSuites: true,
+  });
 
   // Railway creates the database from this template whatever is declared, so
   // any other image is a permanent diff that the data-store guard rejects.
