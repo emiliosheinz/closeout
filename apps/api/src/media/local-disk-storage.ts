@@ -3,7 +3,7 @@ import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
   assertMediaFileName,
-  isMediaFileName,
+  MEDIA_FILE_PATTERN,
   type MediaStorage,
 } from "./media-storage";
 
@@ -21,7 +21,7 @@ export class LocalDiskStorage implements MediaStorage {
   }
 
   async read(name: string): Promise<Buffer | null> {
-    if (!isMediaFileName(name)) return null;
+    if (!MEDIA_FILE_PATTERN.test(name)) return null;
     try {
       return await readFile(this.resolve(name));
     } catch (err) {

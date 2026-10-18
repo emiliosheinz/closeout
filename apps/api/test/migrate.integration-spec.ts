@@ -2,7 +2,7 @@ import { execFile } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import path from "node:path";
 import { promisify } from "node:util";
-import { DataSource } from "typeorm";
+import { DataSource, type MigrationInterface, type QueryRunner } from "typeorm";
 import { migrate } from "@/database/migrate";
 import { connection, runOnServer } from "./global-setup";
 
@@ -14,8 +14,24 @@ const MIGRATIONS = path.join(
   "migrations",
   "*.ts",
 );
-const fixture = (name: string) =>
-  path.join(__dirname, "fixtures", "migrations", name, "*.ts");
+
+class Failing1900000000000 implements MigrationInterface {
+  async up(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(`CREATE TABLE "half_done" ("id" integer)`);
+    await queryRunner.query(`SELECT * FROM "no_such_table"`);
+  }
+
+  async down(): Promise<void> {}
+}
+
+/** Holds the migration lock longer than the DDL lock timeout. */
+class Slow1900000000000 implements MigrationInterface {
+  async up(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query("SELECT pg_sleep(11)");
+  }
+
+  async down(): Promise<void> {}
+}
 
 const SCHEMA_MIGRATIONS = [
   "InitialSchema1792251267804",
@@ -33,7 +49,10 @@ describe("production migrator", () => {
     return database;
   }
 
-  function dataSource(database: string, extra: string[] = []) {
+  function dataSource(
+    database: string,
+    extra: (typeof Failing1900000000000)[] = [],
+  ) {
     return new DataSource({
       type: "postgres",
       ...connection(database),
@@ -78,7 +97,7 @@ describe("production migrator", () => {
   it("applies nothing when one pending migration fails", async () => {
     const database = await scratchDatabase();
     await expect(
-      migrate(dataSource(database, [fixture("failing")])),
+      migrate(dataSource(database, [Failing1900000000000])),
     ).rejects.toThrow('relation "no_such_table" does not exist');
     const tables = await query<{ table_name: string }>(
       database,
@@ -91,14 +110,14 @@ describe("production migrator", () => {
   it("makes an overlapping release wait for the lock instead of timing out", async () => {
     const database = await scratchDatabase();
     const finished: string[] = [];
-    const first = migrate(dataSource(database, [fixture("slow")])).then(
+    const first = migrate(dataSource(database, [Slow1900000000000])).then(
       (applied) => {
         finished.push("first");
         return applied;
       },
     );
     await waitForAdvisoryLock(database);
-    const second = migrate(dataSource(database, [fixture("slow")])).then(
+    const second = migrate(dataSource(database, [Slow1900000000000])).then(
       (applied) => {
         finished.push("second");
         return applied;

@@ -16,14 +16,9 @@ export const MEDIA_STORAGE = Symbol("MEDIA_STORAGE");
 export const MEDIA_FILE_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}-(sm|lg|og)\.(webp|jpg)$/;
 
-/** Whether `name` is a media file name the API could have generated. */
-export function isMediaFileName(name: string): boolean {
-  return MEDIA_FILE_PATTERN.test(name);
-}
-
-/** Throws unless {@link isMediaFileName} accepts `name`. */
+/** Throws unless `name` matches {@link MEDIA_FILE_PATTERN}. */
 export function assertMediaFileName(name: string): void {
-  if (!isMediaFileName(name)) {
+  if (!MEDIA_FILE_PATTERN.test(name)) {
     throw new Error(`Refusing unexpected media file name: ${name}`);
   }
 }

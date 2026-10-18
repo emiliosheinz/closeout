@@ -6,15 +6,10 @@ import { AppDataSource } from "./connection";
 const MIGRATION_LOCK_KEY = 7_260_418_001;
 
 /**
- * Applies pending migrations for a production release. Overlapping releases
- * serialise on a session advisory lock held by one dedicated connection for
- * the whole run, and the pending set runs in a single transaction, so a
- * failure leaves the schema as it was.
- *
- * The lock is taken before `lock_timeout` is set: waiting for another
- * release is expected and bounded by the platform's pre-deploy timeout,
- * while DDL stuck behind live traffic should fail fast instead of queueing
- * storefront queries behind it.
+ * Applies pending migrations in one transaction, serialised across releases
+ * by a session advisory lock. `lock_timeout` is set after the lock: waiting
+ * for another release is expected, while DDL stuck behind live traffic
+ * should fail fast.
  *
  * @returns the names of the migrations applied
  */
@@ -31,12 +26,9 @@ export async function migrate(dataSource: DataSource): Promise<string[]> {
       dataSource,
       queryRunner,
     ).executePendingMigrations();
-    await queryRunner.query("SELECT pg_advisory_unlock($1)", [
-      MIGRATION_LOCK_KEY,
-    ]);
     return applied.map((migration) => migration.name);
   } finally {
-    // Closing the session also drops the lock if the run failed.
+    // Closing the session drops the advisory lock.
     await queryRunner.release();
     await dataSource.destroy();
   }

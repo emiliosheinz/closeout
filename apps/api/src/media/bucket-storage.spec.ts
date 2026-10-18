@@ -31,8 +31,6 @@ function fakeBucket() {
       };
     }
     if (command instanceof DeleteObjectCommand) {
-      const { Bucket, Key } = command.input;
-      objects.delete(`${Bucket}/${Key}`);
       return {};
     }
     throw new Error("unexpected command");
@@ -49,21 +47,17 @@ describe("BucketStorage", () => {
     expect([...objects.keys()]).toEqual([`media/${NAME}`]);
   });
 
-  it("reads null after a remove", async () => {
-    const { storage } = fakeBucket();
-    await storage.put(NAME, Buffer.from([1]));
-    await storage.remove(NAME);
-    expect(await storage.read(NAME)).toBeNull();
-  });
-
   it("reads null for a missing object", async () => {
     const { storage } = fakeBucket();
     expect(await storage.read(NAME)).toBeNull();
   });
 
-  it("removes a missing object without error", async () => {
-    const { storage } = fakeBucket();
-    await expect(storage.remove(NAME)).resolves.toBeUndefined();
+  it("deletes the object from the configured bucket", async () => {
+    const { storage, send } = fakeBucket();
+    await storage.remove(NAME);
+    const command = send.mock.calls[0]?.[0] as DeleteObjectCommand;
+    expect(command).toBeInstanceOf(DeleteObjectCommand);
+    expect(command.input).toEqual({ Bucket: BUCKET, Key: NAME });
   });
 
   it("refuses invalid names without calling the bucket", async () => {

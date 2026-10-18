@@ -7,7 +7,7 @@ import {
 } from "@aws-sdk/client-s3";
 import {
   assertMediaFileName,
-  isMediaFileName,
+  MEDIA_FILE_PATTERN,
   type MediaStorage,
 } from "./media-storage";
 
@@ -26,7 +26,7 @@ export class BucketStorage implements MediaStorage {
   }
 
   async read(name: string): Promise<Buffer | null> {
-    if (!isMediaFileName(name)) return null;
+    if (!MEDIA_FILE_PATTERN.test(name)) return null;
     try {
       const object = await this.client.send(
         new GetObjectCommand({ Bucket: this.bucket, Key: name }),

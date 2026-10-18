@@ -13,9 +13,8 @@ const BUCKET_VARIABLES = [
 
 /**
  * Bucket storage when any `S3_*` variable is set (then all five must be),
- * otherwise local disk under `MEDIA_DIR`. A partial bucket configuration
- * never falls back to disk: in production that would silently keep uploads
- * on a container filesystem that the next deploy discards.
+ * otherwise local disk. A partial bucket configuration never falls back to
+ * disk: uploads would vanish on the next deploy.
  */
 export function mediaStorageFromEnv(
   env: NodeJS.ProcessEnv = process.env,

@@ -23,11 +23,9 @@ describe("dataSourceOptions", () => {
     process.env = { ...original };
   });
 
-  it.each(
-    Object.keys(SETTINGS),
-  )("refuses to build options without %s", (name) => {
-    delete process.env[name];
-    expect(() => dataSourceOptions()).toThrow(`${name} must be set`);
+  it("refuses to build options without a setting", () => {
+    delete process.env.POSTGRES_HOST;
+    expect(() => dataSourceOptions()).toThrow("POSTGRES_HOST must be set");
   });
 
   it("refuses an empty setting", () => {

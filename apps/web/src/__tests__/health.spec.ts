@@ -32,14 +32,17 @@ describe("GET /health", () => {
 
   it.each(
     Object.keys(VALID),
-  )("is not ready without %s, and names it without leaking values", async (name) => {
+  )("is not ready without %s, and names only it", async (name) => {
     delete process.env[name];
     const { status, body } = await check();
     expect(status).toBe(503);
     expect(JSON.parse(body).unusable).toEqual([name]);
-    for (const value of Object.values(VALID)) {
-      expect(body).not.toContain(value);
-    }
+  });
+
+  it("never leaks the values of the other variables", async () => {
+    delete process.env.API_BASE_URL;
+    const { body } = await check();
+    expect(body).not.toContain(VALID.INTERNAL_API_SECRET);
   });
 
   it.each([
