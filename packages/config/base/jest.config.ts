@@ -21,5 +21,3 @@ const config: Config = {
   },
 };
 export default config;
-
-export const typeProbe: number = "x";
