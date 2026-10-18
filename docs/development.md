@@ -187,12 +187,16 @@ Dashboard edits are staged: nothing is live until you click **Deploy Changes**.
    Environments (`gh secret set RAILWAY_TOKEN --env <env>`, value on stdin).
 7. First apply: run the Deploy infrastructure workflow manually on `main` with
    **first-time-setup** checked; the guard then also allows creating the database
-   and the bucket.
+   and the bucket. If the bucket shows on the canvas for a moment and then
+   disappears, the project has had a bucket of that name before (even a deleted
+   one): rename it in `railway.ts` and run first-time setup again.
 8. Generate the web domain at once (web > Settings > Networking, port 3000).
    `PUBLIC_BASE_URL` references it; without it the api fails at boot with `Invalid
    URL` and web `/health` returns 503.
-9. On `api` and `web` (Settings > Source), enable auto deploy and Wait for CI;
-   apply does not set them. Deploy Changes, then redeploy both services.
+9. On `api` and `web` (Settings > Source), check that auto deploy and Wait for CI
+   are on. The push that brought `railway.ts` to `main` failed the guard, so its
+   deploys were skipped: on each service, open the newest skipped deployment and
+   choose **Deploy commit** (redeploy would rebuild an older commit).
 10. Check: a plan reports no changes, `/health` and `/api/v1/health` answer 200.
     Create the first admin.
 
