@@ -29,8 +29,6 @@ export default defineRailway((ctx, project) => {
     region: REGION,
   });
 
-  // Not "media": the CLI resolves that name to the deleted verification bucket
-  // and its create never sticks.
   const media = bucket("media-storage", { region: "iad" });
 
   // Zero downtime: traffic moves after /health passes, then the old
