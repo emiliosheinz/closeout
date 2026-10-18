@@ -1,0 +1,228 @@
+name: Checks
+
+# Pull request gate: lint and format, types, unit and integration tests,
+# migration drift, commit messages, workflow files, production image builds
+# and end-to-end tests. Every job skips draft pull requests.
+#
+# Job display names are the required-check contract: renaming one silently
+# drops it from branch protection. Keep them in sync with docs/development.md.
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  node-checks:
+    name: ${{ matrix.name }}
+    if: ${{ !github.event.pull_request.draft }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Lint and format
+            command: pnpm check
+          - name: Type check
+            command: pnpm typecheck
+          - name: Unit tests
+            command: pnpm test
+    steps:
+      - name: Check out code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up toolchain
+        uses: ./.github/actions/setup-toolchain
+
+      - name: ${{ matrix.name }}
+        run: ${{ matrix.command }}
+
+  postgres-checks:
+    name: ${{ matrix.name }}
+    if: ${{ !github.event.pull_request.draft }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Integration tests
+            command: pnpm --filter api test:integration
+          - name: Migration drift
+            command: pnpm --filter api migration:run && pnpm --filter api migration:check
+    # Service env cannot read the job env, so the credentials appear in both.
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: closeout
+          # Integration global setup creates and drops databases, so this
+          # must be the superuser.
+          POSTGRES_USER: closeout
+          POSTGRES_PASSWORD: closeout
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+    env:
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: closeout
+      POSTGRES_USER: closeout
+      POSTGRES_PASSWORD: closeout
+    steps:
+      - name: Check out code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up toolchain
+        uses: ./.github/actions/setup-toolchain
+
+      - name: ${{ matrix.name }}
+        run: ${{ matrix.command }}
+
+  commit-messages:
+    name: Commit messages
+    if: ${{ !github.event.pull_request.draft }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      # The real head, not the synthetic merge commit, and full history so the
+      # range against the base branch resolves.
+      - name: Check out the PR head with full history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up toolchain
+        uses: ./.github/actions/setup-toolchain
+
+      # The range is resolved on its own line so a git error fails the step
+      # instead of linting zero commits.
+      - name: Lint commit messages
+        env:
+          BASE: origin/${{ github.base_ref }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          status=0
+          shas=$(git rev-list --no-merges "$BASE..$HEAD_SHA")
+          for sha in $shas; do
+            if ! git log -1 --format=%B "$sha" | pnpm --silent commitlint; then
+              echo "::error::Commit $(git rev-parse --short "$sha") violates the commit message rules"
+              status=1
+            fi
+          done
+          exit "$status"
+
+  workflow-files:
+    name: Workflow files
+    if: ${{ !github.event.pull_request.draft }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check out code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Lint workflows with actionlint
+        run: >-
+          docker run --rm -v "$PWD:/repo" -w /repo
+          rhysd/actionlint:1.7.12@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667
+          -color
+
+  # Mirrors the images job in warm-caches.yml: keep the target and cache scope
+  # identical, or pull requests silently build cold.
+  images:
+    name: Build ${{ matrix.name }} image
+    if: ${{ !github.event.pull_request.draft }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - app: api
+            name: API
+          - app: web
+            name: web
+    steps:
+      - name: Check out code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      # Restore only: warm-caches.yml is the sole cache writer.
+      - name: Build the production image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: apps/${{ matrix.app }}/Dockerfile
+          target: prod
+          cache-from: type=gha,scope=image-${{ matrix.app }}
+
+  e2e:
+    name: End-to-end tests
+    if: ${{ !github.event.pull_request.draft }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      COMPOSE_FILE: docker-compose.e2e.yaml
+    steps:
+      - name: Check out code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # The 30-minute step limit sits under the 40-minute job limit, so a hang
+      # still leaves time for diagnostics. The runner container is named and
+      # kept (no --rm) so its log can be collected; teardown removes it.
+      - name: Run Playwright against the e2e stack
+        timeout-minutes: 30
+        run: >-
+          docker compose run --build --name e2e-runner
+          web-e2e pnpm --filter web test:e2e --reporter=list,html
+
+      # compose logs skips one-off run containers, so the runner is read directly.
+      - name: Collect service logs
+        if: failure() || cancelled()
+        run: |
+          mkdir -p e2e-logs
+          for service in $(docker compose config --services); do
+            docker compose logs --no-color "$service" > "e2e-logs/$service.log" 2>&1 || true
+          done
+          docker logs e2e-runner > e2e-logs/web-e2e.log 2>&1 || true
+
+      - name: Upload diagnostics
+        if: failure() || cancelled()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: e2e-diagnostics
+          path: |
+            e2e-logs/
+            apps/web/playwright-report/
+            apps/web/test-results/
+          retention-days: 7
+
+      - name: Tear down the e2e stack
+        if: always()
+        run: docker compose down -v --remove-orphans

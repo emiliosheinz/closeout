@@ -5,7 +5,16 @@
   "private": true,
   "license": "MIT",
   "packageManager": "pnpm@11.1.0",
+  "scripts": {
+    "check": "biome check --error-on-warnings .",
+    "typecheck": "turbo typecheck",
+    "test": "turbo test",
+    "commitlint": "commitlint"
+  },
   "devDependencies": {
+    "@biomejs/biome": "catalog:",
+    "@commitlint/cli": "21.2.3",
+    "@commitlint/config-conventional": "21.2.3",
     "turbo": "2.9.18"
   },
   "engines": {
