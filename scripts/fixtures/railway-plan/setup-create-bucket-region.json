@@ -1,0 +1,32 @@
+{
+  "kind": "railway.config.plan",
+  "version": 1,
+  "cliVersion": "5.70.0",
+  "sourceTree": "0000000000000000000000000000000000000000",
+  "environmentId": "00000000-0000-0000-0000-000000000000",
+  "configEtag": "etag",
+  "changeSetHash": "sha256:0",
+  "changeSet": {
+    "version": 1,
+    "changes": [
+      {
+        "kind": "resource.create",
+        "address": "bucket.media",
+        "resource": {
+          "address": "bucket.media",
+          "type": "bucket",
+          "name": "media",
+          "config": {
+            "region": "sjc"
+          }
+        },
+        "path": "resources.bucket.media",
+        "summary": "Create bucket media",
+        "severity": "safe",
+        "deployEffect": "deploy"
+      }
+    ],
+    "diagnostics": []
+  },
+  "destructive": false
+}

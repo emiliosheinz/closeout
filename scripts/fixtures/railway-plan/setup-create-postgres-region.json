@@ -1,0 +1,41 @@
+{
+  "kind": "railway.config.plan",
+  "version": 1,
+  "cliVersion": "5.70.0",
+  "sourceTree": "0000000000000000000000000000000000000000",
+  "environmentId": "00000000-0000-0000-0000-000000000000",
+  "configEtag": "etag",
+  "changeSetHash": "sha256:0",
+  "changeSet": {
+    "version": 1,
+    "changes": [
+      {
+        "kind": "resource.create",
+        "address": "database.postgres",
+        "resource": {
+          "address": "database.postgres",
+          "type": "database",
+          "name": "postgres",
+          "kind": "database",
+          "engine": "postgres",
+          "image": "ghcr.io/railwayapp-templates/postgres-ssl:17",
+          "output": "DATABASE_URL",
+          "defaultMountPath": "/var/lib/postgresql/data",
+          "deploy": {
+            "multiRegionConfig": {
+              "us-west2": {
+                "numReplicas": 1
+              }
+            }
+          }
+        },
+        "path": "resources.database.postgres",
+        "summary": "Create database postgres",
+        "severity": "safe",
+        "deployEffect": "deploy"
+      }
+    ],
+    "diagnostics": []
+  },
+  "destructive": false
+}

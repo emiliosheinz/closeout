@@ -16,6 +16,7 @@ import { readFileSync } from "node:fs";
 import { parseArgs } from "node:util";
 
 const GUARDED_TYPES = new Set(["database", "bucket", "volume"]);
+const UNGUARDED_TYPES = new Set(["service", "group"]);
 
 const KNOWN_KINDS = new Set([
   "resource.create",
@@ -110,7 +111,10 @@ function checkChange(change: Change, setup: boolean): string | null {
   }
 
   const [type] = address.split(".");
-  if (!GUARDED_TYPES.has(type)) return null;
+  if (UNGUARDED_TYPES.has(type)) return null;
+  if (!GUARDED_TYPES.has(type)) {
+    return `${address}: unknown resource type ${type}`;
+  }
   if (setup && change.kind === "resource.create") {
     return checkCreate(type, address, change.resource);
   }

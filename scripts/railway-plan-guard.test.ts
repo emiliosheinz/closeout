@@ -29,6 +29,9 @@ describe("railway plan guard", () => {
     ["postgres-variable.json", "database.postgres"],
     ["unknown-kind.json", "service.api"],
     ["diagnostic-error.json", "resources.bucket.media.config.region"],
+    ["unknown-resource-type.json", "cluster.postgres"],
+    ["missing-address.json", "change"],
+    ["wrong-version.json", "plan"],
   ]) {
     it(`rejects ${name}, naming ${resource}`, () => {
       const { status, output } = guard(fixture(name));
@@ -66,6 +69,7 @@ describe("railway plan guard", () => {
       encoding: "utf8",
     });
     assert.equal(result.status, 1);
+    assert.match(result.stderr, /^Usage:/m);
   });
 
   for (const name of ["empty.json", "api-variable.json"]) {
@@ -94,6 +98,27 @@ describe("railway plan guard", () => {
       assert.equal(status, 1);
       assert.match(output, /^database\.postgres: created with image .*:18/m);
     });
+
+    for (const [name, resource, region] of [
+      [
+        "setup-create-postgres-region.json",
+        "database.postgres",
+        "us-east4-eqdc4a",
+      ],
+      ["setup-create-bucket-region.json", "bucket.media", "iad"],
+    ]) {
+      it(`rejects ${name}, created outside ${region}`, () => {
+        const { status, output } = guard(fixture(name), "--setup");
+        assert.equal(status, 1);
+        assert.match(
+          output,
+          new RegExp(
+            `^${resource.replace(".", "\\.")}: not created in ${region}`,
+            "m",
+          ),
+        );
+      });
+    }
 
     it("still rejects deleting a data store", () => {
       const { status, output } = guard(fixture("setup-delete.json"), "--setup");
