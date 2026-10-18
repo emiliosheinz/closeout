@@ -83,3 +83,7 @@ export function joinNames(names: string[]): string {
 export function pluralize(count: number, one: string, many: string): string {
   return `${count.toLocaleString(DEFAULT_LOCALE)} ${count === 1 ? one : many}`;
 }
+
+export function lintProbe() {
+  debugger;
+}
