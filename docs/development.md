@@ -106,15 +106,11 @@ commands below are exactly what CI runs.
 refreshes the dependency and image-layer caches that pull requests restore. It is the
 only workflow that saves caches and reports none of the names above.
 
-### Making the checks required
+### Required check on `main`
 
-Branch protection is unavailable on a free private repository. Once the repository is
-public or on a paid plan:
-
-1. Open a pull request so `Ready to merge` has reported at least once.
-2. Settings → Branches → add a branch protection rule (or ruleset) for `main`.
-3. Enable "Require status checks to pass before merging" and add `Ready to merge`.
-4. Check with `gh api repos/{owner}/{repo}/branches/main/protection/required_status_checks --jq .contexts`.
+The "Protect main" ruleset (Settings → Rules → Rulesets) requires `Ready to merge`, from
+GitHub Actions, on every update to `main`, so pull requests merge only when it passes.
+Check with `gh api repos/{owner}/{repo}/rules/branches/main`.
 
 ## Resetting local data
 
