@@ -1,0 +1,30 @@
+{
+  "kind": "railway.config.plan",
+  "version": 1,
+  "cliVersion": "5.70.0",
+  "sourceTree": "0000000000000000000000000000000000000000",
+  "environmentId": "00000000-0000-0000-0000-000000000000",
+  "configEtag": "etag",
+  "changeSetHash": "sha256:0",
+  "changeSet": {
+    "version": 1,
+    "changes": [
+      {
+        "kind": "resource.create",
+        "address": "volume.postgres-volume",
+        "resource": {
+          "address": "volume.postgres-volume",
+          "type": "volume",
+          "name": "postgres-volume",
+          "config": {}
+        },
+        "path": "resources.volume.postgres-volume",
+        "summary": "Create volume postgres-volume",
+        "severity": "safe",
+        "deployEffect": "none"
+      }
+    ],
+    "diagnostics": []
+  },
+  "destructive": false
+}

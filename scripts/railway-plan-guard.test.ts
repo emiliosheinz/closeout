@@ -20,26 +20,47 @@ function guard(file: string, ...flags: string[]) {
 const fixture = (name: string) => path.join(FIXTURES, name);
 
 describe("railway plan guard", () => {
-  for (const [name, resource] of [
-    ["bucket-delete.json", "bucket.media"],
-    ["postgres-delete.json", "database.postgres"],
-    ["postgres-image.json", "database.postgres"],
-    ["volume-change.json", "volume.postgres-volume"],
-    ["volume-attachment.json", "service.api"],
-    ["postgres-variable.json", "database.postgres"],
-    ["unknown-kind.json", "service.api"],
-    ["diagnostic-error.json", "resources.bucket.media.config.region"],
-    ["unknown-resource-type.json", "cluster.postgres"],
-    ["missing-address.json", "change"],
-    ["wrong-version.json", "plan"],
+  for (const [name, problem] of [
+    ["bucket-delete.json", "bucket.media: resource.delete on a data store"],
+    [
+      "postgres-delete.json",
+      "database.postgres: resource.delete on a data store",
+    ],
+    [
+      "postgres-image.json",
+      "database.postgres: resource.update on a data store",
+    ],
+    [
+      "volume-change.json",
+      "volume.postgres-volume: resource.update on a data store",
+    ],
+    ["volume-attachment.json", "service.api: changes a volume attachment"],
+    [
+      "postgres-variable.json",
+      "database.postgres: variable.set on a data store",
+    ],
+    ["unknown-kind.json", "service.api: unknown change kind resource.replace"],
+    [
+      "diagnostic-error.json",
+      "resources.bucket.media.config.region: Bucket regions are immutable",
+    ],
+    [
+      "unknown-resource-type.json",
+      "cluster.postgres: unknown resource type cluster",
+    ],
+    ["missing-address.json", "change: missing kind or address"],
+    ["wrong-version.json", "plan: not a version 1 Railway plan file"],
+    ["wrong-kind.json", "plan: not a version 1 Railway plan file"],
+    [
+      "wrong-change-set-version.json",
+      "plan: not a version 1 Railway plan file",
+    ],
+    ["missing-diagnostics.json", "plan: not a version 1 Railway plan file"],
   ]) {
-    it(`rejects ${name}, naming ${resource}`, () => {
+    it(`rejects ${name}: ${problem}`, () => {
       const { status, output } = guard(fixture(name));
       assert.equal(status, 1);
-      assert.match(
-        output,
-        new RegExp(`^${resource.replaceAll(".", "\\.")}:`, "m"),
-      );
+      assert.ok(output.split("\n").includes(problem), output);
     });
   }
 
@@ -119,6 +140,18 @@ describe("railway plan guard", () => {
         );
       });
     }
+
+    it("rejects creating a volume", () => {
+      const { status, output } = guard(
+        fixture("setup-create-volume.json"),
+        "--setup",
+      );
+      assert.equal(status, 1);
+      assert.match(
+        output,
+        /^volume\.postgres-volume: resource\.create on a data store$/m,
+      );
+    });
 
     it("still rejects deleting a data store", () => {
       const { status, output } = guard(fixture("setup-delete.json"), "--setup");
