@@ -7,7 +7,6 @@ const createJestConfig = nextJest({ dir: "./" });
 const config: Config = {
   ...baseConfig,
   testEnvironment: "jsdom",
-  testRegex: "\\.no-such-suffix$",
   setupFilesAfterEnv: ["<rootDir>/jest.setup.ts"],
   testPathIgnorePatterns: [
     ...(baseConfig.testPathIgnorePatterns ?? []),
