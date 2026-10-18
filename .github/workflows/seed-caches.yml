@@ -27,7 +27,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Set up toolchain and save the pnpm store
-        uses: ./.github/actions/setup
+        uses: ./.github/actions/setup-toolchain
         with:
           save-cache: "true"
 

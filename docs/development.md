@@ -77,7 +77,7 @@ shows "contato indisponível" instead of a WhatsApp button.
 
 ## Continuous integration
 
-`.github/workflows/ci.yml` ("Checks") runs on every non-draft pull request into `main`, and again
+`.github/workflows/checks.yml` ("Checks") runs on every non-draft pull request into `main`, and again
 on each new commit (a newer push cancels the older run). Drafts and PRs into other
 branches run nothing; marking a draft ready for review starts the run. A draft shows its
 checks as skipped, some under a placeholder such as `${{ matrix.name }}`; that is expected.
@@ -101,7 +101,7 @@ the required-check contract:
 | `Build web image` | `docker build -f apps/web/Dockerfile --target prod .` |
 | `End-to-end tests` | `bin/closeout e2e`. On failure or cancellation CI uploads `e2e-diagnostics` (HTML report, traces, every service log) for 7 days |
 
-`.github/workflows/seed-cache.yml` ("Seed caches") runs on every push to `main` and refreshes the
+`.github/workflows/seed-caches.yml` ("Seed caches") runs on every push to `main` and refreshes the
 dependency and image-layer caches that pull requests restore. It is the only workflow
 that saves caches and reports none of the names above.
 

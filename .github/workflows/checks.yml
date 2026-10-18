@@ -37,7 +37,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Set up toolchain
-        uses: ./.github/actions/setup
+        uses: ./.github/actions/setup-toolchain
       - name: Run ${{ matrix.command }}
         run: ${{ matrix.command }}
 
@@ -83,7 +83,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Set up toolchain
-        uses: ./.github/actions/setup
+        uses: ./.github/actions/setup-toolchain
       - name: Run ${{ matrix.command }}
         run: ${{ matrix.command }}
 
@@ -102,7 +102,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - name: Set up toolchain
-        uses: ./.github/actions/setup
+        uses: ./.github/actions/setup-toolchain
       - name: Lint commit messages
         env:
           BASE: origin/${{ github.base_ref }}
