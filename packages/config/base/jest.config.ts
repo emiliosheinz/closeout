@@ -21,7 +21,3 @@ const config: Config = {
   },
 };
 export default config;
-
-export function lintProbe() {
-  debugger;
-}

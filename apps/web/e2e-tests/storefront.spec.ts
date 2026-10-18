@@ -124,7 +124,3 @@ test("the image optimizer endpoint is disabled", async ({ page }) => {
   );
   expect(response.status()).toBe(404);
 });
-
-test("fails on purpose", async () => {
-  expect(1).toBe(2);
-});

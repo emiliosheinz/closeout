@@ -24,5 +24,3 @@ describe("configureApp", () => {
     ).not.toThrow();
   });
 });
-
-export const typeProbe: number = "x";

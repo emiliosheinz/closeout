@@ -36,8 +36,6 @@ RUN mkdir -p /data/media && chown node:node /data/media
 VOLUME ["/data/media"]
 USER node
 
-RUN false
-
 CMD ["node", "dist/main"]
 
 
