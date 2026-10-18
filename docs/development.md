@@ -45,6 +45,11 @@ After generating a migration, run `migration:generate` again and expect "No chan
 it proves the entities and the schema agree. Extensions (`uuid-ossp`, `citext`,
 `unaccent`) are created by the initial migration.
 
+Postgres runs major 18, the same as production. A `db-data` volume created under 17
+will not start on 18: while still on 17, dump what you need (`docker compose exec
+postgres pg_dumpall -U closeout > dump.sql`), then remove the volume (`docker compose down` and `docker
+volume rm closeout_db-data`), start again, and restore with `psql` if you need the data.
+
 ## Administrators
 
 ```bash
@@ -132,38 +137,126 @@ docker compose up -d --wait
 | Login always says "Muitas tentativas" | The limiter allows 10 failures per email and IP, 30 per email and 30 per IP in 15 minutes; restart the api container to clear it. |
 | Uploaded photo rejected | Only JPEG, PNG and WebP up to 10 MB and 40 megapixels are accepted. iPhones convert HEIC to JPEG when uploading from Safari. |
 
-## Production notes
+## Production on Railway
 
-The `prod` targets of `apps/api/Dockerfile` and `apps/web/Dockerfile` build
-standalone images. A deployment needs Postgres, a persistent volume at `MEDIA_DIR`
-for the API, `NODE_ENV=production` (Secure cookies, HSTS), `PUBLIC_BASE_URL` set to
-the HTTPS origin, an `INTERNAL_API_SECRET` of at least 32 random characters, and only the web app exposed.
-Apply migrations before starting the API. The production API image holds only the
-compiled app, so run `pnpm turbo migration:run --filter=api` from a source checkout
-or the tooling image (`docker/Dockerfile.cli`) with the production `POSTGRES_*`
-variables. Put a reverse proxy (nginx, Caddy, a platform load balancer) in front of the web app
-and have it set `X-Forwarded-For` to the real client address
-(`proxy_set_header X-Forwarded-For $remote_addr;` in nginx). The login rate limiter
-keys on the last hop of that header: 10 failures per email and IP, 30 per email and
-30 per IP in 15 minutes. Without a proxy a client can forge it and only the per-email
-limit protects an account. If every request arrives with the same address (a proxy
-that does not set the header), the per-IP limit becomes shared: 30 failed logins from
-anyone block all logins for 15 minutes.
+Production runs the `prod` images on Railway, declared in `.railway/railway.ts`.
 
-The web app caches the store, listing pages and the first page of the unfiltered
-catalog for up to 5 minutes; searches, filters and later pages always read live data. Saves in the admin
-expire that cache at once. Changes made elsewhere (`bin/closeout cli`, SQL) show on
-the storefront within 5 minutes. The cache lives in each web instance, so running
-several instances needs a shared Next.js cache handler.
+The web app must sit behind a proxy that sets `X-Real-IP` to the client address and
+overwrites any value the client sent (Railway's edge does; in nginx,
+`proxy_set_header X-Real-IP $remote_addr;`). The login rate limiter keys on it: 10
+failures per email and IP, 30 per email, 30 per IP in 15 minutes. Without such a
+proxy a client can forge it; if every request arrives with the same address, 30
+failed logins from anyone block all logins for 15 minutes.
 
-### Moving media to object storage
+The web app caches the store, listing pages and the first unfiltered catalog page
+for up to 5 minutes; admin saves expire that cache, other changes (CLI, SQL) show
+within 5 minutes. The cache is per instance.
 
-Image files go through the `MediaStorage` interface
-(`apps/api/src/media/media-storage.ts`). To use S3 or any S3-compatible service,
-add an implementation of its three methods (`put`, `read`, `remove`) and bind it to
-`MEDIA_STORAGE` in `media.module.ts`. File names stay the same, so existing rows need
-no migration: copy the files from the volume to the bucket. Serving can stay behind
-the API's `/media` route or move to a CDN by changing `mediaUrls()`.
+### Overview
+
+Two environments in the Railway project "Closeout": `production` deploys `main`;
+`verification` deploys `verification` and exists only to probe changes before
+launch. Each has `web` (public), `api` (private network only), Postgres 18 and a
+private media bucket. There are no backups, which is why the data-store guard
+refuses any plan that touches the database, the bucket or their volume.
+
+A push creates one deployment per service, held by Railway (Wait for CI) until the
+commit's checks finish. The Railway workflow plans `railway.ts`, runs the
+guard and applies. Then the deployments build; the api pre-deploy step runs pending
+migrations in one transaction under a Postgres advisory lock, and traffic moves only
+after `/health` passes. A failed migration, build or health check leaves the
+previous deployment serving.
+
+### First-time setup
+
+`verification` first, then `production`. Dashboard edits are staged: nothing is live
+until you click **Deploy Changes**.
+
+1. GitHub Environments: `production` limited to `main`, `verification` limited to
+   `verification`, and `production-plan` / `verification-plan` unrestricted (pull
+   request plans run on `refs/pull/*`). Protect the `verification` branch like
+   `main`.
+2. On GitHub (Settings > Applications > Railway > Configure), accept any pending
+   permission request for the Railway app and give it this repository. Without it
+   the source panel says "Auto deploy unavailable" and Wait for CI switches itself
+   off.
+3. Usage limits: see "Usage limits".
+4. Railway project "Closeout" (New > Empty Project). Rename its default
+   environment to `verification`; later add `production` as an empty environment.
+5. Shared variables for the environment: `STORE_SLUG`, and `INTERNAL_API_SECRET`
+   from `openssl rand -hex 32`, sealed.
+6. An environment-scoped project token (Settings > Tokens), stored as
+   `RAILWAY_TOKEN` in both `<env>` and `<env>-plan` GitHub Environments
+   (`gh secret set RAILWAY_TOKEN --env <env>`, value on stdin).
+7. First apply. Once the workflow is on `main`, run the Railway workflow
+   manually on the environment's branch with **first-time-setup** checked: the guard
+   then also allows creating the database and the bucket. Before that (the first
+   environment), run the same steps locally with the CLI version pinned in
+   `.github/workflows/railway.yml`:
+
+   ```bash
+   export RAILWAY_TOKEN=...   # the environment token
+   npx -y @railway/cli@5.70.0 config plan --out plan.json
+   node scripts/railway-plan-guard.ts plan.json --setup
+   npx -y @railway/cli@5.70.0 config apply --plan plan.json --yes
+   ```
+8. Generate the web domain at once (web > Settings > Networking, port 3000).
+   `PUBLIC_BASE_URL` references it; without it the api fails at boot with `Invalid
+   URL` and web `/health` returns 503.
+9. On `api` and `web` (Settings > Source), enable auto deploy and Wait for CI;
+   apply does not set them. Deploy Changes, then redeploy both services.
+10. Check: a plan reports no changes, `/health` and `/api/v1/health` answer 200.
+    Create the first admin.
+
+### Operator CLI
+
+Run it inside the api service, from the dashboard (api > Console) or with
+`railway ssh --service api -- node dist/cli/main.js admin:create --email <email>
+--name <name>`. `admin:password --email <email>` rotates a password and signs the
+user out everywhere. Type passwords at the prompt only, never on the command line
+or in `CLOSEOUT_PASSWORD`. Never run `seed:demo` in production.
+
+### Changing infrastructure
+
+Edit `.railway/railway.ts` in a pull request; the plan shows in the run summary and
+merging applies it. The guard fails the run on any change to the database, the
+bucket or the volume, and on anything it does not recognise. The workflow never
+passes `--confirm-destructive`, so it cannot delete anything.
+
+- To remove a variable, delete it in Railway (or apply locally with
+  `--confirm-destructive` after reading the plan), then remove it from the file. A
+  push that only removes it from the file fails, and its deploys are skipped.
+- Never cancel a Railway workflow run. A cancelled or failed run skips that commit's
+  deploys for good; re-running does not revive them and `railway redeploy` redeploys
+  the last active commit. Push a new commit instead. The same applies to a failed
+  Warm caches run on `main` and to deploys whose checks are still unfinished after
+  2 hours.
+- A force-push may not trigger the workflow: run a plan afterwards.
+- `railway variable set/delete` takes effect on the next deploy only.
+
+### Rollback
+
+Dashboard: service > Deployments > a removed deployment > menu > Rollback. It
+restores that image and its variables without a build (seconds), within the plan's
+retention window. It does not revert migrations: keep migrations backward compatible
+(add first, drop in a later release), or roll forward.
+
+### Secret rotation
+
+Edit the shared `INTERNAL_API_SECRET` (stays sealed) and Deploy Changes; web and api
+redeploy together. Admin sessions survive.
+
+### Usage limits
+
+Workspace > Usage > Set limits: email alert at $10, hard limit at $100. Both cover
+every project in the workspace. At the hard limit every workload goes offline;
+raise the limit, then redeploy anything Railway does not restart.
+
+### Tearing down verification
+
+Delete the `verification` environment in Railway (this deletes its database and
+bucket), revoke its token, delete the `verification` and `verification-plan` GitHub
+Environments and the `verification` branch.
 
 ## Towards multiple storefronts
 

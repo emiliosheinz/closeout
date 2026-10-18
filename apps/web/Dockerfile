@@ -1,4 +1,17 @@
 # syntax=docker/dockerfile:1.18-labs
+# -------- Development (with hot reload) --------
+FROM node:24-alpine AS dev
+
+RUN apk add --no-cache curl
+
+RUN corepack enable pnpm && corepack install -g pnpm@11.1.0
+
+WORKDIR /closeout
+
+CMD ["pnpm", "turbo", "start:dev", "--filter=web"]
+
+
+
 # -------- Production Builder --------
 FROM node:24-alpine AS builder
 
@@ -33,16 +46,3 @@ COPY --from=builder /closeout/apps/web/.next/static ./apps/web/.next/static
 USER node
 
 CMD ["node", "apps/web/server.js"]
-
-
-
-# -------- Development (with hot reload) --------
-FROM node:24-alpine AS dev
-
-RUN apk add --no-cache curl
-
-RUN corepack enable pnpm && corepack install -g pnpm@11.1.0
-
-WORKDIR /closeout
-
-CMD ["pnpm", "turbo", "start:dev", "--filter=web"]

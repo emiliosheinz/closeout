@@ -20,17 +20,23 @@ export function dataSourceOptions(): DataSourceOptions {
 function baseOptions(): DataSourceOptions {
   return {
     type: "postgres",
-    host: process.env.POSTGRES_HOST,
-    port: Number(process.env.POSTGRES_PORT),
-    database: process.env.POSTGRES_DB,
-    username: process.env.POSTGRES_USER,
-    password: process.env.POSTGRES_PASSWORD,
+    host: requireEnv("POSTGRES_HOST"),
+    port: Number(requireEnv("POSTGRES_PORT")),
+    database: requireEnv("POSTGRES_DB"),
+    username: requireEnv("POSTGRES_USER"),
+    password: requireEnv("POSTGRES_PASSWORD"),
     ssl: process.env.POSTGRES_SSL === "true",
     entities: ENTITIES,
     migrations: [path.join(__dirname, "migrations", "*.{ts,js}")],
     migrationsTableName: "migrations",
     synchronize: false,
   };
+}
+
+function requireEnv(name: string): string {
+  const value = process.env[name];
+  if (!value) throw new Error(`${name} must be set`);
+  return value;
 }
 
 // Used by the migration CLI: no statement_timeout, migrations can run long.

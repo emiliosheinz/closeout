@@ -11,12 +11,15 @@ export function isSameOrigin(
 }
 
 /**
- * Last hop of X-Forwarded-For. Trustworthy only behind a reverse proxy that
- * sets the header itself (overwriting or appending the real peer address);
- * without one, Next.js keeps whatever the client sent, and the per-client
- * login limit can be dodged (the per-email limit still applies).
+ * The visitor's address from X-Real-IP. Railway's edge overwrites that
+ * header with the connecting client, so a value the client sends never
+ * arrives. The last X-Forwarded-For hop there is an edge node shared by every
+ * visitor, which would turn the per-IP login limit into a global lockout.
+ * Any other host must sit behind a proxy that sets X-Real-IP the same way;
+ * without one the per-client limit can be dodged (the per-email limit still
+ * applies).
  */
-export function clientIpFrom(forwardedFor: string | null): string | null {
-  const last = forwardedFor?.split(",").at(-1)?.trim();
-  return last ? last : null;
+export function clientIpFrom(realIp: string | null): string | null {
+  const ip = realIp?.trim();
+  return ip ? ip : null;
 }

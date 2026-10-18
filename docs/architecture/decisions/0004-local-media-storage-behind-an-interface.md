@@ -4,7 +4,7 @@ Date: 2026-10-17
 
 ## Status
 
-Accepted
+Accepted. Production storage superseded by [7. Production media in a Railway Bucket](0007-production-media-in-a-railway-bucket.md).
 
 ## Context
 

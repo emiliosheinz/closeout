@@ -11,9 +11,9 @@ describe("isSameOrigin", () => {
 });
 
 describe("clientIpFrom", () => {
-  it("trusts only the hop appended by the nearest proxy", () => {
-    expect(clientIpFrom("6.6.6.6, 203.0.113.5")).toBe("203.0.113.5");
+  it("returns the trimmed X-Real-IP, null when blank", () => {
     expect(clientIpFrom("203.0.113.5")).toBe("203.0.113.5");
+    expect(clientIpFrom(" 203.0.113.5 ")).toBe("203.0.113.5");
     expect(clientIpFrom(null)).toBeNull();
     expect(clientIpFrom(" ")).toBeNull();
   });
