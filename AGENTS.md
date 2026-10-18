@@ -14,9 +14,9 @@ All compute runs inside containers. Never run pnpm, jest, turbo or nest on the h
 
 ```bash
 ./scripts/setup-env.sh && docker compose up -d --wait
-bin/closeout pnpm turbo check typecheck            # must be clean
+bin/closeout pnpm check && bin/closeout pnpm typecheck  # must be clean
 bin/closeout pnpm turbo check:fix                  # auto-fix formatting
-bin/closeout pnpm turbo test                       # unit tests
+bin/closeout pnpm test                             # unit tests
 bin/closeout pnpm --filter api test:integration    # real Postgres, per-run database
 bin/closeout e2e                                   # Playwright, isolated compose project
 bin/closeout db migration:generate <Name>          # then re-run: must say "No changes"
@@ -24,6 +24,7 @@ bin/closeout cli admin:create --email ... --name ... [--whatsapp "+55 ..."]
 ```
 
 Details: `docs/development.md`. Decisions: `docs/architecture/decisions/`.
+CI (the `Checks` workflow) runs on every ready PR into `main` and lints its commit messages (Conventional Commits); checks and local repro: `docs/development.md` "Continuous integration".
 
 # Architecture map
 

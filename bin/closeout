@@ -19,7 +19,7 @@ case "${1:-}" in
     shift
     task="${1:-}"
     if [ -z "$task" ]; then
-      echo "Usage: bin/closeout db <migration:run|migration:revert|migration:show|migration:generate <Name>>" >&2
+      echo "Usage: bin/closeout db <migration:run|migration:revert|migration:show|migration:check|migration:generate <Name>>" >&2
       exit 1
     fi
     shift

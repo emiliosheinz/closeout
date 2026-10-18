@@ -3,7 +3,11 @@
   "envMode": "loose",
   "tasks": {
     "build": { "dependsOn": ["^build"], "outputs": ["dist/**", ".next/**"] },
-    "start:dev": { "dependsOn": ["^build"], "persistent": true, "cache": false },
+    "start:dev": {
+      "dependsOn": ["^build"],
+      "persistent": true,
+      "cache": false
+    },
     "lint": { "dependsOn": ["^build"] },
     "format": { "dependsOn": ["^build"] },
     "check": { "dependsOn": ["^build"] },
@@ -18,6 +22,7 @@
     "migration:run": { "dependsOn": ["^build"], "cache": false },
     "migration:revert": { "dependsOn": ["^build"], "cache": false },
     "migration:show": { "dependsOn": ["^build"], "cache": false },
+    "migration:check": { "dependsOn": ["^build"], "cache": false },
     "migration:generate": { "dependsOn": ["^build"], "cache": false },
     "cli": { "dependsOn": ["^build"], "cache": false }
   }
