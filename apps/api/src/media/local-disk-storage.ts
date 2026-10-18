@@ -1,7 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { MEDIA_FILE_PATTERN, type MediaStorage } from "./media-storage";
+import {
+  assertMediaFileName,
+  isMediaFileName,
+  type MediaStorage,
+} from "./media-storage";
 
 /** Stores media files flat in one directory (a Docker volume in dev). */
 export class LocalDiskStorage implements MediaStorage {
@@ -17,7 +21,7 @@ export class LocalDiskStorage implements MediaStorage {
   }
 
   async read(name: string): Promise<Buffer | null> {
-    if (!MEDIA_FILE_PATTERN.test(name)) return null;
+    if (!isMediaFileName(name)) return null;
     try {
       return await readFile(this.resolve(name));
     } catch (err) {
@@ -31,9 +35,7 @@ export class LocalDiskStorage implements MediaStorage {
   }
 
   private resolve(name: string): string {
-    if (!MEDIA_FILE_PATTERN.test(name)) {
-      throw new Error(`Refusing unexpected media file name: ${name}`);
-    }
+    assertMediaFileName(name);
     return path.join(this.root, name);
   }
 }
