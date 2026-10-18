@@ -1,3 +1,4 @@
+import { type PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { BucketStorage } from "./bucket-storage";
 import { LocalDiskStorage } from "./local-disk-storage";
 import { mediaStorageFromEnv } from "./media-storage-config";
@@ -13,6 +14,19 @@ const BUCKET_ENV = {
 describe("mediaStorageFromEnv", () => {
   it("uses the bucket when all five S3 variables are set", () => {
     expect(mediaStorageFromEnv(BUCKET_ENV)).toBeInstanceOf(BucketStorage);
+  });
+
+  it("writes to the configured bucket", async () => {
+    const send = jest
+      .spyOn(S3Client.prototype, "send")
+      .mockResolvedValue({} as never);
+    await mediaStorageFromEnv(BUCKET_ENV).put(
+      "0b7e4c1a-2f3d-4e5f-8a9b-0c1d2e3f4a5b-sm.webp",
+      Buffer.from([1]),
+    );
+    const command = send.mock.calls[0]?.[0] as PutObjectCommand;
+    expect(command.input.Bucket).toBe("media");
+    send.mockRestore();
   });
 
   it("prefers the bucket even when MEDIA_DIR is also set", () => {

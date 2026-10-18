@@ -128,6 +128,9 @@ describe("production migrator", () => {
       promisify(execFile)("pnpm", ["exec", "tsx", "src/database/migrate.ts"], {
         cwd: path.join(__dirname, ".."),
         env: { ...process.env, POSTGRES_DB: database },
+        // A run that leaves connections open lingers until the pool's idle
+        // timeout, which a pre-deploy step should not wait out.
+        timeout: 5_000,
       });
 
     it("exits 0 after migrating", async () => {
