@@ -1,13 +1,11 @@
 name: Set up toolchain
-description: >-
-  Node from package.json engines, pnpm from packageManager, frozen-lockfile
-  install from the pnpm store cache, and a build of the shared config package.
+description: Node and pnpm at the repo's versions, a cached frozen install and the shared config build.
 
 inputs:
   save-cache:
     description: >-
-      Save the pnpm store after install. Only the main-branch cache-warming workflow
-      sets this, so pull requests never evict main's cache entries.
+      Save the pnpm store after install. Only warm-caches.yml sets this, so
+      pull requests never evict main's cache entries.
     default: "false"
 
 runs:
@@ -17,6 +15,8 @@ runs:
       uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
       with:
         node-version-file: package.json
+        # Off explicitly so pull requests never save a cache, whatever
+        # packageManager names.
         package-manager-cache: false
 
     - name: Set up pnpm from packageManager
