@@ -29,7 +29,7 @@ export default defineRailway((ctx, project) => {
     region: REGION,
   });
 
-  const media = bucket("media", { region: "iad" });
+  const media = bucket("media-storage", { region: "iad" });
 
   // Zero downtime: traffic moves after /health passes, then the old
   // deployment overlaps and drains.
