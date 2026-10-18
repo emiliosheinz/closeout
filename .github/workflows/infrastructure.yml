@@ -1,18 +1,12 @@
 name: Infrastructure
 
-# Applies .railway/railway.ts to the Railway environment of the branch it lands
-# on: main is production, verification is the disposable probe environment.
-# Railway holds each commit's deploys until this run finishes, so an apply
-# always lands before the code that needs it, and a failed run skips them.
+# Plans .railway/railway.ts on pull requests; on main (production) and
+# verification (probe environment) it then applies. Railway holds each commit's
+# deploys until this run finishes. Every plan passes the data-store guard first.
 #
-# Every plan passes the data-store guard before anything is applied; there are
-# no backups. Pull requests only plan, for review. Not part of "Ready to merge".
-#
-# No concurrency group: GitHub keeps one pending run per group and cancels the
-# rest, which would drop an apply. Overlapping applies are serialised by
-# Railway instead, which rejects a plan once its environment has changed; the
-# losing run fails and its commit's deploys are skipped until it is re-run.
-# Never cancel a run by hand for the same reason.
+# No concurrency group: GitHub cancels all but one pending run per group, which
+# would drop an apply. Railway rejects a plan whose environment has changed, so
+# overlapping applies fail instead. Never cancel a run by hand for the same reason.
 
 on:
   pull_request:
@@ -38,55 +32,23 @@ permissions:
   contents: read
 
 env:
-  # The guard rejects plans written by any other CLI version.
+  # Keep in step with CLI_VERSION in scripts/railway-plan-guard.ts.
   RAILWAY_CLI_VERSION: 5.70.0
 
 jobs:
-  plan:
-    name: Plan infrastructure
+  infrastructure:
+    name: Infrastructure
     # Fork pull requests get no token, and no run.
     if: >-
       github.event_name == 'pull_request' &&
-      github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    # Plan-only environments, separate from the apply environments, which
-    # only accept runs from their own branch.
-    environment: ${{ github.base_ref == 'main' && 'production-plan' || 'verification-plan' }}
-    steps:
-      - name: Check out code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - name: Set up toolchain
-        uses: ./.github/actions/setup-toolchain
-
-      - name: Test the data-store guard
-        run: node --test scripts/railway-plan-guard.test.ts
-
-      - name: Install the Railway CLI
-        run: npm install -g "@railway/cli@$RAILWAY_CLI_VERSION"
-
-      - name: Plan against the base branch's environment
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-        run: railway config plan --out plan.json
-
-      - name: Report the plan
-        run: jq -r .diff plan.json >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Check the plan leaves data stores alone
-        run: node scripts/railway-plan-guard.ts plan.json --cli-version "$RAILWAY_CLI_VERSION"
-
-  apply:
-    name: Apply infrastructure
-    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository ||
       github.event_name != 'pull_request' &&
       (github.ref_name == 'main' || github.ref_name == 'verification')
     runs-on: ubuntu-24.04
     timeout-minutes: 15
-    environment: ${{ github.ref_name == 'main' && 'production' || 'verification' }}
+    # Pull requests use the plan-only environments; only pushes and manual
+    # runs reach the ones that apply.
+    environment: ${{ (github.base_ref || github.ref_name) == 'main' && 'production' || 'verification' }}${{ github.event_name == 'pull_request' && '-plan' || '' }}
     steps:
       - name: Check out code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -102,9 +64,6 @@ jobs:
       - name: Install the Railway CLI
         run: npm install -g "@railway/cli@$RAILWAY_CLI_VERSION"
 
-      # Planned afresh in this job rather than reusing the pull request's
-      # plan, which goes stale as soon as anything else changes the
-      # environment.
       - name: Plan
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
@@ -119,12 +78,13 @@ jobs:
         run: |
           flags=()
           if [ "$FIRST_TIME_SETUP" = "true" ]; then flags+=(--setup); fi
-          node scripts/railway-plan-guard.ts plan.json --cli-version "$RAILWAY_CLI_VERSION" "${flags[@]}"
+          node scripts/railway-plan-guard.ts plan.json "${flags[@]}"
 
       # Never add --confirm-destructive: without it Railway refuses any
       # destructive change in a non-interactive run, a second line behind the
       # guard.
       - name: Apply exactly the checked plan
+        if: github.event_name != 'pull_request'
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         run: railway config apply --plan plan.json --yes

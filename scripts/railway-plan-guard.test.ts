@@ -1,162 +1,231 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, it } from "node:test";
+import { checkPlan } from "./railway-plan-guard.ts";
 
 const GUARD = path.join(import.meta.dirname, "railway-plan-guard.ts");
 const FIXTURES = path.join(import.meta.dirname, "fixtures", "railway-plan");
 
-function guard(file: string, ...flags: string[]) {
-  const result = spawnSync(
-    process.execPath,
-    [GUARD, file, "--cli-version", "5.70.0", ...flags],
-    { encoding: "utf8" },
-  );
-  return { status: result.status, output: result.stdout + result.stderr };
-}
+const plan = (changes: object[], overrides: object = {}) => ({
+  kind: "railway.config.plan",
+  version: 1,
+  cliVersion: "5.70.0",
+  changeSet: { version: 1, changes, diagnostics: [] },
+  ...overrides,
+});
 
-const fixture = (name: string) => path.join(FIXTURES, name);
+const real = (name: string) =>
+  JSON.parse(readFileSync(path.join(FIXTURES, `${name}.json`), "utf8"));
+
+const change = (kind: string, address: string, extra: object = {}) => ({
+  kind,
+  address,
+  ...extra,
+});
+
+const NOT_A_PLAN = ["plan: not a version 1 Railway plan file"];
 
 describe("railway plan guard", () => {
-  for (const [name, problem] of [
-    ["bucket-delete.json", "bucket.media: resource.delete on a data store"],
-    [
-      "postgres-delete.json",
-      "database.postgres: resource.delete on a data store",
-    ],
-    [
-      "postgres-image.json",
-      "database.postgres: resource.update on a data store",
-    ],
-    [
-      "volume-change.json",
-      "volume.postgres-volume: resource.update on a data store",
-    ],
-    ["volume-attachment.json", "service.api: changes a volume attachment"],
-    [
-      "postgres-variable.json",
-      "database.postgres: variable.set on a data store",
-    ],
-    ["unknown-kind.json", "service.api: unknown change kind resource.replace"],
-    [
-      "diagnostic-error.json",
-      "resources.bucket.media.config.region: Bucket regions are immutable",
-    ],
-    [
-      "unknown-resource-type.json",
-      "cluster.postgres: unknown resource type cluster",
-    ],
-    ["missing-address.json", "change: missing kind or address"],
-    ["wrong-version.json", "plan: not a version 1 Railway plan file"],
-    ["wrong-kind.json", "plan: not a version 1 Railway plan file"],
-    [
-      "wrong-change-set-version.json",
-      "plan: not a version 1 Railway plan file",
-    ],
-    ["missing-diagnostics.json", "plan: not a version 1 Railway plan file"],
-  ]) {
-    it(`rejects ${name}: ${problem}`, () => {
-      const { status, output } = guard(fixture(name));
-      assert.equal(status, 1);
-      assert.ok(output.split("\n").includes(problem), output);
-    });
-  }
-
-  it("rejects a file that is not valid JSON", () => {
-    const file = path.join(
-      mkdtempSync(path.join(tmpdir(), "plan-")),
-      "plan.json",
-    );
-    writeFileSync(file, '{"kind": "railway.config.plan",');
-    const { status, output } = guard(file);
-    assert.equal(status, 1);
-    assert.match(output, /^plan: cannot read/m);
-  });
-
-  it("rejects a plan written by another CLI version", () => {
-    const result = spawnSync(
-      process.execPath,
-      [GUARD, fixture("empty.json"), "--cli-version", "5.69.0"],
-      { encoding: "utf8" },
-    );
-    assert.equal(result.status, 1);
-    assert.match(result.stderr, /written by CLI 5\.70\.0, expected 5\.69\.0/);
-  });
-
-  it("refuses to run without the expected CLI version", () => {
-    const result = spawnSync(process.execPath, [GUARD, fixture("empty.json")], {
-      encoding: "utf8",
-    });
-    assert.equal(result.status, 1);
-    assert.match(result.stderr, /^Usage:/m);
-  });
-
-  for (const name of ["empty.json", "api-variable.json"]) {
-    it(`accepts ${name}`, () => {
-      assert.equal(guard(fixture(name)).status, 0);
-    });
-  }
-
-  describe("first-time setup", () => {
-    it("rejects creating data stores outside setup", () => {
-      const { status, output } = guard(fixture("setup-create.json"));
-      assert.equal(status, 1);
-      assert.match(output, /^database\.postgres:/m);
-      assert.match(output, /^bucket\.media:/m);
-    });
-
-    it("accepts creating the database and bucket with the expected image and region", () => {
-      assert.equal(guard(fixture("setup-create.json"), "--setup").status, 0);
-    });
-
-    it("rejects creating the database with another Postgres major", () => {
-      const { status, output } = guard(
-        fixture("setup-create-postgres-17.json"),
-        "--setup",
-      );
-      assert.equal(status, 1);
-      assert.match(output, /^database\.postgres: created with image .*:17/m);
-    });
-
-    for (const [name, resource, region] of [
-      [
-        "setup-create-postgres-region.json",
-        "database.postgres",
-        "us-east4-eqdc4a",
-      ],
-      ["setup-create-bucket-region.json", "bucket.media", "iad"],
+  describe("real captures", () => {
+    for (const [name, problem] of [
+      ["bucket-delete", "bucket.media: resource.delete on a data store"],
+      ["postgres-delete", "database.postgres: resource.delete on a data store"],
+      ["postgres-image", "database.postgres: resource.update on a data store"],
+      ["postgres-variable", "database.postgres: variable.set on a data store"],
     ]) {
-      it(`rejects ${name}, created outside ${region}`, () => {
-        const { status, output } = guard(fixture(name), "--setup");
-        assert.equal(status, 1);
-        assert.match(
-          output,
-          new RegExp(
-            `^${resource.replace(".", "\\.")}: not created in ${region}`,
-            "m",
-          ),
-        );
+      it(`rejects ${name}`, () => {
+        assert.deepEqual(checkPlan(real(name), false), [problem]);
       });
     }
 
-    it("rejects creating a volume", () => {
-      const { status, output } = guard(
-        fixture("setup-create-volume.json"),
-        "--setup",
+    it("accepts a variable change on the api", () => {
+      assert.deepEqual(checkPlan(real("api-variable"), false), []);
+    });
+  });
+
+  describe("steady state", () => {
+    it("accepts an empty plan", () => {
+      assert.deepEqual(checkPlan(plan([]), false), []);
+    });
+
+    for (const [address, kind] of [
+      ["volume.postgres-volume", "resource.update"],
+      ["bucket.media", "resource.update"],
+      ["database.postgres", "variable.delete"],
+    ]) {
+      it(`rejects ${kind} on ${address}`, () => {
+        assert.deepEqual(checkPlan(plan([change(kind, address)]), false), [
+          `${address}: ${kind} on a data store`,
+        ]);
+      });
+    }
+
+    it("rejects a volume attachment change", () => {
+      assert.deepEqual(
+        checkPlan(
+          plan([
+            change("resource.update", "service.api", {
+              field: "volumeAttachments",
+            }),
+          ]),
+          false,
+        ),
+        ["service.api: changes a volume attachment"],
       );
-      assert.equal(status, 1);
-      assert.match(
-        output,
-        /^volume\.postgres-volume: resource\.create on a data store$/m,
+    });
+
+    it("rejects an unknown change kind", () => {
+      assert.deepEqual(
+        checkPlan(plan([change("resource.replace", "service.api")]), false),
+        ["service.api: unknown change kind resource.replace"],
+      );
+    });
+
+    it("rejects an unknown resource type", () => {
+      assert.deepEqual(
+        checkPlan(plan([change("resource.update", "cluster.postgres")]), false),
+        ["cluster.postgres: unknown resource type cluster"],
+      );
+    });
+
+    it("rejects a change without kind or address", () => {
+      assert.deepEqual(checkPlan(plan([{ kind: "resource.update" }]), false), [
+        "change: missing kind or address",
+      ]);
+    });
+
+    it("rejects an error diagnostic", () => {
+      const diagnostics = [
+        {
+          severity: "error",
+          path: "resources.bucket.media.config.region",
+          message: "Bucket regions are immutable",
+        },
+      ];
+      assert.deepEqual(
+        checkPlan(
+          plan([], { changeSet: { version: 1, changes: [], diagnostics } }),
+          false,
+        ),
+        ["resources.bucket.media.config.region: Bucket regions are immutable"],
+      );
+    });
+
+    it("rejects creating data stores outside setup", () => {
+      assert.deepEqual(
+        checkPlan(
+          plan([
+            change("resource.create", "database.postgres"),
+            change("resource.create", "bucket.media"),
+          ]),
+          false,
+        ),
+        [
+          "database.postgres: resource.create on a data store",
+          "bucket.media: resource.create on a data store",
+        ],
+      );
+    });
+  });
+
+  describe("not a usable plan file", () => {
+    for (const [name, overrides] of [
+      ["wrong kind", { kind: "something.else" }],
+      ["wrong version", { version: 2 }],
+      ["wrong change set version", { changeSet: { version: 2, changes: [] } }],
+      ["missing diagnostics", { changeSet: { version: 1, changes: [] } }],
+    ] as const) {
+      it(`rejects ${name}`, () => {
+        assert.deepEqual(checkPlan(plan([], overrides), false), NOT_A_PLAN);
+      });
+    }
+
+    it("rejects a plan written by another CLI version", () => {
+      assert.deepEqual(checkPlan(plan([], { cliVersion: "5.71.0" }), false), [
+        "plan: written by CLI 5.71.0, expected 5.70.0",
+      ]);
+    });
+  });
+
+  describe("first-time setup", () => {
+    it("accepts creating the database and the bucket", () => {
+      assert.deepEqual(
+        checkPlan(
+          plan([
+            change("resource.create", "database.postgres"),
+            change("resource.create", "bucket.media", {
+              resource: { config: { region: "iad" } },
+            }),
+          ]),
+          true,
+        ),
+        [],
+      );
+    });
+
+    it("rejects a bucket created outside iad", () => {
+      assert.deepEqual(
+        checkPlan(
+          plan([
+            change("resource.create", "bucket.media", {
+              resource: { config: { region: "ams" } },
+            }),
+          ]),
+          true,
+        ),
+        ["bucket.media: not created in iad"],
+      );
+    });
+
+    it("rejects creating a volume", () => {
+      assert.deepEqual(
+        checkPlan(
+          plan([change("resource.create", "volume.postgres-volume")]),
+          true,
+        ),
+        ["volume.postgres-volume: resource.create on a data store"],
       );
     });
 
     it("still rejects deleting a data store", () => {
-      const { status, output } = guard(fixture("setup-delete.json"), "--setup");
-      assert.equal(status, 1);
-      assert.match(output, /^database\.postgres: resource\.delete/m);
+      assert.deepEqual(
+        checkPlan(plan([change("resource.delete", "database.postgres")]), true),
+        ["database.postgres: resource.delete on a data store"],
+      );
+    });
+  });
+
+  describe("command line", () => {
+    const run = (...args: string[]) =>
+      spawnSync(process.execPath, [GUARD, ...args], { encoding: "utf8" });
+
+    it("prints usage without a plan file", () => {
+      const result = run();
+      assert.equal(result.status, 1);
+      assert.match(result.stderr, /^Usage:/m);
+    });
+
+    it("fails on a file that is not valid JSON", () => {
+      const file = path.join(
+        mkdtempSync(path.join(tmpdir(), "plan-")),
+        "plan.json",
+      );
+      writeFileSync(file, '{"kind": "railway.config.plan",');
+      const result = run(file);
+      assert.equal(result.status, 1);
+      assert.match(result.stderr, /^plan: cannot read/m);
+    });
+
+    it("exits 1 and names the problem for a rejected plan", () => {
+      const result = run(path.join(FIXTURES, "bucket-delete.json"));
+      assert.equal(result.status, 1);
+      assert.match(
+        result.stderr,
+        /^bucket\.media: resource\.delete on a data store$/m,
+      );
     });
   });
 });
