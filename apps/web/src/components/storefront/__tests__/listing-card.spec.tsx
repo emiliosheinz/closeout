@@ -18,6 +18,31 @@ describe("ListingCard", () => {
     expect(document.querySelector("img")).toBeNull();
   });
 
+  it("marks only the first card's photo as high fetch priority", () => {
+    const cover = {
+      sm: "/sm.webp",
+      lg: "/lg.webp",
+      og: "/og.jpg",
+      width: 640,
+      height: 800,
+    };
+    const { unmount } = render(
+      <ListingCard
+        listing={{ ...listing, cover }}
+        priority
+        fetchPriority="high"
+      />,
+    );
+    expect(screen.getByRole("img")).toHaveAttribute("fetchpriority", "high");
+    unmount();
+
+    render(<ListingCard listing={{ ...listing, cover }} priority />);
+    expect(screen.getByRole("img")).not.toHaveAttribute(
+      "fetchpriority",
+      "high",
+    );
+  });
+
   it("links to the item page and stamps sold items", () => {
     render(<ListingCard listing={{ ...listing, availability: "sold" }} />);
     expect(screen.getByRole("link", { name: "Mesa" })).toHaveAttribute(

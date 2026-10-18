@@ -4,13 +4,15 @@ import {
   UnprocessableEntityException,
 } from "@nestjs/common";
 import { InjectDataSource, InjectRepository } from "@nestjs/typeorm";
-import { DataSource, type EntityManager, Repository } from "typeorm";
+import { DataSource, type EntityManager, In, Repository } from "typeorm";
 import { MediaService } from "@/media/media.service";
 import { mediaUrls } from "@/media/media-urls";
 import { Seller } from "@/sellers/entities/seller.entity";
 import { Category } from "@/stores/entities/category.entity";
 import { type AdminImage, toAdminImage } from "../admin-mappers";
 import { Listing } from "../entities/listing.entity";
+import { ListingImage } from "../entities/listing-image.entity";
+import { ListingSeller } from "../entities/listing-seller.entity";
 import { canPublish, PUBLISH_REQUIRES_PHOTO } from "../listing-rules";
 import type {
   Availability,
@@ -18,7 +20,11 @@ import type {
   ListingAttribute,
   Publication,
 } from "../listing-types";
-import { type PublicListingDetail, toPublicDetail } from "../public-mappers";
+import {
+  listingSellers,
+  type PublicListingDetail,
+  toPublicDetail,
+} from "../public-mappers";
 import { listingSlug } from "../slug";
 import { escapeLike } from "../sql";
 
@@ -42,7 +48,7 @@ export interface AdminListingSummary {
   availability: Availability;
   publication: Publication;
   category: { id: string; name: string };
-  seller: { id: string; displayName: string };
+  sellers: { id: string; displayName: string }[];
   coverUrl: string | null;
   imageCount: number;
   updatedAt: string;
@@ -58,7 +64,7 @@ export interface ListingInput {
   title?: string;
   description?: string;
   categoryId?: string;
-  sellerId?: string;
+  sellerIds?: string[];
   priceCents?: number | null;
   condition?: Condition;
   attributes?: ListingAttribute[];
@@ -81,11 +87,10 @@ export class ListingsService {
     const query = this.listings
       .createQueryBuilder("l")
       .innerJoinAndSelect("l.category", "category")
-      .innerJoinAndSelect("l.seller", "seller")
-      .leftJoinAndSelect("l.images", "image")
+      .leftJoinAndSelect("l.sellers", "listingSeller")
+      .leftJoinAndSelect("listingSeller.seller", "seller")
       .where("l.store_id = :storeId", { storeId })
-      .orderBy("l.updated_at", "DESC")
-      .addOrderBy("image.position", "ASC");
+      .orderBy("l.updated_at", "DESC");
     if (q) {
       query.andWhere(
         `unaccent(lower(l.title)) LIKE '%' || unaccent(lower(:q)) || '%' ESCAPE '\\'`,
@@ -93,7 +98,24 @@ export class ListingsService {
       );
     }
     const rows = await query.getMany();
-    return rows.map(toSummary);
+    if (rows.length === 0) return [];
+    const stats = await this.dataSource
+      .getRepository(ListingImage)
+      .createQueryBuilder("i")
+      .select("i.listing_id", "listingId")
+      .addSelect("COUNT(*)::int", "count")
+      .addSelect(
+        "(array_agg(i.storage_key ORDER BY i.position))[1]",
+        "coverKey",
+      )
+      .where("i.listing_id IN (:...ids)", { ids: rows.map((row) => row.id) })
+      .groupBy("i.listing_id")
+      .getRawMany<{ listingId: string; count: number; coverKey: string }>();
+    const byListing = new Map(stats.map((row) => [row.listingId, row]));
+    return rows.map((row) => {
+      const stat = byListing.get(row.id);
+      return toSummary(row, stat?.coverKey ?? null, stat?.count ?? 0);
+    });
   }
 
   /** Counts for the admin dashboard; availability covers published listings only. */
@@ -149,7 +171,7 @@ export class ListingsService {
   async create(
     storeId: string,
     input: Required<
-      Pick<ListingInput, "title" | "categoryId" | "sellerId" | "condition">
+      Pick<ListingInput, "title" | "categoryId" | "sellerIds" | "condition">
     > &
       ListingInput,
   ): Promise<AdminListingDetail> {
@@ -161,7 +183,6 @@ export class ListingsService {
         title: input.title,
         description: input.description ?? "",
         categoryId: input.categoryId,
-        sellerId: input.sellerId,
         priceCents: input.priceCents ?? null,
         condition: input.condition,
         attributes: input.attributes ?? [],
@@ -169,6 +190,7 @@ export class ListingsService {
         publication: "draft",
         publishedAt: null,
       });
+      await setSellers(manager, saved.id, input.sellerIds);
       return toDetail(await this.findWithRelations(manager, storeId, saved.id));
     });
   }
@@ -195,13 +217,15 @@ export class ListingsService {
       const {
         images: _images,
         category: _category,
-        seller: _seller,
+        sellers: _sellers,
         ...row
       } = listing;
+      const { sellerIds, ...fields } = patch;
       await manager.getRepository(Listing).save({
         ...row,
-        ...definedOnly(patch),
+        ...definedOnly(fields),
       });
+      if (sellerIds) await setSellers(manager, id, sellerIds);
       return toDetail(await this.findWithRelations(manager, storeId, id));
     });
   }
@@ -217,7 +241,6 @@ export class ListingsService {
         title,
         description: source.description,
         categoryId: source.categoryId,
-        sellerId: source.sellerId,
         priceCents: source.priceCents,
         condition: source.condition,
         attributes: source.attributes,
@@ -225,6 +248,11 @@ export class ListingsService {
         publication: "draft",
         publishedAt: null,
       });
+      await setSellers(
+        manager,
+        copy.id,
+        source.sellers.map((row) => row.sellerId),
+      );
       return toDetail(await this.findWithRelations(manager, storeId, copy.id));
     });
   }
@@ -245,7 +273,7 @@ export class ListingsService {
   ): Promise<Listing> {
     const listing = await manager.getRepository(Listing).findOne({
       where: { id, storeId },
-      relations: { category: true, seller: true, images: true },
+      relations: { category: true, sellers: { seller: true }, images: true },
       order: { images: { position: "ASC" } },
     });
     if (!listing) throw new NotFoundException("Anúncio não encontrado.");
@@ -266,6 +294,17 @@ export async function lockListing(
   return listing;
 }
 
+/** Replace who sells a listing; callers validate the ids first. */
+async function setSellers(
+  manager: EntityManager,
+  listingId: string,
+  sellerIds: string[],
+): Promise<void> {
+  const rows = manager.getRepository(ListingSeller);
+  await rows.delete({ listingId });
+  await rows.insert(sellerIds.map((sellerId) => ({ listingId, sellerId })));
+}
+
 /**
  * Seller and category ids arrive in the request body, so they must be
  * checked against the store explicitly; the store-member guard only covers
@@ -274,13 +313,13 @@ export async function lockListing(
 async function assertReferencesBelongToStore(
   manager: EntityManager,
   storeId: string,
-  input: Pick<ListingInput, "sellerId" | "categoryId">,
+  input: Pick<ListingInput, "sellerIds" | "categoryId">,
 ): Promise<void> {
   if (
-    input.sellerId !== undefined &&
-    !(await manager
+    input.sellerIds !== undefined &&
+    (await manager
       .getRepository(Seller)
-      .exists({ where: { id: input.sellerId, storeId } }))
+      .countBy({ id: In(input.sellerIds), storeId })) !== input.sellerIds.length
   ) {
     throw new UnprocessableEntityException("Vendedor inválido.");
   }
@@ -294,14 +333,17 @@ async function assertReferencesBelongToStore(
   }
 }
 
-function definedOnly(patch: ListingInput): Partial<Listing> {
+function definedOnly(patch: Omit<ListingInput, "sellerIds">): Partial<Listing> {
   return Object.fromEntries(
     Object.entries(patch).filter(([, value]) => value !== undefined),
   ) as Partial<Listing>;
 }
 
-function toSummary(listing: Listing): AdminListingSummary {
-  const cover = listing.images[0];
+function toSummary(
+  listing: Listing,
+  coverKey: string | null,
+  imageCount: number,
+): AdminListingSummary {
   return {
     id: listing.id,
     slug: listing.slug,
@@ -311,16 +353,23 @@ function toSummary(listing: Listing): AdminListingSummary {
     availability: listing.availability,
     publication: listing.publication,
     category: { id: listing.category.id, name: listing.category.name },
-    seller: { id: listing.seller.id, displayName: listing.seller.displayName },
-    coverUrl: cover ? mediaUrls(cover.storageKey).sm : null,
-    imageCount: listing.images.length,
+    sellers: listingSellers(listing).map((seller) => ({
+      id: seller.id,
+      displayName: seller.displayName,
+    })),
+    coverUrl: coverKey ? mediaUrls(coverKey).sm : null,
+    imageCount,
     updatedAt: listing.updatedAt.toISOString(),
   };
 }
 
 function toDetail(listing: Listing): AdminListingDetail {
   return {
-    ...toSummary(listing),
+    ...toSummary(
+      listing,
+      listing.images[0]?.storageKey ?? null,
+      listing.images.length,
+    ),
     description: listing.description,
     attributes: listing.attributes,
     images: listing.images.map(toAdminImage),

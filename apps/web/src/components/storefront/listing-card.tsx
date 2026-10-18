@@ -10,13 +10,15 @@ import { StatusStamp } from "./status-stamp";
 export function ListingCard({
   listing,
   priority = false,
+  fetchPriority,
 }: {
   listing: ListingSummary;
   priority?: boolean;
+  fetchPriority?: "high";
 }) {
   const sold = listing.availability === "sold";
   return (
-    <article className="group relative min-w-0">
+    <article className="group relative min-w-0 rounded-lg has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-4 has-[:focus-visible]:outline-focus">
       <div className="relative">
         <div className="relative aspect-[4/5] overflow-hidden rounded-lg bg-surface ring-1 ring-line">
           {listing.cover ? (
@@ -29,6 +31,7 @@ export function ListingCard({
               height={listing.cover.height}
               alt={`Foto de ${listing.title}`}
               loading={priority ? "eager" : "lazy"}
+              fetchPriority={fetchPriority}
               decoding="async"
               className={cn(
                 "size-full object-cover transition-transform duration-500 group-hover:scale-[1.03]",
@@ -52,7 +55,7 @@ export function ListingCard({
         <h3 className="text-[0.95rem] leading-snug font-semibold text-pretty break-words">
           <Link
             href={listingPath(listing.slug)}
-            className="after:absolute after:inset-0 after:rounded-lg group-has-[:focus-visible]:underline"
+            className="after:absolute after:inset-0 after:rounded-lg focus-visible:outline-none group-has-[:focus-visible]:underline"
           >
             {listing.title}
           </Link>

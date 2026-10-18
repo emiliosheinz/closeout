@@ -72,6 +72,14 @@ export const SORT_LABELS = {
   price_desc: "Maior preço",
 } as const;
 
+/** "Ana", "Ana e Bia", "Ana, Bia e Caio". */
+export function joinNames(names: string[]): string {
+  return new Intl.ListFormat(DEFAULT_LOCALE, {
+    style: "long",
+    type: "conjunction",
+  }).format(names);
+}
+
 export function pluralize(count: number, one: string, many: string): string {
   return `${count.toLocaleString(DEFAULT_LOCALE)} ${count === 1 ? one : many}`;
 }

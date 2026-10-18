@@ -11,7 +11,6 @@ import {
   Unique,
   UpdateDateColumn,
 } from "typeorm";
-import { Seller } from "@/sellers/entities/seller.entity";
 import { Category } from "@/stores/entities/category.entity";
 import { Store } from "@/stores/entities/store.entity";
 import type {
@@ -21,6 +20,7 @@ import type {
   Publication,
 } from "../listing-types";
 import { ListingImage } from "./listing-image.entity";
+import { ListingSeller } from "./listing-seller.entity";
 
 /**
  * An item for sale. Publication (who can see it) and availability (can it
@@ -36,7 +36,6 @@ import { ListingImage } from "./listing-image.entity";
   "publishedAt",
 ])
 @Index("listings_category_idx", ["storeId", "categoryId"])
-@Index("listings_seller_idx", ["sellerId"])
 @Check(
   "listings_condition_valid",
   `"condition" IN ('new', 'like_new', 'good', 'fair', 'for_parts')`,
@@ -67,13 +66,6 @@ export class Listing {
   @ManyToOne(() => Store, { onDelete: "CASCADE" })
   @JoinColumn({ name: "store_id" })
   declare store: Store;
-
-  @Column({ name: "seller_id", type: "uuid" })
-  declare sellerId: string;
-
-  @ManyToOne(() => Seller, { onDelete: "RESTRICT" })
-  @JoinColumn({ name: "seller_id" })
-  declare seller: Seller;
 
   @Column({ name: "category_id", type: "uuid" })
   declare categoryId: string;
@@ -120,4 +112,10 @@ export class Listing {
     (image) => image.listing,
   )
   declare images: ListingImage[];
+
+  @OneToMany(
+    () => ListingSeller,
+    (listingSeller) => listingSeller.listing,
+  )
+  declare sellers: ListingSeller[];
 }

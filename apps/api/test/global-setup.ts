@@ -17,7 +17,7 @@ export default async function globalSetup(): Promise<void> {
   process.env.CLOSEOUT_TEST_DATABASE = database;
   process.env.MEDIA_DIR = await mkdtemp(path.join(tmpdir(), "closeout-media-"));
   process.env.PUBLIC_BASE_URL = "http://storefront.test";
-  process.env.INTERNAL_API_SECRET = "integration-test-secret";
+  process.env.INTERNAL_API_SECRET = "integration-test-secret-0123456789abcdef";
 
   const dataSource = new DataSource({
     type: "postgres",

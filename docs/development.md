@@ -9,7 +9,7 @@
 | --- | --- |
 | `PUBLIC_BASE_URL` | Origin visitors use. Drives canonical URLs, link previews, WhatsApp messages and the Origin check on writes. Set it to the public HTTPS origin in production. |
 | `STORE_SLUG`, `STORE_NAME` | Store served at the site root; created by the first `admin:create` or `seed:demo`. |
-| `INTERNAL_API_SECRET` | Shared secret for web-to-api server calls (login, client IP forwarding). |
+| `INTERNAL_API_SECRET` | Shared secret for web-to-api server calls (login, client IP forwarding). At least 32 characters; the API refuses to start otherwise. |
 | `MEDIA_DIR` | Where the API stores image files (a Docker volume in development). |
 | `POSTGRES_*` | Database connection. `POSTGRES_HOST_PORT` publishes Postgres on `127.0.0.1` for database tools. |
 
@@ -57,8 +57,9 @@ Passwords need at least 10 characters. For non-interactive use set
 self-registration endpoint; these commands are the only way to create users.
 
 Seller contact numbers are edited in the admin under **Vendedores** and must include
-the country code (`+55 ...`). A seller without a number shows "contato indisponível"
-instead of a WhatsApp button.
+the country code (`+55 ...`). A listing can have several sellers; buyers pick whom to
+message when more than one has a number. A listing none of whose sellers has a number
+shows "contato indisponível" instead of a WhatsApp button.
 
 ## Tests
 
@@ -130,7 +131,7 @@ docker compose up -d --wait
 | Postgres port already in use | Change `POSTGRES_HOST_PORT` in `.env`. |
 | Port 3001 in use | Change `WEB_PORT` and the port in `PUBLIC_BASE_URL`. |
 | `api` unhealthy | `docker compose logs api`; usually a compile error or a failed migration (`docker compose logs migration`). |
-| Login always says "Muitas tentativas" | The limiter allows 10 failures per email and IP in 15 minutes; restart the api container to clear it. |
+| Login always says "Muitas tentativas" | The limiter allows 10 failures per email and IP, 30 per email and 30 per IP in 15 minutes; restart the api container to clear it. |
 | Uploaded photo rejected | Only JPEG, PNG and WebP up to 10 MB and 40 megapixels are accepted. iPhones convert HEIC to JPEG when uploading from Safari. |
 
 ## Production notes
@@ -138,15 +139,24 @@ docker compose up -d --wait
 The `prod` targets of `apps/api/Dockerfile` and `apps/web/Dockerfile` build
 standalone images. A deployment needs Postgres, a persistent volume at `MEDIA_DIR`
 for the API, `NODE_ENV=production` (Secure cookies, HSTS), `PUBLIC_BASE_URL` set to
-the HTTPS origin, a strong `INTERNAL_API_SECRET`, and only the web app exposed.
+the HTTPS origin, an `INTERNAL_API_SECRET` of at least 32 random characters, and only the web app exposed.
 Apply migrations before starting the API. The production API image holds only the
 compiled app, so run `pnpm turbo migration:run --filter=api` from a source checkout
 or the tooling image (`docker/Dockerfile.cli`) with the production `POSTGRES_*`
 variables. Put a reverse proxy (nginx, Caddy, a platform load balancer) in front of the web app
 and have it set `X-Forwarded-For` to the real client address
 (`proxy_set_header X-Forwarded-For $remote_addr;` in nginx). The login rate limiter
-keys on the last hop of that header; without a proxy a client can forge it and only
-the per-email limit (30 failures in 15 minutes) protects an account.
+keys on the last hop of that header: 10 failures per email and IP, 30 per email and
+30 per IP in 15 minutes. Without a proxy a client can forge it and only the per-email
+limit protects an account. If every request arrives with the same address (a proxy
+that does not set the header), the per-IP limit becomes shared: 30 failed logins from
+anyone block all logins for 15 minutes.
+
+The web app caches the store, listing pages and the first page of the unfiltered
+catalog for up to 5 minutes; searches, filters and later pages always read live data. Saves in the admin
+expire that cache at once. Changes made elsewhere (`bin/closeout cli`, SQL) show on
+the storefront within 5 minutes. The cache lives in each web instance, so running
+several instances needs a shared Next.js cache handler.
 
 ### Moving media to object storage
 

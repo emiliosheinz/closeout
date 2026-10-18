@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
+import { ActiveFilters } from "@/components/storefront/active-filters";
+import { RememberCatalogView } from "@/components/storefront/catalog-return";
 import { CategoryChips } from "@/components/storefront/category-chips";
 import { EmptyState } from "@/components/storefront/empty-state";
 import { FilterForm } from "@/components/storefront/filter-form";
@@ -10,6 +12,7 @@ import { SearchForm } from "@/components/storefront/search-form";
 import { StoreHeader } from "@/components/storefront/store-header";
 import { getListings, getStore, PAGE_SIZE } from "@/lib/catalog/api";
 import {
+  activeFilterChips,
   activeFilterCount,
   catalogHref,
   DEFAULT_FILTERS,
@@ -17,6 +20,7 @@ import {
   parseCatalogParams,
 } from "@/lib/catalog/params";
 import { pluralize } from "@/lib/format";
+import { sellerContactUrl } from "@/lib/whatsapp";
 
 interface PageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -25,15 +29,20 @@ interface PageProps {
 export async function generateMetadata({
   searchParams,
 }: PageProps): Promise<Metadata> {
-  const store = await getStore();
-  if (!store) return {};
   const filters = parseCatalogParams(await searchParams);
+  const [storeResult, coverResult] = await Promise.allSettled([
+    getStore(),
+    getListings({ ...parseCatalogParams({}) }, 1),
+  ]);
+  if (storeResult.status === "rejected") throw storeResult.reason;
+  const store = storeResult.value;
+  if (!store) return {};
+  if (coverResult.status === "rejected") throw coverResult.reason;
   const filtered = hasActiveFilters(filters);
   const description =
     store.intro.slice(0, 160) ||
     `${pluralize(store.counts.available, "item disponível", "itens disponíveis")}.`;
-  const cover = (await getListings({ ...parseCatalogParams({}) }, 1)).items[0]
-    ?.cover;
+  const cover = coverResult.value.items[0]?.cover;
   return {
     title: store.name,
     description,
@@ -58,9 +67,17 @@ export async function generateMetadata({
 
 export default async function CatalogPage({ searchParams }: PageProps) {
   const filters = parseCatalogParams(await searchParams);
-  const store = await getStore();
+  // getListings throws when the store is missing, so notFound must win over a
+  // listings rejection: settle both and check the store first.
+  const [storeResult, listingsResult] = await Promise.allSettled([
+    getStore(),
+    getListings(filters),
+  ]);
+  if (storeResult.status === "rejected") throw storeResult.reason;
+  const store = storeResult.value;
   if (!store) notFound();
-  const results = await getListings(filters);
+  if (listingsResult.status === "rejected") throw listingsResult.reason;
+  const results = listingsResult.value;
   // A page past the end (old link, edited URL) shows the first page instead
   // of an empty catalog.
   if (results.items.length === 0 && results.total > 0 && filters.page > 1) {
@@ -68,9 +85,18 @@ export default async function CatalogPage({ searchParams }: PageProps) {
   }
 
   const filtered = hasActiveFilters(filters);
+  const chips = activeFilterChips(
+    filters,
+    (slug) => store.categories.find((category) => category.slug === slug)?.name,
+  );
+  const contactHref =
+    store.sellers
+      .map((seller) => sellerContactUrl(seller.whatsappNumber, store.name))
+      .find((href) => href !== null) ?? null;
   return (
     <>
-      <StoreHeader store={store} />
+      <RememberCatalogView href={catalogHref(filters)} />
+      <StoreHeader store={store} compact={filtered || filters.page > 1} />
       <main
         id="catalogo"
         className="mx-auto max-w-6xl px-4 pb-24 sm:px-6 lg:px-8"
@@ -95,7 +121,7 @@ export default async function CatalogPage({ searchParams }: PageProps) {
           </aside>
 
           <section aria-labelledby="results-heading">
-            <div className="mb-5 flex items-baseline justify-between gap-4">
+            <div className="mb-5 flex flex-col gap-3">
               <h2
                 id="results-heading"
                 className="text-sm font-medium text-ink-soft"
@@ -104,17 +130,21 @@ export default async function CatalogPage({ searchParams }: PageProps) {
                 <span data-testid="results-count">
                   {pluralize(results.total, "item", "itens")}
                 </span>
-                {filters.q && <> para “{filters.q}”</>}
               </h2>
+              <ActiveFilters chips={chips} />
             </div>
 
             {results.items.length === 0 ? (
-              <EmptyState filtered={filtered} />
+              <EmptyState filtered={filtered} contactHref={contactHref} />
             ) : (
               <ul className="grid grid-cols-2 gap-x-4 gap-y-12 sm:grid-cols-3 sm:gap-x-6 xl:grid-cols-4">
                 {results.items.map((listing, index) => (
                   <li key={listing.slug}>
-                    <ListingCard listing={listing} priority={index < 4} />
+                    <ListingCard
+                      listing={listing}
+                      priority={index < 4}
+                      fetchPriority={index === 0 ? "high" : undefined}
+                    />
                   </li>
                 ))}
               </ul>

@@ -37,6 +37,17 @@ async function readError(response: Response): Promise<ApiError> {
   }
 }
 
+// The write already succeeded; a failed expiry only delays the storefront
+// until the cache's own revalidation window passes.
+async function expireCatalogCache(): Promise<void> {
+  try {
+    await fetch("/api/catalog/revalidate", {
+      method: "POST",
+      credentials: "same-origin",
+    });
+  } catch {}
+}
+
 /**
  * Browser-side call to the API through the same-origin `/api/v1` proxy.
  * The session cookie travels automatically; a 401 sends the admin back to
@@ -60,6 +71,7 @@ export async function api<T>(
     throw new ApiError(401, "Sua sessão expirou. Entre de novo.");
   }
   if (!response.ok) throw await readError(response);
+  if (method !== "GET") await expireCatalogCache();
   if (response.status === 204) return undefined as T;
   return (await response.json()) as T;
 }

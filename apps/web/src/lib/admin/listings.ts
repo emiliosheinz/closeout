@@ -8,7 +8,7 @@ export interface ListingFields {
   title: string;
   description: string;
   categoryId: string;
-  sellerId: string;
+  sellerIds: string[];
   priceCents: number | null;
   condition: string;
   attributes: { label: string; value: string }[];

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { LoginForm } from "@/components/admin/login-form";
 import { getMe } from "@/lib/admin/server-api";
@@ -18,7 +19,14 @@ export default async function LoginPage({
     <main className="mx-auto flex min-h-dvh max-w-sm flex-col justify-center px-4 py-12">
       <h1 className="text-3xl font-extrabold">Entrar</h1>
       <p className="mt-2 text-ink-soft">
-        Área de quem está vendendo. Visitantes não precisam de conta.
+        Área de quem está vendendo. Visitantes não precisam de conta:{" "}
+        <Link
+          href="/"
+          className="font-semibold text-ink underline decoration-ink/30 underline-offset-4"
+        >
+          ver a loja
+        </Link>
+        .
       </p>
       {erro === "sem-acesso" && (
         <p

@@ -1,7 +1,13 @@
 import { createHash, randomBytes } from "node:crypto";
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { type EntityManager, IsNull, type Repository } from "typeorm";
+import {
+  type EntityManager,
+  IsNull,
+  LessThanOrEqual,
+  Not,
+  type Repository,
+} from "typeorm";
 import { Session } from "../entities/session.entity";
 import { SESSION_DURATION_MS } from "../session-cookie";
 
@@ -20,7 +26,12 @@ export class SessionsService {
 
   async mint(userId: string): Promise<{ rawToken: string; expiresAt: Date }> {
     const rawToken = randomBytes(RAW_TOKEN_BYTES).toString("base64url");
-    const expiresAt = new Date(Date.now() + SESSION_DURATION_MS);
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + SESSION_DURATION_MS);
+    await this.sessions.delete([
+      { userId, expiresAt: LessThanOrEqual(now) },
+      { userId, revokedAt: Not(IsNull()) },
+    ]);
     await this.sessions.save({
       userId,
       tokenHash: hashToken(rawToken),

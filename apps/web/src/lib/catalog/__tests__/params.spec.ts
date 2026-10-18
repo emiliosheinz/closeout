@@ -1,4 +1,5 @@
 import {
+  activeFilterChips,
   activeFilterCount,
   catalogHref,
   DEFAULT_FILTERS,
@@ -145,5 +146,53 @@ describe("catalog URL edge cases", () => {
         sort: "price_asc",
       }),
     ).toBe("/?estado=como-novo&ordem=menor-preco");
+  });
+
+  it("offers one chip per active filter, each removing only itself", () => {
+    const filters = parseCatalogParams({
+      q: "mesa",
+      categoria: "moveis",
+      estado: "como-novo",
+      disponibilidade: "vendido",
+      max: "500",
+      ordem: "menor-preco",
+      pagina: "2",
+    });
+    expect(
+      activeFilterChips(filters, (slug) =>
+        slug === "moveis" ? "Móveis" : undefined,
+      ),
+    ).toEqual([
+      {
+        label: "“mesa”",
+        href: "/?categoria=moveis&estado=como-novo&disponibilidade=vendido&max=500&ordem=menor-preco",
+      },
+      {
+        label: "Móveis",
+        href: "/?q=mesa&estado=como-novo&disponibilidade=vendido&max=500&ordem=menor-preco",
+      },
+      {
+        label: "Como novo",
+        href: "/?q=mesa&categoria=moveis&disponibilidade=vendido&max=500&ordem=menor-preco",
+      },
+      {
+        label: "Vendidos",
+        href: "/?q=mesa&categoria=moveis&estado=como-novo&max=500&ordem=menor-preco",
+      },
+      {
+        label: "Até R$ 500",
+        href: "/?q=mesa&categoria=moveis&estado=como-novo&disponibilidade=vendido&ordem=menor-preco",
+      },
+    ]);
+  });
+
+  it("labels each shape of price range", () => {
+    const label = (min?: string, max?: string) =>
+      activeFilterChips(parseCatalogParams({ min, max }), () => undefined)[0]
+        ?.label;
+    expect(label("100", "1500")).toBe("R$ 100 a R$ 1.500");
+    expect(label("100")).toBe("A partir de R$ 100");
+    expect(label("0", "50")).toBe("R$ 0 a R$ 50");
+    expect(activeFilterChips(DEFAULT_FILTERS, () => undefined)).toEqual([]);
   });
 });
