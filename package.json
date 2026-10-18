@@ -15,6 +15,7 @@
     "@biomejs/biome": "catalog:",
     "@commitlint/cli": "21.2.3",
     "@commitlint/config-conventional": "21.2.3",
+    "railway": "3.16.0",
     "turbo": "2.9.18"
   },
   "engines": {

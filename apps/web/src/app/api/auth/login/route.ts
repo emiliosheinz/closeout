@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
       "Content-Type": "application/json",
       [INTERNAL_SECRET_HEADER]: requireEnv("INTERNAL_API_SECRET"),
       [CLIENT_IP_HEADER]:
-        clientIpFrom(request.headers.get("x-forwarded-for")) ?? "local",
+        clientIpFrom(request.headers.get("x-real-ip")) ?? "local",
     },
     body: JSON.stringify({
       email: credentials.email,

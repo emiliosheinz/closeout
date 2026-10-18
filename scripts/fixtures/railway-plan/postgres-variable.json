@@ -1,0 +1,41 @@
+{
+  "kind": "railway.config.plan",
+  "version": 1,
+  "cliVersion": "5.70.0",
+  "sourceTree": "sha256:8933f2c72852ef9c02419d816aa92a32db6a2156b5ca99d4b3ce400b1b7ca29f",
+  "environmentId": "dac2f07c-f4bf-47f9-96cc-faf3828a181c",
+  "configEtag": "b4df330a2c266c8e8d13b7824180c2019773350b7b6e8b656f11c267af2f5ac5",
+  "changeSetHash": "sha256:55a642dca1f30ededd39cdd7fd82eb620138f803c51b4850d2d4bcf1f3c1076a",
+  "changeSet": {
+    "changes": [
+      {
+        "address": "database.postgres",
+        "after": {
+          "type": "literal",
+          "value": "1"
+        },
+        "deployEffect": "deploy",
+        "details": ["postgres.POSTGRES_PROBE (unset → «hidden»)"],
+        "kind": "variable.set",
+        "path": "resources.database.postgres.variables.POSTGRES_PROBE",
+        "severity": "safe",
+        "summary": "Set variable postgres.POSTGRES_PROBE",
+        "variable": "POSTGRES_PROBE"
+      }
+    ],
+    "declared": [
+      "database.postgres",
+      "bucket.media",
+      "service.api",
+      "service.web"
+    ],
+    "diagnostics": [],
+    "telemetry": {
+      "language": "typescript"
+    },
+    "version": 1
+  },
+  "diff": "~ Set variable postgres.POSTGRES_PROBE",
+  "destructive": false,
+  "claim": true
+}

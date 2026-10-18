@@ -1,0 +1,90 @@
+name: Railway
+
+# Plans .railway/railway.ts on pull requests; on main (production) and
+# verification (probe environment) it then applies. Railway holds each commit's
+# deploys until this run finishes. Every plan passes the data-store guard first.
+#
+# No concurrency group: GitHub cancels all but one pending run per group, which
+# would drop an apply. Railway rejects a plan whose environment has changed, so
+# overlapping applies fail instead. Never cancel a run by hand for the same reason.
+
+on:
+  pull_request:
+    branches: [main, verification]
+    paths: &infra-paths
+      - .railway/**
+      - package.json
+      - pnpm-lock.yaml
+      - scripts/railway-plan-guard*
+      - scripts/fixtures/railway-plan/**
+      - .github/workflows/railway.yml
+  push:
+    branches: [main, verification]
+    paths: *infra-paths
+  workflow_dispatch:
+    inputs:
+      first-time-setup:
+        description: Allow creating the database and the bucket (the first apply of an empty environment only)
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+env:
+  # Keep in step with CLI_VERSION in scripts/railway-plan-guard.ts.
+  RAILWAY_CLI_VERSION: 5.70.0
+
+jobs:
+  railway:
+    name: ${{ github.event_name == 'pull_request' && 'Plan' || 'Apply' }} ${{ (github.base_ref || github.ref_name) == 'main' && 'production' || 'verification' }}
+    # Fork pull requests get no token, and no run.
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository ||
+      github.event_name != 'pull_request' &&
+      (github.ref_name == 'main' || github.ref_name == 'verification')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    # Pull requests use the plan-only environments; only pushes and manual
+    # runs reach the ones that apply.
+    environment: ${{ (github.base_ref || github.ref_name) == 'main' && 'production' || 'verification' }}${{ github.event_name == 'pull_request' && '-plan' || '' }}
+    steps:
+      - name: Check out code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up toolchain
+        uses: ./.github/actions/setup-toolchain
+
+      - name: Test the data-store guard
+        run: node --test scripts/railway-plan-guard.test.ts
+
+      - name: Install the Railway CLI
+        run: npm install -g "@railway/cli@$RAILWAY_CLI_VERSION"
+
+      - name: Plan
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: railway config plan --out plan.json
+
+      - name: Report the plan
+        run: jq -r .diff plan.json >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Check the plan leaves data stores alone
+        env:
+          FIRST_TIME_SETUP: ${{ inputs.first-time-setup }}
+        run: |
+          flags=()
+          if [ "$FIRST_TIME_SETUP" = "true" ]; then flags+=(--setup); fi
+          node scripts/railway-plan-guard.ts plan.json "${flags[@]}"
+
+      # Never add --confirm-destructive: without it Railway refuses any
+      # destructive change in a non-interactive run, a second line behind the
+      # guard.
+      - name: Apply exactly the checked plan
+        if: github.event_name != 'pull_request'
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: railway config apply --plan plan.json --yes

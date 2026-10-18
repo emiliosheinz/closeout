@@ -73,3 +73,29 @@ describe("login route body cap", () => {
     expect(res.status).toBe(400);
   });
 });
+
+describe("login route client IP", () => {
+  beforeEach(() => {
+    process.env.PUBLIC_BASE_URL = "http://web:3000";
+  });
+
+  it("keys the client by X-Real-IP, never by X-Forwarded-For", async () => {
+    process.env.API_BASE_URL = "http://api:3001";
+    process.env.INTERNAL_API_SECRET = "secret";
+    const fetchMock = jest
+      .spyOn(global, "fetch")
+      .mockResolvedValue(
+        Response.json(
+          { message: "E-mail ou senha inválidos." },
+          { status: 401 },
+        ),
+      );
+    await login(JSON.stringify({ email: "a@b.co", password: "wrong" }), {
+      "x-real-ip": "179.129.216.37",
+      "x-forwarded-for": "6.6.6.6, 46.151.194.130",
+    });
+    const headers = new Headers(fetchMock.mock.calls[0]?.[1]?.headers);
+    expect(headers.get("x-client-ip")).toBe("179.129.216.37");
+    fetchMock.mockRestore();
+  });
+});

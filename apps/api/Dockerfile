@@ -1,4 +1,17 @@
 # syntax=docker/dockerfile:1.18-labs
+# -------- Dev (with hot reload) --------
+FROM node:24-alpine AS dev
+
+RUN apk add --no-cache curl
+
+RUN corepack enable pnpm && corepack install -g pnpm@11.1.0
+
+WORKDIR /closeout
+
+CMD ["pnpm", "turbo", "start:dev", "--filter=api"]
+
+
+
 # -------- Production Builder --------
 FROM node:24-alpine AS builder
 
@@ -31,22 +44,6 @@ RUN apk add --no-cache curl
 
 COPY --from=builder /out ./
 
-ENV MEDIA_DIR=/data/media
-RUN mkdir -p /data/media && chown node:node /data/media
-VOLUME ["/data/media"]
 USER node
 
 CMD ["node", "dist/main"]
-
-
-
-# -------- Dev (with hot reload) --------
-FROM node:24-alpine AS dev
-
-RUN apk add --no-cache curl
-
-RUN corepack enable pnpm && corepack install -g pnpm@11.1.0
-
-WORKDIR /closeout
-
-CMD ["pnpm", "turbo", "start:dev", "--filter=api"]

@@ -1,0 +1,116 @@
+{
+  "kind": "railway.config.plan",
+  "version": 1,
+  "cliVersion": "5.70.0",
+  "sourceTree": "sha256:e73e8b3d4aa067f82ac31c064701df41a0c354eefa6a8cc7cfd8bad3178bfbde",
+  "environmentId": "dac2f07c-f4bf-47f9-96cc-faf3828a181c",
+  "configEtag": "b4df330a2c266c8e8d13b7824180c2019773350b7b6e8b656f11c267af2f5ac5",
+  "changeSetHash": "sha256:5bd78341f134a2c2d403d8fe2c88a7ff63881b54b1413bf0a9e3e26ea861dca0",
+  "changeSet": {
+    "changes": [
+      {
+        "address": "service.api",
+        "deployEffect": "deploy",
+        "kind": "variable.delete",
+        "path": "resources.service.api.variables.POSTGRES_DB",
+        "previous": {
+          "type": "preserve"
+        },
+        "severity": "destructive",
+        "summary": "Delete variable api.POSTGRES_DB",
+        "variable": "POSTGRES_DB"
+      },
+      {
+        "address": "service.api",
+        "deployEffect": "deploy",
+        "kind": "variable.delete",
+        "path": "resources.service.api.variables.POSTGRES_HOST",
+        "previous": {
+          "type": "preserve"
+        },
+        "severity": "destructive",
+        "summary": "Delete variable api.POSTGRES_HOST",
+        "variable": "POSTGRES_HOST"
+      },
+      {
+        "address": "service.api",
+        "deployEffect": "deploy",
+        "kind": "variable.delete",
+        "path": "resources.service.api.variables.POSTGRES_PASSWORD",
+        "previous": {
+          "type": "preserve"
+        },
+        "severity": "destructive",
+        "summary": "Delete variable api.POSTGRES_PASSWORD",
+        "variable": "POSTGRES_PASSWORD"
+      },
+      {
+        "address": "service.api",
+        "deployEffect": "deploy",
+        "kind": "variable.delete",
+        "path": "resources.service.api.variables.POSTGRES_PORT",
+        "previous": {
+          "type": "preserve"
+        },
+        "severity": "destructive",
+        "summary": "Delete variable api.POSTGRES_PORT",
+        "variable": "POSTGRES_PORT"
+      },
+      {
+        "address": "service.api",
+        "deployEffect": "deploy",
+        "kind": "variable.delete",
+        "path": "resources.service.api.variables.POSTGRES_USER",
+        "previous": {
+          "type": "preserve"
+        },
+        "severity": "destructive",
+        "summary": "Delete variable api.POSTGRES_USER",
+        "variable": "POSTGRES_USER"
+      },
+      {
+        "address": "database.postgres",
+        "deployEffect": "deploy",
+        "kind": "resource.delete",
+        "path": "resources.database.postgres",
+        "previous": {
+          "address": "database.postgres",
+          "defaultMountPath": "/var/lib/postgresql/data",
+          "deploy": {
+            "ipv6EgressEnabled": false,
+            "multiRegionConfig": {
+              "us-east4-eqdc4a": {
+                "numReplicas": 1
+              }
+            },
+            "requiredMountPath": "/var/lib/postgresql/data",
+            "runtime": "V2",
+            "useLegacyStacker": false
+          },
+          "engine": "postgres",
+          "image": "ghcr.io/railwayapp-templates/postgres-ssl:18",
+          "kind": "database",
+          "name": "postgres",
+          "output": "DATABASE_URL",
+          "type": "database",
+          "volumeMounts": {
+            "52ab6c8f-7649-4d7a-b49d-0036f8aa7a0c": {
+              "mountPath": "/var/lib/postgresql/data"
+            }
+          }
+        },
+        "severity": "destructive",
+        "summary": "Delete database postgres"
+      }
+    ],
+    "declared": ["bucket.media", "service.api", "service.web"],
+    "diagnostics": [],
+    "telemetry": {
+      "language": "typescript"
+    },
+    "version": 1
+  },
+  "diff": "~ Delete variable api.POSTGRES_DB\n~ Delete variable api.POSTGRES_HOST\n~ Delete variable api.POSTGRES_PASSWORD\n~ Delete variable api.POSTGRES_PORT\n~ Delete variable api.POSTGRES_USER\n- Delete database postgres",
+  "destructive": true,
+  "claim": true
+}

@@ -1,0 +1,44 @@
+{
+  "kind": "railway.config.plan",
+  "version": 1,
+  "cliVersion": "5.70.0",
+  "sourceTree": "sha256:ce356b538f2ce89519f41afed9be813b8ad5c1e0c09de1a4a40acdb7ed6d06f8",
+  "environmentId": "dac2f07c-f4bf-47f9-96cc-faf3828a181c",
+  "configEtag": "b4df330a2c266c8e8d13b7824180c2019773350b7b6e8b656f11c267af2f5ac5",
+  "changeSetHash": "sha256:75aef5bab78c18d5883fef51c451f74e218092fb90803381fcc12543f53de1e5",
+  "changeSet": {
+    "changes": [
+      {
+        "address": "service.api",
+        "after": {
+          "type": "literal",
+          "value": "Nosso Desapego Probe"
+        },
+        "before": {
+          "type": "preserve"
+        },
+        "deployEffect": "deploy",
+        "details": ["api.STORE_NAME (preserve() → «hidden»)"],
+        "kind": "variable.set",
+        "path": "resources.service.api.variables.STORE_NAME",
+        "severity": "safe",
+        "summary": "Update variable api.STORE_NAME",
+        "variable": "STORE_NAME"
+      }
+    ],
+    "declared": [
+      "database.postgres",
+      "bucket.media",
+      "service.api",
+      "service.web"
+    ],
+    "diagnostics": [],
+    "telemetry": {
+      "language": "typescript"
+    },
+    "version": 1
+  },
+  "diff": "~ Update variable api.STORE_NAME",
+  "destructive": false,
+  "claim": true
+}
