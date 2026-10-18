@@ -161,7 +161,7 @@ private media bucket. There are no backups, which is why the data-store guard
 refuses any plan that touches the database, the bucket or their volume.
 
 A push creates one deployment per service, held by Railway (Wait for CI) until the
-commit's checks finish. The Infrastructure workflow plans `railway.ts`, runs the
+commit's checks finish. The Railway workflow plans `railway.ts`, runs the
 guard and applies. Then the deployments build; the api pre-deploy step runs pending
 migrations in one transaction under a Postgres advisory lock, and traffic moves only
 after `/health` passes. A failed migration, build or health check leaves the
@@ -188,11 +188,11 @@ until you click **Deploy Changes**.
 6. An environment-scoped project token (Settings > Tokens), stored as
    `RAILWAY_TOKEN` in both `<env>` and `<env>-plan` GitHub Environments
    (`gh secret set RAILWAY_TOKEN --env <env>`, value on stdin).
-7. First apply. Once the workflow is on `main`, run the Infrastructure workflow
+7. First apply. Once the workflow is on `main`, run the Railway workflow
    manually on the environment's branch with **first-time-setup** checked: the guard
    then also allows creating the database and the bucket. Before that (the first
    environment), run the same steps locally with the CLI version pinned in
-   `.github/workflows/infrastructure.yml`:
+   `.github/workflows/railway.yml`:
 
    ```bash
    export RAILWAY_TOKEN=...   # the environment token
@@ -226,7 +226,7 @@ passes `--confirm-destructive`, so it cannot delete anything.
 - To remove a variable, delete it in Railway (or apply locally with
   `--confirm-destructive` after reading the plan), then remove it from the file. A
   push that only removes it from the file fails, and its deploys are skipped.
-- Never cancel an Infrastructure run. A cancelled or failed run skips that commit's
+- Never cancel a Railway workflow run. A cancelled or failed run skips that commit's
   deploys for good; re-running does not revive them and `railway redeploy` redeploys
   the last active commit. Push a new commit instead. The same applies to a failed
   Warm caches run on `main` and to deploys whose checks are still unfinished after

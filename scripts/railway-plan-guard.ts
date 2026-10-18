@@ -21,7 +21,7 @@ const KNOWN_KINDS = new Set([
   "variable.delete",
 ]);
 
-// Must match RAILWAY_CLI_VERSION in .github/workflows/infrastructure.yml.
+// Must match RAILWAY_CLI_VERSION in .github/workflows/railway.yml.
 const CLI_VERSION = "5.70.0";
 
 // Restated here so editing .railway/railway.ts alone cannot relax this.

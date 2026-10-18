@@ -32,7 +32,7 @@ and the files would have no backups.
 - api deploys keep zero downtime and uploads survive them.
 - Image bytes pass through the api; fine at this traffic, and variants are cached
   as immutable.
-- The bucket has no backups; the infrastructure workflow refuses any plan that
+- The bucket has no backups; the Railway workflow refuses any plan that
   touches it.
 - The plan-only GitHub Environment holds a token for the same Railway environment
   as the apply (Railway project tokens cannot be limited to planning); accepted

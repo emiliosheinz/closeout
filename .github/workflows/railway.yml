@@ -1,4 +1,4 @@
-name: Infrastructure
+name: Railway
 
 # Plans .railway/railway.ts on pull requests; on main (production) and
 # verification (probe environment) it then applies. Railway holds each commit's
@@ -17,7 +17,7 @@ on:
       - pnpm-lock.yaml
       - scripts/railway-plan-guard*
       - scripts/fixtures/railway-plan/**
-      - .github/workflows/infrastructure.yml
+      - .github/workflows/railway.yml
   push:
     branches: [main, verification]
     paths: *infra-paths
@@ -36,8 +36,8 @@ env:
   RAILWAY_CLI_VERSION: 5.70.0
 
 jobs:
-  infrastructure:
-    name: Infrastructure
+  railway:
+    name: ${{ github.event_name == 'pull_request' && 'Plan' || 'Apply' }} ${{ (github.base_ref || github.ref_name) == 'main' && 'production' || 'verification' }}
     # Fork pull requests get no token, and no run.
     if: >-
       github.event_name == 'pull_request' &&
