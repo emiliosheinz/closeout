@@ -2,28 +2,97 @@
   "kind": "railway.config.plan",
   "version": 1,
   "cliVersion": "5.70.0",
-  "sourceTree": "0000000000000000000000000000000000000000",
-  "environmentId": "00000000-0000-0000-0000-000000000000",
-  "configEtag": "etag",
-  "changeSetHash": "sha256:0",
+  "sourceTree": "sha256:44c13ae9f5b19b91971ce2908d0845cb9511335c897de21679c55591431da720",
+  "environmentId": "dac2f07c-f4bf-47f9-96cc-faf3828a181c",
+  "configEtag": "b4df330a2c266c8e8d13b7824180c2019773350b7b6e8b656f11c267af2f5ac5",
+  "changeSetHash": "sha256:79e480780f600e3626137d17b8c02893276fa3c744a9c367ab3ee37f7fc4522d",
   "changeSet": {
-    "version": 1,
     "changes": [
       {
-        "kind": "resource.delete",
+        "address": "service.api",
+        "deployEffect": "deploy",
+        "kind": "variable.delete",
+        "path": "resources.service.api.variables.S3_ACCESS_KEY_ID",
+        "previous": {
+          "type": "preserve"
+        },
+        "severity": "destructive",
+        "summary": "Delete variable api.S3_ACCESS_KEY_ID",
+        "variable": "S3_ACCESS_KEY_ID"
+      },
+      {
+        "address": "service.api",
+        "deployEffect": "deploy",
+        "kind": "variable.delete",
+        "path": "resources.service.api.variables.S3_BUCKET",
+        "previous": {
+          "type": "preserve"
+        },
+        "severity": "destructive",
+        "summary": "Delete variable api.S3_BUCKET",
+        "variable": "S3_BUCKET"
+      },
+      {
+        "address": "service.api",
+        "deployEffect": "deploy",
+        "kind": "variable.delete",
+        "path": "resources.service.api.variables.S3_ENDPOINT",
+        "previous": {
+          "type": "preserve"
+        },
+        "severity": "destructive",
+        "summary": "Delete variable api.S3_ENDPOINT",
+        "variable": "S3_ENDPOINT"
+      },
+      {
+        "address": "service.api",
+        "deployEffect": "deploy",
+        "kind": "variable.delete",
+        "path": "resources.service.api.variables.S3_REGION",
+        "previous": {
+          "type": "preserve"
+        },
+        "severity": "destructive",
+        "summary": "Delete variable api.S3_REGION",
+        "variable": "S3_REGION"
+      },
+      {
+        "address": "service.api",
+        "deployEffect": "deploy",
+        "kind": "variable.delete",
+        "path": "resources.service.api.variables.S3_SECRET_ACCESS_KEY",
+        "previous": {
+          "type": "preserve"
+        },
+        "severity": "destructive",
+        "summary": "Delete variable api.S3_SECRET_ACCESS_KEY",
+        "variable": "S3_SECRET_ACCESS_KEY"
+      },
+      {
         "address": "bucket.media",
+        "deployEffect": "none",
+        "kind": "resource.delete",
+        "path": "resources.bucket.media",
         "previous": {
           "address": "bucket.media",
-          "type": "bucket",
-          "name": "media"
+          "config": {
+            "region": "iad"
+          },
+          "name": "media",
+          "type": "bucket"
         },
-        "path": "resources.bucket.media",
-        "summary": "Delete bucket media",
         "severity": "destructive",
-        "deployEffect": "none"
+        "summary": "Delete bucket media"
       }
     ],
-    "diagnostics": []
+    "declared": ["database.postgres", "service.api", "service.web"],
+    "diagnostics": [],
+    "telemetry": {
+      "language": "typescript"
+    },
+    "version": 1
   },
-  "destructive": true
+  "diff": "~ Delete variable api.S3_ACCESS_KEY_ID\n~ Delete variable api.S3_BUCKET\n~ Delete variable api.S3_ENDPOINT\n~ Delete variable api.S3_REGION\n~ Delete variable api.S3_SECRET_ACCESS_KEY\n- Delete bucket media",
+  "destructive": true,
+  "claim": true
 }

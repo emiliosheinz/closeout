@@ -2,26 +2,44 @@
   "kind": "railway.config.plan",
   "version": 1,
   "cliVersion": "5.70.0",
-  "sourceTree": "0000000000000000000000000000000000000000",
-  "environmentId": "00000000-0000-0000-0000-000000000000",
-  "configEtag": "etag",
-  "changeSetHash": "sha256:0",
+  "sourceTree": "sha256:1847824d7cb6ff3445aa6c3fb936f1d348aa2dc6f0559b247545b04fcdfd04c6",
+  "environmentId": "dac2f07c-f4bf-47f9-96cc-faf3828a181c",
+  "configEtag": "b4df330a2c266c8e8d13b7824180c2019773350b7b6e8b656f11c267af2f5ac5",
+  "changeSetHash": "sha256:e61d67b641f3c74211d5e849978b145dcc25f479c82cdb5e64c631e08de58c5c",
   "changeSet": {
-    "version": 1,
     "changes": [
       {
-        "kind": "resource.update",
         "address": "database.postgres",
+        "after": {
+          "image": "ghcr.io/railwayapp-templates/postgres-ssl:17",
+          "type": "image"
+        },
+        "before": null,
+        "deployEffect": "deploy",
+        "details": [
+          "source.image (null → \"postgres:17\")",
+          "source.type (null → \"image\")"
+        ],
         "field": "source",
-        "before": {},
-        "after": {},
+        "kind": "resource.update",
         "path": "resources.database.postgres.source",
-        "summary": "Update database.postgres source",
-        "severity": "destructive",
-        "deployEffect": "deploy"
+        "severity": "safe",
+        "summary": "Update postgres source.image, source.type"
       }
     ],
-    "diagnostics": []
+    "declared": [
+      "database.postgres",
+      "bucket.media",
+      "service.api",
+      "service.web"
+    ],
+    "diagnostics": [],
+    "telemetry": {
+      "language": "typescript"
+    },
+    "version": 1
   },
-  "destructive": true
+  "diff": "~ Update postgres source.image, source.type",
+  "destructive": false,
+  "claim": true
 }
