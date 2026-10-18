@@ -83,9 +83,11 @@ draft shows its checks as skipped, matrix checks under an unexpanded name; that 
 expected. Retargeting an open PR to `main` starts no run until its next push. A PR with
 merge conflicts against `main` gets no run at all: resolve the conflict to get checks.
 
-Each check reports its own status, shown on the PR as `Checks / <name>`. These names are
-the required-check contract: **renaming one silently drops it from the required checks
-on `main`.** The commands below are exactly what CI runs.
+Each check reports its own status, shown on the PR as `Checks / <name>`. A final
+`Ready to merge` check passes only when every check below passed, so it is the one
+status to require on `main`: **renaming it silently drops it from the required checks,
+and a new job must be added to its `needs` list or it will not block merging.** The
+commands below are exactly what CI runs.
 
 | Check | Reproduce locally |
 | --- | --- |
@@ -104,15 +106,11 @@ on `main`.** The commands below are exactly what CI runs.
 refreshes the dependency and image-layer caches that pull requests restore. It is the
 only workflow that saves caches and reports none of the names above.
 
-### Making the checks required
+### Required check on `main`
 
-Branch protection is unavailable on a free private repository. Once the repository is
-public or on a paid plan:
-
-1. Open a pull request so every status above has reported at least once.
-2. Settings → Branches → add a branch protection rule (or ruleset) for `main`.
-3. Enable "Require status checks to pass before merging" and add all ten names above.
-4. Check with `gh api repos/{owner}/{repo}/branches/main/protection/required_status_checks --jq .contexts`.
+The "Protect main" ruleset (Settings → Rules → Rulesets) requires `Ready to merge`, from
+GitHub Actions, on every update to `main`, so pull requests merge only when it passes.
+Check with `gh api repos/{owner}/{repo}/rules/branches/main`.
 
 ## Resetting local data
 
