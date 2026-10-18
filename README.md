@@ -57,8 +57,7 @@ docker compose logs -f api web
 ```
 
 The full guide (environment, database, tests, resets, troubleshooting, production
-and the path to multiple storefronts) is in [docs/development.md](docs/development.md), which also holds the Railway
-production runbook.
+and the path to multiple storefronts) is in [docs/development.md](docs/development.md).
 Architecture decisions are recorded in [docs/architecture/decisions](docs/architecture/decisions).
 
 ## Structure
