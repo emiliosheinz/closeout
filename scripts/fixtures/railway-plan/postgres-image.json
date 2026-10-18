@@ -1,0 +1,27 @@
+{
+  "kind": "railway.config.plan",
+  "version": 1,
+  "cliVersion": "5.70.0",
+  "sourceTree": "0000000000000000000000000000000000000000",
+  "environmentId": "00000000-0000-0000-0000-000000000000",
+  "configEtag": "etag",
+  "changeSetHash": "sha256:0",
+  "changeSet": {
+    "version": 1,
+    "changes": [
+      {
+        "kind": "resource.update",
+        "address": "database.postgres",
+        "field": "source",
+        "before": {},
+        "after": {},
+        "path": "resources.database.postgres.source",
+        "summary": "Update database.postgres source",
+        "severity": "destructive",
+        "deployEffect": "deploy"
+      }
+    ],
+    "diagnostics": []
+  },
+  "destructive": true
+}

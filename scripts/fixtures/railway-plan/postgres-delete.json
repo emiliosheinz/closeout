@@ -1,0 +1,29 @@
+{
+  "kind": "railway.config.plan",
+  "version": 1,
+  "cliVersion": "5.70.0",
+  "sourceTree": "0000000000000000000000000000000000000000",
+  "environmentId": "00000000-0000-0000-0000-000000000000",
+  "configEtag": "etag",
+  "changeSetHash": "sha256:0",
+  "changeSet": {
+    "version": 1,
+    "changes": [
+      {
+        "kind": "resource.delete",
+        "address": "database.postgres",
+        "previous": {
+          "address": "database.postgres",
+          "type": "database",
+          "name": "postgres"
+        },
+        "path": "resources.database.postgres",
+        "summary": "Delete database postgres",
+        "severity": "destructive",
+        "deployEffect": "none"
+      }
+    ],
+    "diagnostics": []
+  },
+  "destructive": true
+}
