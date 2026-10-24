@@ -1,10 +1,10 @@
 import { expect, test } from "@playwright/test";
-import { hydrated } from "./helpers";
+import { hydrated, STORE } from "./helpers";
 
 test("the WhatsApp action is visible without scrolling on a phone", async ({
   page,
 }) => {
-  await page.goto("/?q=bicicleta");
+  await page.goto(`${STORE}?q=bicicleta`);
   await page.getByRole("link", { name: "Bicicleta aro 29" }).click();
   await expect(page.getByTestId("whatsapp-contact").last()).toBeInViewport();
 });
@@ -12,7 +12,7 @@ test("the WhatsApp action is visible without scrolling on a phone", async ({
 test("filters open in a bottom sheet and apply through the URL", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto(STORE);
   await hydrated(page);
   await page.getByRole("button", { name: /^Filtros/ }).click();
   const sheet = page.getByRole("dialog", { name: "Filtrar itens" });
@@ -28,7 +28,7 @@ test("filters open in a bottom sheet and apply through the URL", async ({
 });
 
 test("the catalog never scrolls sideways", async ({ page }) => {
-  await page.goto("/");
+  await page.goto(STORE);
   const overflow = await page.evaluate(
     () =>
       document.documentElement.scrollWidth -
@@ -45,7 +45,7 @@ test("sharing without a share sheet or clipboard offers the link to copy", async
   await page.addInitScript(() => {
     Object.defineProperty(navigator, "share", { value: undefined });
   });
-  await page.goto("/?q=bicicleta");
+  await page.goto(`${STORE}?q=bicicleta`);
   await page.getByRole("link", { name: "Bicicleta aro 29" }).click();
   await hydrated(page);
   // window.prompt blocks the page, so answer it from a handler registered

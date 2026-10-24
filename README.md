@@ -2,9 +2,10 @@
 
 A personal storefront to sell the things you no longer need to people you know.
 
-Visitors open one shared link, browse photos, prices and conditions, and message the
+Visitors open a store's link, browse photos, prices and conditions, and message the
 right seller on WhatsApp with a prefilled note. There is no cart, checkout or buyer
-account. Sellers manage one shared catalog from an admin area.
+account. One deployment serves every store at `/store/<slug>`; each store's team
+manages its catalog from an admin area.
 
 ## Quick start
 
@@ -15,28 +16,33 @@ Requirements: Docker with Compose. Nothing else is needed on the host.
 docker compose up -d --wait     # postgres, migrations, api, web, workspace
 ```
 
-Create the administrators, one per seller. The password is prompted for:
+Create a store and its owner. The password is prompted for; the store is created
+when the slug is new:
 
 ```bash
-bin/closeout cli admin:create --email you@example.com --name "Seu nome" --whatsapp "+55 11 99999-8888"
-bin/closeout cli admin:create --email partner@example.com --name "Nome dela" --whatsapp "+55 11 98888-7777"
+bin/closeout cli admin:create --store nosso-desapego --store-name "Nosso Desapego" \
+  --email you@example.com --name "Seu nome" --whatsapp "+55 11 99999-8888"
 ```
 
-The first admin becomes the store owner, and each admin gets a seller profile that
-buyers contact. The store (`STORE_SLUG` and `STORE_NAME` in `.env`) is created by the
-first `admin:create`.
+Everyone else joins by invite: the owner opens **Equipe**, creates an invite link
+and sends it. Members are owners and admins, who manage the store, its team and
+every listing, or sellers, who manage only their own listings. Each member has a
+seller profile that buyers contact.
 
 | URL | What |
 | --- | --- |
-| http://localhost:3001 | Public storefront |
+| http://localhost:3001 | Landing page |
+| http://localhost:3001/store/nosso-desapego | Public storefront |
 | http://localhost:3001/admin | Admin area |
 
-Optional demo content for a fresh local store. The example listings are clearly
-marked and use abstract placeholder art; the command does nothing when the store
-already has listings:
+Optional demo content for a fresh local store: demo owner (unless the store has
+one), admin and seller accounts (`owner@<slug>.test`, `admin@<slug>.test`,
+`seller@<slug>.test`, password `demo-password`) and clearly marked listings with
+abstract placeholder art. The command does nothing when the store already has
+listings:
 
 ```bash
-bin/closeout cli seed:demo
+bin/closeout cli seed:demo --store nosso-desapego --store-name "Nosso Desapego"
 ```
 
 To publish a real item: sign in, open **Novo anúncio**, fill in the name, price and
@@ -57,7 +63,7 @@ docker compose logs -f api web
 ```
 
 The full guide (environment, database, tests, resets, troubleshooting, production
-and the path to multiple storefronts) is in [docs/development.md](docs/development.md).
+and what multiple storefronts still need) is in [docs/development.md](docs/development.md).
 Architecture decisions are recorded in [docs/architecture/decisions](docs/architecture/decisions).
 
 ## Structure

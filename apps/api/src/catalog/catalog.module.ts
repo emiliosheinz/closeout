@@ -11,6 +11,7 @@ import { ListingsController } from "./controllers/listings.controller";
 import { PublicCatalogController } from "./controllers/public-catalog.controller";
 import { Listing } from "./entities/listing.entity";
 import { ListingImage } from "./entities/listing-image.entity";
+import { AssignedListingGuard } from "./guards/assigned-listing.guard";
 import { ListingImagesService } from "./services/listing-images.service";
 import { ListingsService } from "./services/listings.service";
 import { PublicCatalogService } from "./services/public-catalog.service";
@@ -27,7 +28,12 @@ import { PublicCatalogService } from "./services/public-catalog.service";
     DashboardController,
     PublicCatalogController,
   ],
-  providers: [ListingsService, ListingImagesService, PublicCatalogService],
+  providers: [
+    ListingsService,
+    ListingImagesService,
+    PublicCatalogService,
+    AssignedListingGuard,
+  ],
   exports: [ListingsService, ListingImagesService],
 })
 export class CatalogModule {}

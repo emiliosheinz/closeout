@@ -2,10 +2,12 @@ import Link from "next/link";
 import { type CatalogFilters, catalogHref } from "@/lib/catalog/params";
 
 export function Pagination({
+  storeSlug,
   filters,
   total,
   pageSize,
 }: {
+  storeSlug: string;
   filters: CatalogFilters;
   total: number;
   pageSize: number;
@@ -21,7 +23,7 @@ export function Pagination({
     >
       {filters.page > 1 ? (
         <Link
-          href={catalogHref({ ...filters, page: filters.page - 1 })}
+          href={catalogHref(storeSlug, { ...filters, page: filters.page - 1 })}
           className={link}
           rel="prev"
         >
@@ -35,7 +37,7 @@ export function Pagination({
       </p>
       {filters.page < pages ? (
         <Link
-          href={catalogHref({ ...filters, page: filters.page + 1 })}
+          href={catalogHref(storeSlug, { ...filters, page: filters.page + 1 })}
           className={link}
           rel="next"
         >

@@ -15,9 +15,14 @@ export interface StoreSettings {
   currency: string;
 }
 
+export type Role = "owner" | "admin" | "seller";
+
+/** Roles an invite or a role change can grant; owner comes only from the CLI. */
+export type AssignableRole = Exclude<Role, "owner">;
+
 export interface Me {
   user: { id: string; name: string; email: string };
-  memberships: { role: "owner" | "admin"; store: StoreSettings }[];
+  memberships: { role: Role; sellerId: string; store: StoreSettings }[];
 }
 
 export interface AdminImage {
@@ -71,4 +76,28 @@ export interface Category {
   id: string;
   slug: string;
   name: string;
+}
+
+export interface TeamMember {
+  userId: string;
+  name: string;
+  email: string;
+  role: Role;
+  sellerId: string;
+  displayName: string;
+  whatsappNumber: string | null;
+  avatarUrl: string | null;
+  listingCount: number;
+}
+
+export interface PendingInvite {
+  id: string;
+  email: string;
+  role: AssignableRole;
+  expiresAt: string;
+}
+
+export interface IssuedInvite {
+  invite: PendingInvite;
+  link: string;
 }

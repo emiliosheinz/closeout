@@ -4,7 +4,7 @@ Date: 2026-10-17
 
 ## Status
 
-Accepted
+Accepted. Store serving and selection superseded by [9. Every store served at its own path](0009-every-store-served-at-its-own-path.md).
 
 ## Context
 

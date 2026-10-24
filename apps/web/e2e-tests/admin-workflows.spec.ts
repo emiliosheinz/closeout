@@ -1,5 +1,12 @@
 import { expect, test } from "@playwright/test";
-import { findInAdmin, hydrated, samplePhoto, signIn } from "./helpers";
+import {
+  ADMIN_EMAIL,
+  findInAdmin,
+  hydrated,
+  STORE,
+  samplePhoto,
+  signIn,
+} from "./helpers";
 
 const TITLE = `Estante de teste ${Date.now()}`;
 const NEW_NUMBER = "5521977771234";
@@ -93,6 +100,7 @@ test.describe
           .getAttribute("href")) ?? "",
         page.url(),
       ).pathname;
+      expect(publicPath).toMatch(/^\/store\/loja-e2e\/items\//);
     });
 
     test("the admin table search shows only matching titles", async ({
@@ -112,26 +120,29 @@ test.describe
       await signIn(page);
       await page
         .getByRole("navigation", { name: "Administração" })
-        .getByRole("link", { name: "Vendedores", exact: true })
+        .getByRole("link", { name: "Equipe", exact: true })
         .click();
-      await expect(page).toHaveURL(/\/admin\/vendedores$/);
+      await expect(page).toHaveURL(/\/admin\/equipe$/);
       await hydrated(page);
-      const number = page.getByLabel("WhatsApp").first();
+      const row = page.getByRole("listitem").filter({ hasText: ADMIN_EMAIL });
+      const dialog = page.getByRole("dialog");
+      const edit = async (value: string) => {
+        await row.getByRole("button", { name: /^Ações para / }).click();
+        await page.getByRole("menuitem", { name: "Editar" }).click();
+        await dialog.getByLabel("WhatsApp").fill(value);
+        await dialog.getByRole("button", { name: "Salvar alterações" }).click();
+      };
 
-      await number.fill("11 9999-0000");
-      await page
-        .getByRole("button", { name: "Salvar contato" })
-        .first()
-        .click();
-      await expect(page.getByText(/código do país/).first()).toBeVisible();
-      await expect(number).toHaveValue("11 9999-0000");
+      await edit("11 9999-0000");
+      await expect(dialog.getByRole("alert")).toContainText(
+        "Informe o WhatsApp com o código do país",
+      );
+      await expect(dialog.getByLabel("WhatsApp")).toHaveValue("11 9999-0000");
+      await dialog.getByRole("button", { name: "Cancelar" }).click();
 
-      await number.fill("+55 21 97777-1234");
-      await page
-        .getByRole("button", { name: "Salvar contato" })
-        .first()
-        .click();
-      await expect(page.getByText("Contato salvo.").first()).toBeVisible();
+      await edit("+55 21 97777-1234");
+      await expect(dialog).toBeHidden();
+      await expect(row).toContainText("+5521977771234");
 
       await page.goto(publicPath);
       const href = await page
@@ -141,14 +152,11 @@ test.describe
       expect(new URL(href ?? "").pathname).toBe(`/${NEW_NUMBER}`);
 
       // Restore the fixture number the other journeys expect.
-      await page.goto("/admin/vendedores");
+      await page.goto("/admin/equipe");
       await hydrated(page);
-      await page.getByLabel("WhatsApp").first().fill("+55 11 98888-7777");
-      await page
-        .getByRole("button", { name: "Salvar contato" })
-        .first()
-        .click();
-      await expect(page.getByText("Contato salvo.").first()).toBeVisible();
+      await edit("+55 11 98888-7777");
+      await expect(dialog).toBeHidden();
+      await expect(row).toContainText("+5511988887777");
     });
 
     test("duplicating opens a draft copy", async ({ page }) => {
@@ -199,11 +207,18 @@ test.describe
       await page.getByRole("button", { name: "Salvar loja" }).click();
       await expect(page.getByText("Loja atualizada.")).toBeVisible();
 
-      await page.goto("/");
+      await page.goto(STORE);
       await expect(page).toHaveTitle("Bazar da Mudança");
       await expect(page.locator("header").first()).toContainText(
         "Bazar da Mudança",
       );
+
+      // Restore the fixture name the other journeys expect.
+      await page.goto("/admin/loja");
+      await hydrated(page);
+      await page.getByLabel("Nome da loja").fill("Loja E2E");
+      await page.getByRole("button", { name: "Salvar loja" }).click();
+      await expect(page.getByText("Loja atualizada.")).toBeVisible();
     });
   });
 

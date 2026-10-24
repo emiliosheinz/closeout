@@ -3,6 +3,7 @@ import {
   ADMIN_WHATSAPP,
   findInAdmin,
   hydrated,
+  STORE,
   samplePhoto,
   signIn,
 } from "./helpers";
@@ -42,7 +43,7 @@ test.describe
     test("a visitor finds it by search and opens WhatsApp with the seller", async ({
       page,
     }) => {
-      await page.goto("/");
+      await page.goto(STORE);
       await page
         .getByRole("searchbox", { name: "Buscar itens" })
         .fill("luminaria de teste");
@@ -67,7 +68,7 @@ test.describe
     });
 
     test("the item page carries link-preview metadata", async ({ page }) => {
-      await page.goto(`/?q=${encodeURIComponent(TITLE)}`);
+      await page.goto(`${STORE}?q=${encodeURIComponent(TITLE)}`);
       await page.getByRole("link", { name: TITLE, exact: true }).click();
       await expect(page.locator('meta[property="og:title"]')).toHaveAttribute(
         "content",
@@ -92,20 +93,22 @@ test.describe
       page,
       browser,
     }) => {
-      const partner = `Parceira ${Date.now()}`;
+      const partner = "Vendedora de exemplo";
       await signIn(page);
-      await page.goto("/admin/vendedores");
+      await page.goto("/admin/equipe");
       await hydrated(page);
-      await page.getByRole("button", { name: "Adicionar vendedor" }).click();
-      const card = page.getByRole("listitem").filter({
-        has: page.getByRole("textbox", { name: "Nome que aparece na loja" }),
-        hasText: "0 anúncios",
-      });
-      await expect(card.last()).toBeVisible();
-      await card.last().getByLabel("Nome que aparece na loja").fill(partner);
-      await card.last().getByLabel("WhatsApp").fill("+55 21 97777-0000");
-      await card.last().getByRole("button", { name: "Salvar contato" }).click();
-      await expect(card.last().getByText("Contato salvo.")).toBeVisible();
+      const card = page
+        .getByRole("listitem")
+        .filter({ hasText: "seller@loja-e2e.test" });
+      await card.getByRole("button", { name: /^Ações para / }).click();
+      await page.getByRole("menuitem", { name: "Editar" }).click();
+      const editDialog = page.getByRole("dialog");
+      await editDialog.getByLabel("WhatsApp").fill("+55 21 97777-0000");
+      await editDialog
+        .getByRole("button", { name: "Salvar alterações" })
+        .click();
+      await expect(editDialog).toBeHidden();
+      await expect(card).toContainText("+5521977770000");
 
       await page.goto("/admin");
       await findInAdmin(page, TITLE);
@@ -120,7 +123,7 @@ test.describe
       await expect(page.getByText("Alterações salvas.")).toBeVisible();
 
       const visitor = await browser.newPage();
-      await visitor.goto(`/?q=${encodeURIComponent(TITLE)}`);
+      await visitor.goto(`${STORE}?q=${encodeURIComponent(TITLE)}`);
       await visitor.getByRole("link", { name: TITLE, exact: true }).click();
       await hydrated(visitor);
       await visitor
@@ -156,7 +159,7 @@ test.describe
       ).toBeVisible();
 
       const visitor = await browser.newPage();
-      await visitor.goto("/?disponibilidade=reservado");
+      await visitor.goto(`${STORE}?disponibilidade=reservado`);
       await expect(
         visitor.getByRole("article").filter({ hasText: TITLE }),
       ).toContainText("Reservado");
@@ -166,11 +169,11 @@ test.describe
         page.getByText(`"${TITLE}" marcado como vendido.`),
       ).toBeVisible();
 
-      await visitor.goto("/");
+      await visitor.goto(STORE);
       await expect(
         visitor.getByRole("link", { name: TITLE, exact: true }),
       ).toHaveCount(0);
-      await visitor.goto("/?disponibilidade=vendido");
+      await visitor.goto(`${STORE}?disponibilidade=vendido`);
       await visitor.getByRole("link", { name: TITLE, exact: true }).click();
       await expect(
         visitor.getByText("Este item já foi vendido.").first(),

@@ -11,7 +11,7 @@ import { type AdminImage, toAdminImage } from "../admin-mappers";
 import { Listing } from "../entities/listing.entity";
 import { ListingImage } from "../entities/listing-image.entity";
 import { canRemovePhoto, PUBLISHED_KEEPS_A_PHOTO } from "../listing-rules";
-import { lockListing } from "./listings.service";
+import { LISTING_NOT_FOUND, lockListing } from "./listings.service";
 
 @Injectable()
 export class ListingImagesService {
@@ -36,7 +36,7 @@ export class ListingImagesService {
         .getRepository(Listing)
         .exists({ where: { id: listingId, storeId } }))
     ) {
-      throw new NotFoundException("Anúncio não encontrado.");
+      throw new NotFoundException(LISTING_NOT_FOUND);
     }
     const existing = await repo.count({ where: { listingId } });
     if (existing + files.length > MAX_IMAGES_PER_LISTING) {

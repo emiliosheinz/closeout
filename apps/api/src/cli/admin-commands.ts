@@ -2,20 +2,25 @@ import type { DataSource, EntityManager } from "typeorm";
 import { User } from "@/auth/entities/user.entity";
 import { hashPassword, MIN_PASSWORD_LENGTH } from "@/auth/services/passwords";
 import type { SessionsService } from "@/auth/services/sessions.service";
-import { Seller } from "@/sellers/entities/seller.entity";
 import { normalizeWhatsAppNumber } from "@/sellers/whatsapp-number";
 import { Store } from "@/stores/entities/store.entity";
-import { StoreMember } from "@/stores/entities/store-member.entity";
+import type { StoreRole } from "@/stores/entities/store-member.entity";
+import {
+  isLongEnoughPassword,
+  parseEmail,
+  parseName,
+} from "@/stores/member-input";
+import { provisionMember } from "@/stores/member-provisioning";
 import type { StoresService } from "@/stores/services/stores.service";
 
 export class CommandError extends Error {}
 
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const STORE_SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+const SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
 export interface StoreIdentity {
   slug: string;
-  name: string;
+  /** Only used when the store does not exist yet. */
+  name?: string;
 }
 
 /** Return the store with `slug`, creating it (with default categories) if missing. */
@@ -24,7 +29,7 @@ export async function ensureStore(
   stores: StoresService,
   identity: StoreIdentity,
 ): Promise<Store> {
-  if (!STORE_SLUG_PATTERN.test(identity.slug)) {
+  if (!SLUG_PATTERN.test(identity.slug)) {
     throw new CommandError(
       `Invalid store slug "${identity.slug}": use lowercase letters, digits and dashes.`,
     );
@@ -32,7 +37,14 @@ export async function ensureStore(
   const existing = await manager
     .getRepository(Store)
     .findOne({ where: { slug: identity.slug } });
-  return existing ?? stores.create(manager, identity);
+  if (existing) return existing;
+  const name = identity.name?.trim();
+  if (!name) {
+    throw new CommandError(
+      `Store "${identity.slug}" does not exist; pass --store-name to create it.`,
+    );
+  }
+  return stores.create(manager, { slug: identity.slug, name });
 }
 
 export interface CreateAdminInput {
@@ -44,18 +56,18 @@ export interface CreateAdminInput {
 }
 
 /**
- * Create an administrator, grant them the store (the first member becomes
- * its owner) and give them a seller profile buyers can contact. This is the
- * only way users are created: there is no registration endpoint.
+ * Create a member of the store (the first one becomes its owner, later ones
+ * admins) with a contact profile buyers can reach. Besides accepting an
+ * invite, this is the only way users are created.
  */
 export async function createAdmin(
   dataSource: DataSource,
   stores: StoresService,
   input: CreateAdminInput,
-): Promise<{ userId: string; storeId: string; role: string }> {
-  const email = input.email.trim().toLowerCase();
-  const name = input.name.trim();
-  if (!EMAIL_PATTERN.test(email)) throw new CommandError("Invalid email.");
+): Promise<{ userId: string; storeId: string; role: StoreRole }> {
+  const email = parseEmail(input.email);
+  const name = parseName(input.name);
+  if (!email) throw new CommandError("Invalid email.");
   if (!name) throw new CommandError("Name is required.");
   assertPasswordStrength(input.password);
   const whatsappNumber =
@@ -67,24 +79,14 @@ export async function createAdmin(
     if (await manager.getRepository(User).exists({ where: { email } })) {
       throw new CommandError(`A user with email ${email} already exists.`);
     }
-    const user = await manager
-      .getRepository(User)
-      .save({ email, name, passwordHash });
-    const hasMembers = await manager
-      .getRepository(StoreMember)
-      .exists({ where: { storeId: store.id } });
-    const role = hasMembers ? "admin" : "owner";
-    await manager
-      .getRepository(StoreMember)
-      .save({ storeId: store.id, userId: user.id, role });
-    await manager.getRepository(Seller).save({
+    const member = await provisionMember(manager, {
       storeId: store.id,
-      userId: user.id,
-      displayName: name,
+      email,
+      name,
+      passwordHash,
       whatsappNumber,
-      avatarKey: null,
     });
-    return { userId: user.id, storeId: store.id, role };
+    return { userId: member.userId, storeId: store.id, role: member.role };
   });
 }
 
@@ -108,7 +110,7 @@ export async function resetPassword(
 }
 
 function assertPasswordStrength(password: string): void {
-  if (password.length < MIN_PASSWORD_LENGTH) {
+  if (!isLongEnoughPassword(password)) {
     throw new CommandError(
       `Password must have at least ${MIN_PASSWORD_LENGTH} characters.`,
     );

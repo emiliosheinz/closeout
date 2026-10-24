@@ -8,7 +8,8 @@ export interface ListingFields {
   title: string;
   description: string;
   categoryId: string;
-  sellerIds: string[];
+  /** Omitted for sellers: the API assigns their own profile. */
+  sellerIds?: string[];
   priceCents: number | null;
   condition: string;
   attributes: { label: string; value: string }[];

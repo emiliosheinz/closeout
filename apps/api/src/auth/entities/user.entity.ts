@@ -7,8 +7,8 @@ import {
 } from "typeorm";
 
 /**
- * Store administrator. Created only by the operator CLI; there is no
- * self-registration endpoint. `passwordHash` is a self-describing scrypt
+ * Store member's account. Created only by the operator CLI or by accepting
+ * an invite; there is no self-registration endpoint. `passwordHash` is a self-describing scrypt
  * string (see `passwords.ts`) and never leaves the API.
  */
 @Entity({ name: "users" })

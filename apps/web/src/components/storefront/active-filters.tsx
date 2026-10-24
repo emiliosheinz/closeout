@@ -1,9 +1,16 @@
 import { X } from "lucide-react";
 import Link from "next/link";
 import type { FilterChip } from "@/lib/catalog/params";
+import { storePath } from "@/lib/site";
 
 /** What the visitor is looking at, with one tap to undo each part. */
-export function ActiveFilters({ chips }: { chips: FilterChip[] }) {
+export function ActiveFilters({
+  storeSlug,
+  chips,
+}: {
+  storeSlug: string;
+  chips: FilterChip[];
+}) {
   if (chips.length === 0) return null;
   return (
     <ul
@@ -25,7 +32,7 @@ export function ActiveFilters({ chips }: { chips: FilterChip[] }) {
       {chips.length > 1 && (
         <li>
           <Link
-            href="/"
+            href={storePath(storeSlug)}
             className="inline-flex h-9 items-center px-2 text-sm font-medium underline decoration-ink/30 underline-offset-4"
           >
             Limpar filtros

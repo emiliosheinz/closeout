@@ -5,6 +5,7 @@ import { AppController } from "./app.controller";
 import { AuthModule } from "./auth/auth.module";
 import { CatalogModule } from "./catalog/catalog.module";
 import { dataSourceOptions } from "./database/connection";
+import { InvitesModule } from "./invites/invites.module";
 import { MediaModule } from "./media/media.module";
 import { SellersModule } from "./sellers/sellers.module";
 import { StoresModule } from "./stores/stores.module";
@@ -17,6 +18,7 @@ import { StoresModule } from "./stores/stores.module";
     SellersModule,
     MediaModule,
     CatalogModule,
+    InvitesModule,
   ],
   controllers: [AppController],
   providers: [

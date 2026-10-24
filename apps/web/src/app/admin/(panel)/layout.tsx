@@ -1,15 +1,19 @@
 import { AdminNav } from "@/components/admin/admin-nav";
-import { requireAdmin } from "@/lib/admin/current-store";
+import { isManager, requireMember } from "@/lib/admin/current-store";
 
 export default async function PanelLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const { store } = await requireAdmin();
+  const { store, role } = await requireMember();
   return (
     <>
-      <AdminNav storeName={store.name} />
+      <AdminNav
+        storeName={store.name}
+        storeSlug={store.slug}
+        managesStore={isManager(role)}
+      />
       <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">{children}</main>
     </>
   );

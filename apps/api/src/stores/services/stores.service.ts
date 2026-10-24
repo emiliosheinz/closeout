@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import type { EntityManager, Repository } from "typeorm";
 import { User } from "@/auth/entities/user.entity";
+import { Seller } from "@/sellers/entities/seller.entity";
 import { DEFAULT_CATEGORIES } from "../default-categories";
 import { Category } from "../entities/category.entity";
 import { Store } from "../entities/store.entity";
@@ -30,6 +31,8 @@ export interface MeResponse {
 
 export interface Membership {
   role: StoreRole;
+  /** The member's own contact profile in this store. */
+  sellerId: string;
   store: StoreSettings;
 }
 
@@ -44,6 +47,8 @@ export class StoresService {
     private readonly categories: Repository<Category>,
     @InjectRepository(User)
     private readonly users: Repository<User>,
+    @InjectRepository(Seller)
+    private readonly sellers: Repository<Seller>,
   ) {}
 
   /** Create a store together with its default categories. */
@@ -67,7 +72,7 @@ export class StoresService {
     return store;
   }
 
-  /** The signed-in admin and the stores they can manage. */
+  /** The signed-in user and the stores they belong to. */
   async me(userId: string): Promise<MeResponse> {
     const user = await this.users.findOneOrFail({ where: { id: userId } });
     return {
@@ -82,10 +87,18 @@ export class StoresService {
       relations: { store: true },
       order: { createdAt: "ASC" },
     });
-    return rows.map((row) => ({
-      role: row.role,
-      store: toSettings(row.store),
-    }));
+    const profiles = await this.sellers.find({ where: { userId } });
+    return rows.map((row) => {
+      const profile = profiles.find((p) => p.storeId === row.storeId);
+      if (!profile) {
+        throw new Error(`Member ${userId} has no contact profile`);
+      }
+      return {
+        role: row.role,
+        sellerId: profile.id,
+        store: toSettings(row.store),
+      };
+    });
   }
 
   async getSettings(storeId: string): Promise<StoreSettings> {

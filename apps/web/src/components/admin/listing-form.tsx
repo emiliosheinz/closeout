@@ -19,6 +19,7 @@ import {
 import {
   AVAILABILITY_LABELS,
   CONDITION_LABELS,
+  joinNames,
   PUBLICATION_LABELS,
 } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -28,7 +29,10 @@ interface ListingFormProps {
   storeId: string;
   categories: Category[];
   sellers: Seller[];
-  defaultSellerId: string | null;
+  /** The signed-in member's contact profile, preselected on new listings. */
+  ownSellerId: string;
+  /** Managers pick who sells; a seller's listings stay assigned as they are. */
+  canAssignSellers: boolean;
   listing?: AdminListingDetail;
 }
 
@@ -50,7 +54,8 @@ export function ListingForm({
   storeId,
   categories,
   sellers,
-  defaultSellerId,
+  ownSellerId,
+  canAssignSellers,
   listing,
 }: ListingFormProps) {
   const router = useRouter();
@@ -60,11 +65,14 @@ export function ListingForm({
   const [categoryId, setCategoryId] = useState(
     listing?.category.id ?? categories[0]?.id ?? "",
   );
-  const [sellerIds, setSellerIds] = useState<string[]>(() => {
-    if (listing) return listing.sellers.map((seller) => seller.id);
-    const first = defaultSellerId ?? sellers[0]?.id;
-    return first ? [first] : [];
-  });
+  const [sellerIds, setSellerIds] = useState<string[]>(() =>
+    listing ? listing.sellers.map((seller) => seller.id) : [ownSellerId],
+  );
+  const assignedNames = listing
+    ? listing.sellers.map((seller) => seller.displayName)
+    : sellers
+        .filter((seller) => seller.id === ownSellerId)
+        .map((seller) => seller.displayName);
   const [price, setPrice] = useState(centsToInput(listing?.priceCents ?? null));
   const [noPrice, setNoPrice] = useState(
     editing ? listing.priceCents === null : false,
@@ -99,7 +107,7 @@ export function ListingForm({
   function validate(): { priceCents: number | null } | null {
     const next: FormErrors = {};
     if (!title.trim()) next.title = "Dê um nome ao item.";
-    if (sellerIds.length === 0) {
+    if (canAssignSellers && sellerIds.length === 0) {
       next.sellers = "Escolha ao menos uma pessoa para receber as mensagens.";
     }
     let priceCents: number | null = null;
@@ -121,7 +129,7 @@ export function ListingForm({
       title: title.trim(),
       description: description.trim(),
       categoryId,
-      sellerIds,
+      ...(canAssignSellers ? { sellerIds } : {}),
       priceCents: valid.priceCents,
       condition,
       attributes: attributes.filter((a) => a.label.trim() && a.value.trim()),
@@ -334,49 +342,60 @@ export function ListingForm({
         />
       </Field>
 
-      <fieldset
-        aria-describedby={
-          errors.sellers ? "sellers-hint sellers-error" : "sellers-hint"
-        }
-      >
-        <legend className="text-sm font-semibold">Quem vende</legend>
-        <p id="sellers-hint" className="mt-1 text-xs text-muted">
-          Quem recebe as mensagens no WhatsApp. Com mais de uma pessoa, o
-          comprador escolhe com quem falar.
-        </p>
-        <div className="mt-2 flex flex-wrap gap-2">
-          {sellers.map((seller) => (
-            <label
-              key={seller.id}
-              className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border border-line bg-surface px-3.5 text-sm has-[:checked]:border-ink has-[:checked]:bg-ink has-[:checked]:text-surface has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-focus"
-            >
-              <input
-                type="checkbox"
-                checked={sellerIds.includes(seller.id)}
-                onChange={(e) =>
-                  setSellerIds(
-                    e.target.checked
-                      ? [...sellerIds, seller.id]
-                      : sellerIds.filter((id) => id !== seller.id),
-                  )
-                }
-                className="size-4 accent-surface"
-              />
-              {seller.displayName}
-              {seller.whatsappNumber ? "" : " (sem WhatsApp)"}
-            </label>
-          ))}
-        </div>
-        {errors.sellers && (
-          <p
-            id="sellers-error"
-            role="alert"
-            className="mt-1.5 text-sm font-medium text-stamp"
-          >
-            {errors.sellers}
+      {!canAssignSellers ? (
+        <div>
+          <p className="text-sm font-semibold">Quem vende</p>
+          <p className="mt-1 text-base">{joinNames(assignedNames)}</p>
+          <p className="mt-1 text-xs text-muted">
+            Quem recebe as mensagens no WhatsApp. Só quem administra a loja muda
+            essa escolha.
           </p>
-        )}
-      </fieldset>
+        </div>
+      ) : (
+        <fieldset
+          aria-describedby={
+            errors.sellers ? "sellers-hint sellers-error" : "sellers-hint"
+          }
+        >
+          <legend className="text-sm font-semibold">Quem vende</legend>
+          <p id="sellers-hint" className="mt-1 text-xs text-muted">
+            Quem recebe as mensagens no WhatsApp. Com mais de uma pessoa, o
+            comprador escolhe com quem falar.
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {sellers.map((seller) => (
+              <label
+                key={seller.id}
+                className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border border-line bg-surface px-3.5 text-sm has-[:checked]:border-ink has-[:checked]:bg-ink has-[:checked]:text-surface has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-focus"
+              >
+                <input
+                  type="checkbox"
+                  checked={sellerIds.includes(seller.id)}
+                  onChange={(e) =>
+                    setSellerIds(
+                      e.target.checked
+                        ? [...sellerIds, seller.id]
+                        : sellerIds.filter((id) => id !== seller.id),
+                    )
+                  }
+                  className="size-4 accent-surface"
+                />
+                {seller.displayName}
+                {seller.whatsappNumber ? "" : " (sem WhatsApp)"}
+              </label>
+            ))}
+          </div>
+          {errors.sellers && (
+            <p
+              id="sellers-error"
+              role="alert"
+              className="mt-1.5 text-sm font-medium text-stamp"
+            >
+              {errors.sellers}
+            </p>
+          )}
+        </fieldset>
+      )}
 
       <fieldset>
         <legend className="text-sm font-semibold">Detalhes (opcional)</legend>

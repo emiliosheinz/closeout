@@ -25,7 +25,7 @@ export class SessionsService {
   ) {}
 
   async mint(userId: string): Promise<{ rawToken: string; expiresAt: Date }> {
-    const rawToken = randomBytes(RAW_TOKEN_BYTES).toString("base64url");
+    const rawToken = newRawToken();
     const now = new Date();
     const expiresAt = new Date(now.getTime() + SESSION_DURATION_MS);
     await this.sessions.delete([
@@ -67,6 +67,12 @@ export class SessionsService {
   }
 }
 
-function hashToken(rawToken: string): string {
+/** A fresh opaque token: 32 CSPRNG bytes, base64url. Store only its hash. */
+export function newRawToken(): string {
+  return randomBytes(RAW_TOKEN_BYTES).toString("base64url");
+}
+
+/** The SHA-256 hex digest stored in place of a raw token. */
+export function hashToken(rawToken: string): string {
   return createHash("sha256").update(rawToken).digest("hex");
 }

@@ -5,19 +5,26 @@ import {
   PublicCatalogService,
   type PublicListingPage,
   type PublicStore,
+  type PublicStoreIndex,
 } from "../services/public-catalog.service";
 
 /** Unauthenticated, read-only endpoints backing the storefront. */
-@Controller("public/stores/:storeSlug")
+@Controller("public/stores")
 export class PublicCatalogController {
   constructor(private readonly catalog: PublicCatalogService) {}
 
+  /** Every store's slug, for the sitemap. */
   @Get()
+  stores(): Promise<PublicStoreIndex> {
+    return this.catalog.listStores();
+  }
+
+  @Get(":storeSlug")
   store(@Param("storeSlug") storeSlug: string): Promise<PublicStore> {
     return this.catalog.getStore(storeSlug);
   }
 
-  @Get("listings")
+  @Get(":storeSlug/listings")
   listings(
     @Param("storeSlug") storeSlug: string,
     @Query() query: CatalogQueryDto,
@@ -25,7 +32,7 @@ export class PublicCatalogController {
     return this.catalog.listListings(storeSlug, query);
   }
 
-  @Get("listings/:listingSlug")
+  @Get(":storeSlug/listings/:listingSlug")
   listing(
     @Param("storeSlug") storeSlug: string,
     @Param("listingSlug") listingSlug: string,

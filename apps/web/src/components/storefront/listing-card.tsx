@@ -1,17 +1,19 @@
 import Link from "next/link";
 import type { ListingSummary } from "@/lib/catalog/types";
 import { CONDITION_LABELS } from "@/lib/format";
-import { listingPath } from "@/lib/site";
+import { itemPath } from "@/lib/site";
 import { cn } from "@/lib/utils";
 import { PhotoPlaceholder } from "./photo-placeholder";
 import { PriceSticker } from "./price-sticker";
 import { StatusStamp } from "./status-stamp";
 
 export function ListingCard({
+  storeSlug,
   listing,
   priority = false,
   fetchPriority,
 }: {
+  storeSlug: string;
   listing: ListingSummary;
   priority?: boolean;
   fetchPriority?: "high";
@@ -54,7 +56,7 @@ export function ListingCard({
       <div className="mt-3">
         <h3 className="text-[0.95rem] leading-snug font-semibold text-pretty break-words">
           <Link
-            href={listingPath(listing.slug)}
+            href={itemPath(storeSlug, listing.slug)}
             className="after:absolute after:inset-0 after:rounded-lg focus-visible:outline-none group-has-[:focus-visible]:underline"
           >
             {listing.title}

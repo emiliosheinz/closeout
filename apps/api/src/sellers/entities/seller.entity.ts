@@ -7,18 +7,20 @@ import {
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
+  Unique,
   UpdateDateColumn,
 } from "typeorm";
 import { User } from "@/auth/entities/user.entity";
 import { Store } from "@/stores/entities/store.entity";
 
 /**
- * Public contact profile buyers reach on WhatsApp. Optionally linked to the
- * administrator it represents. `whatsappNumber` holds international digits
- * only (no `+`), the exact form `wa.me` expects.
+ * Public contact profile buyers reach on WhatsApp. Every store member has
+ * exactly one, and it goes away with the member's account. `whatsappNumber`
+ * holds international digits only (no `+`), the exact form `wa.me` expects.
  */
 @Entity({ name: "sellers" })
 @Index("sellers_store_idx", ["storeId"])
+@Unique("sellers_store_user_uq", ["storeId", "userId"])
 @Check(
   "sellers_whatsapp_number_valid",
   `"whatsapp_number" IS NULL OR "whatsapp_number" ~ '^[1-9][0-9]{7,14}$'`,
@@ -34,12 +36,12 @@ export class Seller {
   @JoinColumn({ name: "store_id" })
   declare store: Store;
 
-  @Column({ name: "user_id", type: "uuid", nullable: true })
-  declare userId: string | null;
+  @Column({ name: "user_id", type: "uuid" })
+  declare userId: string;
 
-  @ManyToOne(() => User, { onDelete: "SET NULL", nullable: true })
+  @ManyToOne(() => User, { onDelete: "CASCADE" })
   @JoinColumn({ name: "user_id" })
-  declare user: User | null;
+  declare user: User;
 
   @Column({ name: "display_name", type: "text" })
   declare displayName: string;

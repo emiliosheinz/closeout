@@ -1,6 +1,12 @@
-import { Controller, Get, Param, UseGuards } from "@nestjs/common";
+import { Controller, Get, UseGuards } from "@nestjs/common";
 import { SessionGuard } from "@/auth/guards/session.guard";
 import { StoreMemberGuard } from "@/stores/guards/store-member.guard";
+import {
+  ANY_MEMBER,
+  CurrentMember,
+  type MembershipContext,
+  Roles,
+} from "@/stores/membership";
 import {
   type DashboardCounts,
   ListingsService,
@@ -12,7 +18,10 @@ export class DashboardController {
   constructor(private readonly listings: ListingsService) {}
 
   @Get()
-  dashboard(@Param("storeId") storeId: string): Promise<DashboardCounts> {
-    return this.listings.dashboard(storeId);
+  @Roles(ANY_MEMBER)
+  dashboard(
+    @CurrentMember() member: MembershipContext,
+  ): Promise<DashboardCounts> {
+    return this.listings.dashboard(member);
   }
 }

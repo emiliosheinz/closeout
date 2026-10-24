@@ -64,8 +64,10 @@ describe("catalog URL parameters", () => {
   });
 
   it("round-trips through the URL and omits defaults", () => {
-    expect(catalogHref(DEFAULT_FILTERS)).toBe("/");
-    const href = catalogHref({
+    expect(catalogHref("nosso-desapego", DEFAULT_FILTERS)).toBe(
+      "/store/nosso-desapego",
+    );
+    const href = catalogHref("nosso-desapego", {
       ...DEFAULT_FILTERS,
       q: "mesa & cadeira",
       condition: "for_parts",
@@ -73,9 +75,9 @@ describe("catalog URL parameters", () => {
       page: 2,
     });
     expect(href).toBe(
-      "/?q=mesa+%26+cadeira&estado=conserto&ordem=maior-preco&pagina=2",
+      "/store/nosso-desapego?q=mesa+%26+cadeira&estado=conserto&ordem=maior-preco&pagina=2",
     );
-    const params = Object.fromEntries(new URLSearchParams(href.slice(2)));
+    const params = Object.fromEntries(new URLSearchParams(href.split("?")[1]));
     expect(parseCatalogParams(params)).toMatchObject({
       q: "mesa & cadeira",
       condition: "for_parts",
@@ -140,12 +142,12 @@ describe("catalog URL edge cases", () => {
 
   it("writes condition and sort slugs into the URL", () => {
     expect(
-      catalogHref({
+      catalogHref("loja-da-bia", {
         ...DEFAULT_FILTERS,
         condition: "like_new",
         sort: "price_asc",
       }),
-    ).toBe("/?estado=como-novo&ordem=menor-preco");
+    ).toBe("/store/loja-da-bia?estado=como-novo&ordem=menor-preco");
   });
 
   it("offers one chip per active filter, each removing only itself", () => {
@@ -159,40 +161,45 @@ describe("catalog URL edge cases", () => {
       pagina: "2",
     });
     expect(
-      activeFilterChips(filters, (slug) =>
-        slug === "moveis" ? "Móveis" : undefined,
+      activeFilterChips("nosso-desapego", filters, (categorySlug) =>
+        categorySlug === "moveis" ? "Móveis" : undefined,
       ),
     ).toEqual([
       {
         label: "“mesa”",
-        href: "/?categoria=moveis&estado=como-novo&disponibilidade=vendido&max=500&ordem=menor-preco",
+        href: "/store/nosso-desapego?categoria=moveis&estado=como-novo&disponibilidade=vendido&max=500&ordem=menor-preco",
       },
       {
         label: "Móveis",
-        href: "/?q=mesa&estado=como-novo&disponibilidade=vendido&max=500&ordem=menor-preco",
+        href: "/store/nosso-desapego?q=mesa&estado=como-novo&disponibilidade=vendido&max=500&ordem=menor-preco",
       },
       {
         label: "Como novo",
-        href: "/?q=mesa&categoria=moveis&disponibilidade=vendido&max=500&ordem=menor-preco",
+        href: "/store/nosso-desapego?q=mesa&categoria=moveis&disponibilidade=vendido&max=500&ordem=menor-preco",
       },
       {
         label: "Vendidos",
-        href: "/?q=mesa&categoria=moveis&estado=como-novo&max=500&ordem=menor-preco",
+        href: "/store/nosso-desapego?q=mesa&categoria=moveis&estado=como-novo&max=500&ordem=menor-preco",
       },
       {
         label: "Até R$ 500",
-        href: "/?q=mesa&categoria=moveis&estado=como-novo&disponibilidade=vendido&ordem=menor-preco",
+        href: "/store/nosso-desapego?q=mesa&categoria=moveis&estado=como-novo&disponibilidade=vendido&ordem=menor-preco",
       },
     ]);
   });
 
   it("labels each shape of price range", () => {
     const label = (min?: string, max?: string) =>
-      activeFilterChips(parseCatalogParams({ min, max }), () => undefined)[0]
-        ?.label;
+      activeFilterChips(
+        "loja",
+        parseCatalogParams({ min, max }),
+        () => undefined,
+      )[0]?.label;
     expect(label("100", "1500")).toBe("R$ 100 a R$ 1.500");
     expect(label("100")).toBe("A partir de R$ 100");
     expect(label("0", "50")).toBe("R$ 0 a R$ 50");
-    expect(activeFilterChips(DEFAULT_FILTERS, () => undefined)).toEqual([]);
+    expect(activeFilterChips("loja", DEFAULT_FILTERS, () => undefined)).toEqual(
+      [],
+    );
   });
 });

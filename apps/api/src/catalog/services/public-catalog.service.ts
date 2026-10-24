@@ -56,6 +56,10 @@ export interface PublicStore {
   }[];
 }
 
+export interface PublicStoreIndex {
+  items: { slug: string }[];
+}
+
 export interface PublicListingPage {
   items: PublicListingSummary[];
   total: number;
@@ -210,6 +214,14 @@ export class PublicCatalogService {
       .limit(RELATED_LIMIT)
       .getMany();
     return this.withCovers(rows);
+  }
+
+  async listStores(): Promise<PublicStoreIndex> {
+    const rows = await this.stores.find({
+      select: { slug: true },
+      order: { slug: "ASC" },
+    });
+    return { items: rows.map(({ slug }) => ({ slug })) };
   }
 
   private async withCovers(rows: Listing[]): Promise<PublicListingSummary[]> {

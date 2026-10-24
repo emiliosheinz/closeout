@@ -3,8 +3,9 @@
 closeout is a personal storefront for selling pre-owned items through WhatsApp. It is
 a Docker-first pnpm/Turborepo monorepo with two apps and a shared config package. The
 API (NestJS + TypeORM + PostgreSQL) owns all persistence, authentication, store
-membership, the catalog and image storage. The web app (Next.js App Router + React +
-Tailwind) renders the public storefront and the admin UI and talks to the API over
+membership and roles, invites, the catalog and image storage. The web app (Next.js App
+Router + React + Tailwind) renders every store's storefront at `/store/<slug>`, a
+landing page at `/` and the admin UI and talks to the API over
 HTTP: server-side with `API_BASE_URL`, from the browser through the `/api/v1/*` and
 `/media/*` rewrites in `apps/web/src/proxy.ts`.
 
@@ -20,7 +21,8 @@ bin/closeout pnpm test                             # unit tests
 bin/closeout pnpm --filter api test:integration    # real Postgres, per-run database
 bin/closeout e2e                                   # Playwright, isolated compose project
 bin/closeout db migration:generate <Name>          # then re-run: must say "No changes"
-bin/closeout cli admin:create --email ... --name ... [--whatsapp "+55 ..."]
+bin/closeout cli admin:create --store <slug> --store-name <name> --email ... --name ... [--whatsapp "+55 ..."]
+bin/closeout cli seed:demo --store <slug> --store-name <name>   # demo members and listings
 ```
 
 Details: `docs/development.md`. Decisions: `docs/architecture/decisions/`.
@@ -33,7 +35,8 @@ CI (the `Pull request checks` workflow) runs on every ready PR into `main` and l
 apps/api/src/
   auth/        scrypt passwords, opaque hashed sessions, SessionGuard, login rate limiter
   security/    Origin check for writes, internal-secret trust, security headers
-  stores/      stores, memberships (StoreMemberGuard), categories, settings, /me
+  stores/      stores, memberships and roles (StoreMemberGuard, @Roles), team, categories, settings, /me
+  invites/     single-use invite links: issue, regenerate, revoke, lookup and accept
   sellers/     seller contact profiles and WhatsApp number normalization
   catalog/     listings, photos, public catalog; listing-rules.ts holds the domain rules
   media/       image pipeline (sharp) behind the MediaStorage interface
@@ -41,9 +44,11 @@ apps/api/src/
   database/    data source, entity list, migrations (generated)
 apps/api/test/ integration suites (*.integration-spec.ts)
 apps/web/src/
-  app/(storefront)/   public catalog and item pages
+  app/page.tsx        landing page at the site root
+  app/store/[slug]/   public catalog and item pages of each store
+  app/invite/         invite acceptance page
   app/admin/          admin UI; (panel) layout requires a session
-  app/api/auth/       login/logout route handlers (own the session cookie)
+  app/api/auth/       login/logout/invite route handlers (own the session cookie)
   components/         storefront/, admin/, ui/ (shadcn-style primitives)
   lib/                catalog/ (URL state, API client), admin/, format.ts, whatsapp.ts
 apps/web/e2e-tests/   Playwright journeys
@@ -56,7 +61,9 @@ apps/web/e2e-tests/   Playwright journeys
 - Entities use `declare field: T`. Migrations are generated from the entity diff and
   reviewed; extensions are the only hand-written SQL.
 - Every admin route lives under `/stores/:storeId/*` behind `SessionGuard` and
-  `StoreMemberGuard`. Ids that arrive in a body must be checked against the store.
+  `StoreMemberGuard`, and declares its roles with `@Roles` (undeclared handlers are
+  refused). Sellers reach only listings they sell. Ids that arrive in a body must be
+  checked against the store.
 - Public payloads are built by allow-list mappers (`catalog/public-mappers.ts`); never
   serialize an entity.
 - Domain rules (visibility, contactability, publishing) live in

@@ -2,9 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
-  Delete,
   Get,
-  HttpCode,
   Param,
   ParseUUIDPipe,
   Patch,
@@ -20,62 +18,57 @@ import { InvalidImageError } from "@/media/image-processor";
 import { UploadErrorsFilter } from "@/media/upload-errors.filter";
 import { imageUploadOptions } from "@/media/upload-limits";
 import { StoreMemberGuard } from "@/stores/guards/store-member.guard";
-import { CreateSellerDto, UpdateSellerDto } from "../dto/seller.dto";
+import {
+  ANY_MEMBER,
+  CurrentMember,
+  type MembershipContext,
+  Roles,
+} from "@/stores/membership";
+import { UpdateSellerDto } from "../dto/seller.dto";
 import {
   type SellerResponse,
   SellersService,
 } from "../services/sellers.service";
 
+/**
+ * Contact profiles are created and deleted only with their member (see the
+ * team endpoints); here they are listed and edited.
+ */
 @Controller("stores/:storeId/sellers")
 @UseGuards(SessionGuard, StoreMemberGuard)
 export class SellersController {
   constructor(private readonly sellers: SellersService) {}
 
   @Get()
+  @Roles(ANY_MEMBER)
   async list(
-    @Param("storeId") storeId: string,
+    @CurrentMember() member: MembershipContext,
   ): Promise<{ items: SellerResponse[] }> {
-    return { items: await this.sellers.list(storeId) };
-  }
-
-  @Post()
-  @HttpCode(201)
-  create(
-    @Param("storeId") storeId: string,
-    @Body() body: CreateSellerDto,
-  ): Promise<SellerResponse> {
-    return this.sellers.create(storeId, body);
+    return { items: await this.sellers.list(member.storeId) };
   }
 
   @Patch(":id")
+  @Roles(ANY_MEMBER)
   update(
-    @Param("storeId") storeId: string,
+    @CurrentMember() member: MembershipContext,
     @Param("id", new ParseUUIDPipe()) id: string,
     @Body() body: UpdateSellerDto,
   ): Promise<SellerResponse> {
-    return this.sellers.update(storeId, id, body);
-  }
-
-  @Delete(":id")
-  @HttpCode(204)
-  remove(
-    @Param("storeId") storeId: string,
-    @Param("id", new ParseUUIDPipe()) id: string,
-  ): Promise<void> {
-    return this.sellers.remove(storeId, id);
+    return this.sellers.update(member, id, body);
   }
 
   @Post(":id/avatar")
+  @Roles(ANY_MEMBER)
   @UseFilters(new UploadErrorsFilter("Envie uma foto por vez."))
   @UseInterceptors(FileInterceptor("file", imageUploadOptions(1)))
   async avatar(
-    @Param("storeId") storeId: string,
+    @CurrentMember() member: MembershipContext,
     @Param("id", new ParseUUIDPipe()) id: string,
     @UploadedFile() file: Express.Multer.File | undefined,
   ): Promise<SellerResponse> {
     if (!file) throw new BadRequestException("Envie uma imagem.");
     try {
-      return await this.sellers.setAvatar(storeId, id, file.buffer);
+      return await this.sellers.setAvatar(member, id, file.buffer);
     } catch (err) {
       if (err instanceof InvalidImageError) {
         throw new BadRequestException(err.message);

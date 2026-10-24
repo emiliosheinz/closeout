@@ -1,3 +1,4 @@
+import { isManager, type StoreRole } from "@/stores/roles";
 import type { Availability, Publication } from "./listing-types";
 
 /** Published listings are the only ones a visitor can open by URL. */
@@ -37,4 +38,39 @@ export function canRemovePhoto(
   imageCount: number,
 ): boolean {
   return !isPubliclyVisible(listing) || imageCount > 1;
+}
+
+interface ListingActor {
+  role: StoreRole;
+  /** The actor's own contact profile. */
+  sellerId: string;
+}
+
+/**
+ * Who sells a new listing. Managers choose; a seller always sells their own
+ * listing alone, whatever they submitted. Null when a manager chose nobody.
+ */
+export function sellersForNewListing(
+  actor: ListingActor,
+  submitted: string[] | undefined,
+): string[] | null {
+  if (!isManager(actor.role)) return [actor.sellerId];
+  return submitted && submitted.length > 0 ? submitted : null;
+}
+
+/**
+ * Whether an edit may set `submitted` (undefined leaves them unchanged) as a
+ * listing's sellers. Only managers may change who sells a listing; order is
+ * not a change.
+ */
+export function canSetSellers(
+  actor: ListingActor,
+  current: string[],
+  submitted: string[] | undefined,
+): boolean {
+  if (isManager(actor.role) || submitted === undefined) return true;
+  const wanted = new Set(submitted);
+  return (
+    wanted.size === current.length && current.every((id) => wanted.has(id))
+  );
 }

@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { ADMIN_EMAIL, hydrated, signIn } from "./helpers";
+import { ADMIN_EMAIL, BASE_URL, hydrated, STORE, signIn } from "./helpers";
 
 test("a wrong password gets one generic message", async ({ page }) => {
   await page.goto("/admin/entrar");
@@ -51,12 +51,15 @@ test("an admin edits the store identity and the storefront shows it", async ({
     .click();
   await expect(page).toHaveURL(/\/admin\/loja$/);
   await hydrated(page);
+  await expect(
+    page.getByText(`${BASE_URL}${STORE}`, { exact: true }),
+  ).toBeVisible();
   await page
     .getByLabel("Chamada principal")
     .fill("Tudo precisa sair até sexta");
   await page.getByRole("button", { name: "Salvar loja" }).click();
   await expect(page.getByText("Loja atualizada.")).toBeVisible();
-  await page.goto("/");
+  await page.goto(STORE);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(
     "Tudo precisa sair até sexta",
   );

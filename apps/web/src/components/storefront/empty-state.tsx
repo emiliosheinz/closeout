@@ -1,10 +1,13 @@
 import { MessageCircle, PackageOpen } from "lucide-react";
 import Link from "next/link";
+import { storePath } from "@/lib/site";
 
 export function EmptyState({
+  storeSlug,
   filtered,
   contactHref = null,
 }: {
+  storeSlug: string;
   filtered: boolean;
   /** WhatsApp link for "ask us", when the store has a reachable seller. */
   contactHref?: string | null;
@@ -29,7 +32,7 @@ export function EmptyState({
           </div>
           <div className="flex flex-wrap gap-2 sm:justify-center">
             <Link
-              href="/"
+              href={storePath(storeSlug)}
               className="inline-flex h-11 items-center rounded-full bg-ink px-5 text-sm font-semibold text-surface hover:bg-ink-soft"
             >
               Ver todos os itens

@@ -30,6 +30,7 @@ describe("ListingRows", () => {
     render(
       <ListingRows
         storeId="store"
+        storeSlug="loja"
         listings={[
           row("a", ["no-phone"]),
           row("b", ["with-phone"]),
@@ -41,7 +42,36 @@ describe("ListingRows", () => {
     );
     const warnings = screen.getAllByRole("link", { name: /sem WhatsApp/ });
     expect(warnings).toHaveLength(1);
-    expect(warnings[0]).toHaveAttribute("href", "/admin/vendedores");
+    expect(warnings[0]).toHaveAttribute("href", "/admin/equipe");
     expect(warnings[0]?.closest("li")).toHaveTextContent("Item a");
+  });
+
+  it.each([
+    ["nosso-desapego", "/store/nosso-desapego/items/a"],
+    ["loja-da-bia", "/store/loja-da-bia/items/a"],
+  ])("links published items to their page in %s", (slug, href) => {
+    render(
+      <ListingRows
+        storeId="store"
+        storeSlug={slug}
+        listings={[row("a", [])]}
+      />,
+    );
+    expect(
+      screen.getByRole("link", { name: "Ver Item a na loja" }),
+    ).toHaveAttribute("href", href);
+  });
+
+  it("links unpublished items to the admin preview", () => {
+    render(
+      <ListingRows
+        storeId="store"
+        storeSlug="loja"
+        listings={[row("b", [], "draft")]}
+      />,
+    );
+    expect(
+      screen.getByRole("link", { name: "Pré-visualizar Item b" }),
+    ).toHaveAttribute("href", "/admin/anuncios/b/previa");
   });
 });
