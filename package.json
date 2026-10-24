@@ -6,7 +6,7 @@
   "license": "MIT",
   "packageManager": "pnpm@11.1.0",
   "scripts": {
-    "check": "biome check --error-on-warnings .",
+    "check": "biome check --error-on-warnings . && sh apps/web/scripts/check-fsd-imports.sh",
     "typecheck": "turbo typecheck",
     "test": "turbo test",
     "commitlint": "commitlint"
