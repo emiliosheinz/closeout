@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/shared/ui/button";
-import { Field, inputClass } from "./field";
+import { Field, inputClass } from "@/shared/ui/field";
 
 const NAME_MESSAGE = "Informe seu nome.";
 const PASSWORD_MESSAGE = "A senha precisa ter pelo menos 10 caracteres.";

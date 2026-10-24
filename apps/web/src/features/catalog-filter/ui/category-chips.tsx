@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { CatalogFilters, StoreInfo } from "@/entities/listing";
-import { catalogHref, withFilters } from "@/lib/catalog/params";
 import { cn } from "@/shared/lib/utils";
+import { catalogHref, withFilters } from "../model/params";
 
 /** Horizontal category strip; each chip is a plain link. */
 export function CategoryChips({

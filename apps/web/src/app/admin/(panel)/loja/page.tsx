@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { StoreSettingsForm } from "@/components/admin/store-settings-form";
 import { isManager } from "@/entities/session";
 import { requireMember } from "@/entities/session/index.server";
+import { StoreSettingsForm } from "@/features/edit-store";
 import { absoluteUrl, storePath } from "@/shared/lib/site";
 
 export const metadata: Metadata = { title: "Loja" };

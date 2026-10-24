@@ -9,7 +9,6 @@ import type {
   ListingAttribute,
   Seller,
 } from "@/entities/listing";
-import { createListingWithPhotos } from "@/lib/admin/listings";
 import { ApiError, api } from "@/shared/api";
 import {
   AVAILABILITIES,
@@ -27,7 +26,8 @@ import {
 import { centsToInput, parsePriceToCents } from "@/shared/lib/money";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
-import { Field, inputClass } from "./field";
+import { Field, inputClass } from "@/shared/ui/field";
+import { createListingWithPhotos } from "../api/create-listing";
 
 interface ListingFormProps {
   storeId: string;

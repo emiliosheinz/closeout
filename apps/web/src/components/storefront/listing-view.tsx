@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { ListingDetail } from "@/entities/listing";
 import { DEFAULT_FILTERS } from "@/entities/listing";
-import { catalogHref, withFilters } from "@/lib/catalog/params";
+import { catalogHref, withFilters } from "@/features/catalog-filter";
 import {
   AVAILABILITY_LABELS,
   CONDITION_LABELS,

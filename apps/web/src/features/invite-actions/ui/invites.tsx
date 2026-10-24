@@ -4,6 +4,7 @@ import { Mail, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { IssuedInvite, PendingInvite } from "@/entities/invite";
+import { RoleToggle } from "@/entities/member";
 import { ApiError, api } from "@/shared/api";
 import type { AssignableRole } from "@/shared/config/enums";
 import {
@@ -12,6 +13,7 @@ import {
   ROLE_LABELS,
 } from "@/shared/lib/format";
 import { Button } from "@/shared/ui/button";
+import { ConfirmDialog } from "@/shared/ui/confirm-dialog";
 import {
   Dialog,
   DialogClose,
@@ -19,11 +21,9 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@/shared/ui/dialog";
-import { ConfirmDialog } from "../confirm-dialog";
-import { Field, inputClass } from "../field";
+import { Field, inputClass } from "@/shared/ui/field";
+import { RowMenu } from "@/shared/ui/row-menu";
 import { InviteLinkDialog, type ShownInvite } from "./invite-link-dialog";
-import { RoleToggle } from "./role-toggle";
-import { RowMenu } from "./row-menu";
 
 function toShown(issued: IssuedInvite): ShownInvite {
   return { email: issued.invite.email, link: issued.link };

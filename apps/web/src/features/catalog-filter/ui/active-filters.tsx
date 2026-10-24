@@ -1,7 +1,7 @@
 import { X } from "lucide-react";
 import Link from "next/link";
-import type { FilterChip } from "@/lib/catalog/params";
 import { storePath } from "@/shared/lib/site";
+import type { FilterChip } from "../model/params";
 
 /** What the visitor is looking at, with one tap to undo each part. */
 export function ActiveFilters({

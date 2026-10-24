@@ -3,11 +3,13 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { TeamMember } from "@/entities/member";
+import { RoleToggle } from "@/entities/member";
 import { ApiError, api } from "@/shared/api";
 import type { AssignableRole } from "@/shared/config/enums";
 import { ROLE_DESCRIPTIONS, ROLE_LABELS } from "@/shared/lib/format";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
+import { ConfirmDialog } from "@/shared/ui/confirm-dialog";
 import {
   Dialog,
   DialogClose,
@@ -15,10 +17,8 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@/shared/ui/dialog";
-import { ConfirmDialog } from "../confirm-dialog";
-import { Field, inputClass } from "../field";
-import { RoleToggle } from "./role-toggle";
-import { RowMenu } from "./row-menu";
+import { Field, inputClass } from "@/shared/ui/field";
+import { RowMenu } from "@/shared/ui/row-menu";
 
 /** Shows a stored digits-only number the way people type it back. */
 function displayNumber(number: string | null): string {

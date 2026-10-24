@@ -1,7 +1,7 @@
 import { Search } from "lucide-react";
 import type { CatalogFilters } from "@/entities/listing";
-import { catalogEntries } from "@/lib/catalog/params";
 import { storePath } from "@/shared/lib/site";
+import { catalogEntries } from "../model/params";
 
 /** GET search that keeps the other active filters. */
 export function SearchForm({

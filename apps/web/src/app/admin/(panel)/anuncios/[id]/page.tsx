@@ -2,12 +2,12 @@ import { ArrowLeft } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ListingForm } from "@/components/admin/listing-form";
-import { PhotoManager } from "@/components/admin/photo-manager";
 import type { AdminListingDetail } from "@/entities/listing";
 import { listingFormOptions } from "@/entities/listing/index.server";
 import { isManager } from "@/entities/session";
 import { requireMember } from "@/entities/session/index.server";
+import { ListingForm } from "@/features/listing-form";
+import { PhotoManager } from "@/features/manage-photos";
 import { adminGet, isUuid } from "@/shared/api/index.server";
 import { itemPath } from "@/shared/lib/site";
 

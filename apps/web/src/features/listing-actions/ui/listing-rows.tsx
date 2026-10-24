@@ -18,7 +18,7 @@ import {
   PUBLICATION_LABELS,
 } from "@/shared/lib/format";
 import { itemPath } from "@/shared/lib/site";
-import { ConfirmDialog } from "./confirm-dialog";
+import { ConfirmDialog } from "@/shared/ui/confirm-dialog";
 
 const PUBLICATIONS: Publication[] = ["draft", "published", "archived"];
 const selectClass =

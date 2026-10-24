@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { InviteLinkDialog } from "../team/invite-link-dialog";
+import { InviteLinkDialog } from "../invite-link-dialog";
 
 const invite = {
   email: "duda@loja.test",

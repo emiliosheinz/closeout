@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { activeFilterChips, parseCatalogParams } from "@/lib/catalog/params";
+import { activeFilterChips, parseCatalogParams } from "../../model/params";
 import { ActiveFilters } from "../active-filters";
 import { CategoryChips } from "../category-chips";
 import { FilterForm } from "../filter-form";

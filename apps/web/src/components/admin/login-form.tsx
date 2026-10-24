@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/shared/ui/button";
-import { Field, inputClass } from "./field";
+import { Field, inputClass } from "@/shared/ui/field";
 
 export function LoginForm() {
   const [error, setError] = useState<string | null>(null);

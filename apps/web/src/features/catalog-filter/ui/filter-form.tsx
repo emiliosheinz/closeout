@@ -4,12 +4,6 @@ import type {
   CatalogFilters,
   CatalogSort,
 } from "@/entities/listing";
-import {
-  AVAILABILITY_PARAM,
-  CONDITION_PARAM,
-  catalogEntries,
-  SORT_PARAM,
-} from "@/lib/catalog/params";
 import { CONDITIONS } from "@/shared/config/enums";
 import {
   AVAILABILITY_FILTER_LABELS,
@@ -17,6 +11,12 @@ import {
   SORT_LABELS,
 } from "@/shared/lib/format";
 import { storePath } from "@/shared/lib/site";
+import {
+  AVAILABILITY_PARAM,
+  CONDITION_PARAM,
+  catalogEntries,
+  SORT_PARAM,
+} from "../model/params";
 
 const AVAILABILITY_OPTIONS: AvailabilityFilter[] = [
   "listed",

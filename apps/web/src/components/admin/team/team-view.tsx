@@ -1,8 +1,8 @@
 import type { PendingInvite } from "@/entities/invite";
 import type { TeamMember } from "@/entities/member";
+import { InviteButton, PendingInvites } from "@/features/invite-actions";
+import { MemberRow } from "@/features/member-actions";
 import { pluralize } from "@/shared/lib/format";
-import { InviteButton, PendingInvites } from "./invites";
-import { MemberRow } from "./member-row";
 
 /**
  * The Equipe page body. Managers get every member and the invites; a seller

@@ -7,7 +7,7 @@ import type { StoreSettings } from "@/entities/session";
 import { ApiError, api } from "@/shared/api";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
-import { Field, inputClass } from "./field";
+import { Field, inputClass } from "@/shared/ui/field";
 
 export function StoreSettingsForm({
   store,

@@ -1,10 +1,10 @@
 import { ArrowLeft } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ListingForm } from "@/components/admin/listing-form";
 import { listingFormOptions } from "@/entities/listing/index.server";
 import { isManager } from "@/entities/session";
 import { requireMember } from "@/entities/session/index.server";
+import { ListingForm } from "@/features/listing-form";
 
 export const metadata: Metadata = { title: "Novo anúncio" };
 

@@ -1,7 +1,6 @@
 import { Plus, Search } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ListingRows } from "@/components/admin/listing-rows";
 import type {
   AdminListingSummary,
   DashboardCounts,
@@ -13,6 +12,7 @@ import {
   STATUS_FILTERS,
 } from "@/entities/listing";
 import { requireMember } from "@/entities/session/index.server";
+import { ListingRows } from "@/features/listing-actions";
 import { adminGet } from "@/shared/api/index.server";
 import { cn } from "@/shared/lib/utils";
 

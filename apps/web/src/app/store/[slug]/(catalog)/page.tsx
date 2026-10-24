@@ -1,14 +1,9 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
-import { ActiveFilters } from "@/components/storefront/active-filters";
 import { RememberCatalogView } from "@/components/storefront/catalog-return";
-import { CategoryChips } from "@/components/storefront/category-chips";
 import { EmptyState } from "@/components/storefront/empty-state";
-import { FilterForm } from "@/components/storefront/filter-form";
 import { FiltersSheet } from "@/components/storefront/filters-sheet";
 import { ListingCard } from "@/components/storefront/listing-card";
-import { Pagination } from "@/components/storefront/pagination";
-import { SearchForm } from "@/components/storefront/search-form";
 import { StoreHeader } from "@/components/storefront/store-header";
 import {
   activeFilterCount,
@@ -21,10 +16,15 @@ import {
   PAGE_SIZE,
 } from "@/entities/listing/index.server";
 import {
+  ActiveFilters,
   activeFilterChips,
+  CategoryChips,
   catalogHref,
+  FilterForm,
+  Pagination,
   parseCatalogParams,
-} from "@/lib/catalog/params";
+  SearchForm,
+} from "@/features/catalog-filter";
 import { pluralize } from "@/shared/lib/format";
 import { storePath } from "@/shared/lib/site";
 import { sellerContactUrl } from "@/shared/lib/whatsapp";

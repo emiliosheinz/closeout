@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { parseCatalogParams } from "@/lib/catalog/params";
+import { parseCatalogParams } from "../../model/params";
 import { Pagination } from "../pagination";
 
 describe("Pagination", () => {
