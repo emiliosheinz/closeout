@@ -2,7 +2,7 @@ import { Plus, Search } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ListingRows } from "@/components/admin/listing-rows";
-import { requireAdmin } from "@/lib/admin/current-store";
+import { requireMember } from "@/lib/admin/current-store";
 import { adminGet } from "@/lib/admin/server-api";
 import {
   dashboardHref,
@@ -23,7 +23,7 @@ export default async function DashboardPage({
 }: {
   searchParams: Promise<{ q?: string; status?: string }>;
 }) {
-  const { store } = await requireAdmin();
+  const { store } = await requireMember();
   const query = await searchParams;
   const q = (query.q ?? "").trim().slice(0, 100);
   const status = findStatusFilter(query.status);

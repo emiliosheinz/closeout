@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ListingView } from "@/components/storefront/listing-view";
-import { requireAdmin } from "@/lib/admin/current-store";
+import { requireMember } from "@/lib/admin/current-store";
 import { adminGet, isUuid } from "@/lib/admin/server-api";
 import type { ListingDetail } from "@/lib/catalog/types";
 
@@ -14,7 +14,7 @@ export default async function PreviewPage({
 }) {
   const { id } = await params;
   if (!isUuid(id)) notFound();
-  const { store } = await requireAdmin();
+  const { store } = await requireMember();
   const listing = await adminGet<ListingDetail>(
     `/stores/${store.id}/listings/${id}/preview`,
   );

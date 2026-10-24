@@ -42,7 +42,7 @@ describe("ListingRows", () => {
     );
     const warnings = screen.getAllByRole("link", { name: /sem WhatsApp/ });
     expect(warnings).toHaveLength(1);
-    expect(warnings[0]).toHaveAttribute("href", "/admin/vendedores");
+    expect(warnings[0]).toHaveAttribute("href", "/admin/equipe");
     expect(warnings[0]?.closest("li")).toHaveTextContent("Item a");
   });
 

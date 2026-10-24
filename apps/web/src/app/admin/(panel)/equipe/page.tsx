@@ -1,0 +1,75 @@
+import type { Metadata } from "next";
+import { TeamView } from "@/components/admin/team/team-view";
+import {
+  isManager,
+  type Member,
+  requireMember,
+} from "@/lib/admin/current-store";
+import { adminGet } from "@/lib/admin/server-api";
+import type { PendingInvite, Seller, TeamMember } from "@/lib/admin/types";
+
+export const metadata: Metadata = { title: "Equipe" };
+
+/**
+ * Managers load every member and the pending invites; a seller loads only
+ * their own contact profile, and `invites: null` hides the team controls.
+ */
+async function loadTeam({ me, store, role, sellerId }: Member): Promise<{
+  members: TeamMember[];
+  invites: PendingInvite[] | null;
+}> {
+  if (isManager(role)) {
+    const [team, pending] = await Promise.all([
+      adminGet<{ items: TeamMember[] }>(`/stores/${store.id}/members`),
+      adminGet<{ items: PendingInvite[] }>(`/stores/${store.id}/invites`),
+    ]);
+    return { members: team?.items ?? [], invites: pending?.items ?? [] };
+  }
+  const sellers = await adminGet<{ items: Seller[] }>(
+    `/stores/${store.id}/sellers`,
+  );
+  const own = sellers?.items.find((seller) => seller.id === sellerId);
+  if (!own) return { members: [], invites: null };
+  return {
+    members: [
+      {
+        userId: me.user.id,
+        name: me.user.name,
+        email: me.user.email,
+        role,
+        sellerId: own.id,
+        displayName: own.displayName,
+        whatsappNumber: own.whatsappNumber,
+        avatarUrl: own.avatarUrl,
+        listingCount: own.listingCount,
+      },
+    ],
+    invites: null,
+  };
+}
+
+export default async function TeamPage() {
+  const member = await requireMember();
+  const { me, store } = member;
+  const manager = isManager(member.role);
+  const { members, invites } = await loadTeam(member);
+
+  return (
+    <>
+      <h1 className="text-3xl font-extrabold">Equipe</h1>
+      <p className="mt-1 max-w-[60ch] text-ink-soft">
+        {manager
+          ? "Quem vende e quem cuida da loja. O botão de WhatsApp de cada anúncio abre a conversa com quem vende."
+          : "Seu contato na loja. O botão de WhatsApp dos seus anúncios abre a conversa com você."}
+      </p>
+      <div className="mt-8">
+        <TeamView
+          storeId={store.id}
+          viewerId={me.user.id}
+          members={members}
+          invites={invites}
+        />
+      </div>
+    </>
+  );
+}

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ListingForm } from "@/components/admin/listing-form";
 import { PhotoManager } from "@/components/admin/photo-manager";
-import { requireAdmin } from "@/lib/admin/current-store";
+import { isManager, requireMember } from "@/lib/admin/current-store";
 import { listingFormOptions } from "@/lib/admin/form-data";
 import { adminGet, isUuid } from "@/lib/admin/server-api";
 import type { AdminListingDetail } from "@/lib/admin/types";
@@ -27,7 +27,7 @@ export default async function EditListingPage({
   const { id } = await params;
   if (!isUuid(id)) notFound();
   const query = await searchParams;
-  const { store } = await requireAdmin();
+  const { store, role, sellerId } = await requireMember();
   const [listing, options] = await Promise.all([
     adminGet<AdminListingDetail>(`/stores/${store.id}/listings/${id}`),
     listingFormOptions(store.id),
@@ -96,7 +96,8 @@ export default async function EditListingPage({
           storeId={store.id}
           categories={options.categories}
           sellers={options.sellers}
-          defaultSellerId={null}
+          ownSellerId={sellerId}
+          canAssignSellers={isManager(role)}
           listing={listing}
         />
       </div>

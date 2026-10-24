@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import { StoreSettingsForm } from "@/components/admin/store-settings-form";
-import { requireAdmin } from "@/lib/admin/current-store";
+import { isManager, requireMember } from "@/lib/admin/current-store";
 import { absoluteUrl, storePath } from "@/lib/site";
 
 export const metadata: Metadata = { title: "Loja" };
 
 export default async function StorePage() {
-  const { store } = await requireAdmin();
+  const { store, role } = await requireMember();
+  if (!isManager(role)) notFound();
   return (
     <>
       <h1 className="text-3xl font-extrabold">Loja</h1>

@@ -151,7 +151,7 @@ export function ListingRows({
                   unreachableSellerIds.includes(seller.id),
                 ) && (
                   <Link
-                    href="/admin/vendedores"
+                    href="/admin/equipe"
                     className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-stamp/10 px-2.5 py-1 text-xs font-semibold text-stamp hover:bg-stamp/15"
                     title="Este item aparece na loja sem botão de contato."
                   >
