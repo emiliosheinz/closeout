@@ -2,22 +2,26 @@
 
 import {
   AVAILABILITIES,
-  type Availability,
   CONDITIONS,
-  type Condition,
   PUBLICATIONS,
-  type Publication,
 } from "@closeout/contracts/enums";
-import { ImagePlus, Plus, X } from "lucide-react";
+import { listingRequestSchema } from "@closeout/contracts/schemas";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation } from "@tanstack/react-query";
+import { Plus, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import type {
-  AdminListingDetail,
-  Category,
-  ListingAttribute,
-  Seller,
+import { Controller, useFieldArray, useForm, useWatch } from "react-hook-form";
+import { z } from "zod";
+import {
+  type AdminListingDetail,
+  type Category,
+  LISTING_NOTICES,
+  listingEditHref,
+  listingKeys,
+  PhotoDropzone,
+  type Seller,
 } from "@/entities/listing";
-import { ApiError, api } from "@/shared/api";
 import {
   AVAILABILITY_LABELS,
   CONDITION_LABELS,
@@ -35,10 +39,74 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/shared/ui/select";
-import { createListingWithPhotos } from "../api/create-listing";
+import { notify } from "@/shared/ui/sonner";
+import {
+  createListingWithPhotos,
+  type ListingFields,
+  type SaveOutcome,
+  updateListing,
+} from "../api/save-listing";
 
 const selectTriggerClass =
   "h-11 border-line-strong bg-surface px-3 text-base text-ink shadow-none";
+
+const { shape } = listingRequestSchema;
+
+function toCents(price: string | undefined): number {
+  const text = price?.trim() ?? "";
+  if (text === "") return Number.NaN;
+  return parsePriceToCents(text) ?? Number.NaN;
+}
+
+function buildSchema(canAssignSellers: boolean) {
+  return z
+    .object({
+      title: shape.title,
+      description: shape.description.unwrap(),
+      categoryId: shape.categoryId,
+      sellerIds: canAssignSellers
+        ? shape.sellerIds.unwrap()
+        : z.array(z.string()),
+      price: z.string().optional(),
+      noPrice: z.boolean(),
+      condition: shape.condition,
+      attributes: z
+        .array(z.object({ label: z.string(), value: z.string() }))
+        .max(20)
+        .transform((rows) =>
+          rows
+            .map((row) => ({
+              label: row.label.trim(),
+              value: row.value.trim(),
+            }))
+            .filter((row) => row.label && row.value),
+        ),
+      availability: z.enum(AVAILABILITIES),
+      publication: z.enum(PUBLICATIONS),
+    })
+    .transform((values, ctx) => {
+      // An empty price, or "Preço a combinar", means no price; the typed text
+      // is ignored while ticked but kept in the form.
+      const typed = values.price?.trim() ?? "";
+      const cents = values.noPrice || typed === "" ? null : toCents(typed);
+      const checked = shape.priceCents.safeParse(cents);
+      if (!checked.success) {
+        ctx.issues.push({
+          code: "custom",
+          message: checked.error.issues[0]?.message ?? "",
+          input: values.price,
+          path: ["price"],
+        });
+        return z.NEVER;
+      }
+      return { ...values, price: checked.data ?? null };
+    });
+}
+
+const managerSchema = buildSchema(true);
+const sellerSchema = buildSchema(false);
+type FormInput = z.input<typeof managerSchema>;
+type FormValues = z.output<typeof managerSchema>;
 
 interface ListingFormProps {
   storeId: string;
@@ -49,13 +117,6 @@ interface ListingFormProps {
   /** Managers pick who sells; a seller's listings stay assigned as they are. */
   canAssignSellers: boolean;
   listing?: AdminListingDetail;
-}
-
-interface FormErrors {
-  title?: string;
-  sellers?: string;
-  price?: string;
-  form?: string;
 }
 
 /**
@@ -73,38 +134,43 @@ export function ListingForm({
 }: ListingFormProps) {
   const router = useRouter();
   const editing = listing !== undefined;
-  const [title, setTitle] = useState(listing?.title ?? "");
-  const [description, setDescription] = useState(listing?.description ?? "");
-  const [categoryId, setCategoryId] = useState(
-    listing?.category.id ?? categories[0]?.id ?? "",
-  );
-  const [sellerIds, setSellerIds] = useState<string[]>(() =>
-    listing ? listing.sellers.map((seller) => seller.id) : [ownSellerId],
-  );
   const assignedNames = listing
     ? listing.sellers.map((seller) => seller.displayName)
     : sellers
         .filter((seller) => seller.id === ownSellerId)
         .map((seller) => seller.displayName);
-  const [price, setPrice] = useState(centsToInput(listing?.priceCents ?? null));
-  const [noPrice, setNoPrice] = useState(
-    editing ? listing.priceCents === null : false,
-  );
-  const [condition, setCondition] = useState<Condition>(
-    listing?.condition ?? "good",
-  );
-  const [attributes, setAttributes] = useState<ListingAttribute[]>(
-    listing?.attributes ?? [],
-  );
-  const [availability, setAvailability] = useState<Availability>(
-    listing?.availability ?? "available",
-  );
-  const [publication, setPublication] = useState<Publication>(
-    listing?.publication ?? "draft",
-  );
+  const {
+    register,
+    handleSubmit,
+    control,
+    formState: { errors },
+  } = useForm<FormInput, unknown, FormValues>({
+    resolver: zodResolver(canAssignSellers ? managerSchema : sellerSchema),
+    defaultValues: {
+      title: listing?.title ?? "",
+      description: listing?.description ?? "",
+      categoryId: listing?.category.id ?? categories[0]?.id ?? "",
+      sellerIds: listing
+        ? listing.sellers.map((seller) => seller.id)
+        : [ownSellerId],
+      price: centsToInput(listing?.priceCents ?? null),
+      noPrice: editing ? listing.priceCents === null : false,
+      condition: listing?.condition ?? "good",
+      attributes: listing?.attributes ?? [],
+      availability: listing?.availability ?? "available",
+      publication: listing?.publication ?? "draft",
+    },
+  });
+  const {
+    fields: attributes,
+    append,
+    remove,
+  } = useFieldArray({ control, name: "attributes" });
+  const noPrice = useWatch({ control, name: "noPrice" });
+  const publication = useWatch({ control, name: "publication" });
+
   const [files, setFiles] = useState<File[]>([]);
-  const [errors, setErrors] = useState<FormErrors>({});
-  const [pending, setPending] = useState<string | null>(null);
+  const [progress, setProgress] = useState<string | null>(null);
 
   const previews = files.map((file) => ({
     file,
@@ -117,128 +183,89 @@ export function ListingForm({
     [previews],
   );
 
-  function validate(): { priceCents: number | null } | null {
-    const next: FormErrors = {};
-    if (!title.trim()) next.title = "Dê um nome ao item.";
-    if (canAssignSellers && sellerIds.length === 0) {
-      next.sellers = "Escolha ao menos uma pessoa para receber as mensagens.";
-    }
-    let priceCents: number | null = null;
-    if (!noPrice && price.trim() !== "") {
-      priceCents = parsePriceToCents(price);
-      if (priceCents === null) {
-        next.price =
-          'Use um valor como 1.200,00, ou deixe vazio para "Preço a combinar".';
+  const save = useMutation({
+    mutationFn: ({
+      values,
+      publish,
+    }: {
+      values: FormValues;
+      publish: boolean;
+    }): Promise<SaveOutcome> => {
+      const fields: ListingFields = {
+        title: values.title,
+        description: values.description,
+        categoryId: values.categoryId,
+        ...(canAssignSellers ? { sellerIds: values.sellerIds } : {}),
+        priceCents: values.price,
+        condition: values.condition,
+        attributes: values.attributes,
+      };
+      if (listing) {
+        return updateListing(
+          storeId,
+          listing.id,
+          {
+            ...fields,
+            availability: values.availability,
+            publication: publish ? "published" : values.publication,
+          },
+          publish,
+        );
       }
-    }
-    setErrors(next);
-    return Object.keys(next).length === 0 ? { priceCents } : null;
-  }
-
-  async function save(publish: boolean) {
-    const valid = validate();
-    if (!valid) return;
-    const fields = {
-      title: title.trim(),
-      description: description.trim(),
-      categoryId,
-      ...(canAssignSellers ? { sellerIds } : {}),
-      priceCents: valid.priceCents,
-      condition,
-      attributes: attributes.filter((a) => a.label.trim() && a.value.trim()),
-    };
-
-    setPending(publish ? "Publicando..." : "Salvando...");
-    let id = listing?.id;
-    const updating = Boolean(editing && id);
-    const nextPublication = publish ? "published" : publication;
-    const savedParam = publish ? "publicado" : "1";
-    try {
-      if (updating) {
-        await api("PATCH", `/stores/${storeId}/listings/${id}`, {
-          ...fields,
-          availability,
-          publication: nextPublication,
-        });
-        setPending(null);
-        router.push(`/admin/anuncios/${id}?salvo=${savedParam}`);
-        router.refresh();
-        return;
-      }
-
-      const created = await createListingWithPhotos(storeId, fields, files, {
+      return createListingWithPhotos(storeId, fields, files, {
         publish,
-        onCreated: (createdId) => {
-          id = createdId;
-        },
-        onProgress: setPending,
+        onProgress: setProgress,
       });
-      if (created === null) {
-        setPending(null);
-        router.push("/admin");
-        router.refresh();
-        return;
-      }
-      id = created;
-      router.push(`/admin/anuncios/${id}?salvo=${savedParam}`);
-    } catch (err) {
-      setPending(null);
-      const message =
-        err instanceof ApiError ? err.message : "Não foi possível salvar.";
-      if (!editing && id) {
-        // The listing exists; continue on its page instead of creating a duplicate.
-        setPending(null);
-        router.push(`/admin/anuncios/${id}?erro=envio`);
-        return;
-      }
-      setErrors({ form: message });
-    }
+    },
+    onSettled: () => setProgress(null),
+    meta: { invalidates: [listingKeys.all(storeId)] },
+  });
+
+  function submit(values: FormValues, publish: boolean) {
+    save.mutate(
+      { values, publish },
+      {
+        onSuccess: ({ id, notice }) => {
+          if (id === null) {
+            const { kind, message } = LISTING_NOTICES[notice];
+            notify[kind](message);
+            router.push("/admin");
+            return;
+          }
+          router.push(listingEditHref(id, notice));
+        },
+      },
+    );
   }
+
+  const publishing = save.isPending && save.variables.publish;
+  const savingDraft = save.isPending && !save.variables.publish;
 
   return (
     <form
-      onSubmit={(event) => {
-        event.preventDefault();
-        save(false);
-      }}
+      onSubmit={handleSubmit((values) => submit(values, false))}
       className="flex flex-col gap-6"
       noValidate
     >
       {!editing && (
-        <Field
-          label="Fotos"
-          htmlFor="photos"
-          hint="Comece pelas fotos: são elas que vendem. Escolha várias de uma vez; a primeira vira a capa."
-        >
-          <div className="flex items-center gap-3">
-            <span className="relative inline-flex h-11 items-center gap-2 rounded-full bg-ink px-5 text-sm font-semibold text-surface has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-focus">
-              <ImagePlus className="size-4" aria-hidden="true" />
-              Escolher fotos
-              <input
-                id="photos"
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                multiple
-                onChange={(e) => {
-                  setFiles(
-                    [...files, ...Array.from(e.target.files ?? [])].slice(
-                      0,
-                      20,
-                    ),
-                  );
-                  e.target.value = "";
-                }}
-                className="absolute inset-0 cursor-pointer opacity-0"
-              />
-            </span>
-            <span className="text-sm text-muted">
-              {files.length === 0
-                ? "Nenhuma foto escolhida"
-                : files.length === 1
-                  ? "1 foto"
-                  : `${files.length} fotos`}
-            </span>
-          </div>
+        <fieldset className="flex flex-col gap-1.5">
+          <legend className="mb-1.5 text-sm font-semibold">Fotos</legend>
+          <p className="text-xs text-muted">
+            Comece pelas fotos: são elas que vendem. Escolha várias de uma vez;
+            a primeira vira a capa.
+          </p>
+          <PhotoDropzone
+            existing={files.length}
+            onFiles={(added) => setFiles([...files, ...added])}
+            disabled={save.isPending}
+          />
+          <span role="status" className="text-sm text-muted">
+            {files.length === 0
+              ? "Nenhuma foto escolhida"
+              : files.length === 1
+                ? "1 foto"
+                : `${files.length} fotos`}
+          </span>
           {previews.length > 0 && (
             <ul className="mt-3 grid grid-cols-4 gap-2 sm:grid-cols-6">
               {previews.map((preview, index) => (
@@ -268,18 +295,18 @@ export function ListingForm({
               ))}
             </ul>
           )}
-        </Field>
+        </fieldset>
       )}
 
-      <Field label="Nome do item" htmlFor="title" error={errors.title}>
+      <Field label="Nome do item" htmlFor="title" error={errors.title?.message}>
         <input
           id="title"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
           maxLength={120}
           placeholder="Ex.: Sofá retrátil 3 lugares"
           aria-invalid={Boolean(errors.title)}
+          aria-describedby={errors.title ? "title-error" : undefined}
           className={inputClass}
+          {...register("title")}
         />
       </Field>
 
@@ -287,42 +314,47 @@ export function ListingForm({
         <Field
           label="Preço (R$)"
           htmlFor="price"
-          error={errors.price}
+          error={errors.price?.message}
           hint="Sem preço definido? Marque a opção e receba propostas."
         >
           <input
             id="price"
             inputMode="decimal"
-            value={noPrice ? "" : price}
-            onChange={(e) => setPrice(e.target.value)}
             disabled={noPrice}
             placeholder="Ex.: 450"
             aria-invalid={Boolean(errors.price)}
+            aria-describedby={errors.price ? "price-error" : undefined}
             className={inputClass}
+            {...register("price")}
           />
           <label className="mt-1 inline-flex items-center gap-2 text-sm">
             <input
               type="checkbox"
-              checked={noPrice}
-              onChange={(e) => setNoPrice(e.target.checked)}
               className="size-4 accent-ink"
+              {...register("noPrice")}
             />
             Preço a combinar
           </label>
         </Field>
         <Field label="Categoria" htmlFor="category">
-          <Select value={categoryId} onValueChange={setCategoryId}>
-            <SelectTrigger id="category" className={selectTriggerClass}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {categories.map((category) => (
-                <SelectItem key={category.id} value={category.id}>
-                  {category.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Controller
+            control={control}
+            name="categoryId"
+            render={({ field }) => (
+              <Select value={field.value} onValueChange={field.onChange}>
+                <SelectTrigger id="category" className={selectTriggerClass}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((category) => (
+                    <SelectItem key={category.id} value={category.id}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          />
         </Field>
       </div>
 
@@ -336,11 +368,9 @@ export function ListingForm({
             >
               <input
                 type="radio"
-                name="condition"
                 value={value}
-                checked={condition === value}
-                onChange={() => setCondition(value)}
                 className="sr-only"
+                {...register("condition")}
               />
               {CONDITION_LABELS[value]}
             </label>
@@ -355,11 +385,10 @@ export function ListingForm({
       >
         <textarea
           id="description"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
           rows={5}
           maxLength={5000}
           className={cn(inputClass, "h-auto py-2 leading-relaxed")}
+          {...register("description")}
         />
       </Field>
 
@@ -375,7 +404,7 @@ export function ListingForm({
       ) : (
         <fieldset
           aria-describedby={
-            errors.sellers ? "sellers-hint sellers-error" : "sellers-hint"
+            errors.sellerIds ? "sellers-hint sellers-error" : "sellers-hint"
           }
         >
           <legend className="text-sm font-semibold">Quem vende</legend>
@@ -383,36 +412,43 @@ export function ListingForm({
             Quem recebe as mensagens no WhatsApp. Com mais de uma pessoa, o
             comprador escolhe com quem falar.
           </p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {sellers.map((seller) => (
-              <label
-                key={seller.id}
-                className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border border-line bg-surface px-3.5 text-sm has-[:checked]:border-ink has-[:checked]:bg-ink has-[:checked]:text-surface has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-focus"
-              >
-                <input
-                  type="checkbox"
-                  checked={sellerIds.includes(seller.id)}
-                  onChange={(e) =>
-                    setSellerIds(
-                      e.target.checked
-                        ? [...sellerIds, seller.id]
-                        : sellerIds.filter((id) => id !== seller.id),
-                    )
-                  }
-                  className="size-4 accent-surface"
-                />
-                {seller.displayName}
-                {seller.whatsappNumber ? "" : " (sem WhatsApp)"}
-              </label>
-            ))}
-          </div>
-          {errors.sellers && (
+          <Controller
+            control={control}
+            name="sellerIds"
+            render={({ field }) => (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {sellers.map((seller) => (
+                  <label
+                    key={seller.id}
+                    className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border border-line bg-surface px-3.5 text-sm has-[:checked]:border-ink has-[:checked]:bg-ink has-[:checked]:text-surface has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-focus"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={field.value.includes(seller.id)}
+                      aria-invalid={Boolean(errors.sellerIds)}
+                      onChange={(e) =>
+                        field.onChange(
+                          e.target.checked
+                            ? [...field.value, seller.id]
+                            : field.value.filter((id) => id !== seller.id),
+                        )
+                      }
+                      className="size-4 accent-surface"
+                    />
+                    {seller.displayName}
+                    {seller.whatsappNumber ? "" : " (sem WhatsApp)"}
+                  </label>
+                ))}
+              </div>
+            )}
+          />
+          {errors.sellerIds && (
             <p
               id="sellers-error"
               role="alert"
               className="mt-1.5 text-sm font-medium text-stamp"
             >
-              {errors.sellers}
+              {errors.sellerIds.message}
             </p>
           )}
         </fieldset>
@@ -425,41 +461,24 @@ export function ListingForm({
         </p>
         <ul className="mt-3 flex flex-col gap-2">
           {attributes.map((attribute, index) => (
-            // biome-ignore lint/suspicious/noArrayIndexKey: rows are edited in place by position.
-            <li key={index} className="flex gap-2">
+            <li key={attribute.id} className="flex gap-2">
               <input
                 aria-label={`Nome do detalhe ${index + 1}`}
-                value={attribute.label}
-                onChange={(e) =>
-                  setAttributes(
-                    attributes.map((a, i) =>
-                      i === index ? { ...a, label: e.target.value } : a,
-                    ),
-                  )
-                }
                 placeholder="Ex.: Voltagem"
                 maxLength={40}
                 className={cn(inputClass, "w-2/5")}
+                {...register(`attributes.${index}.label`)}
               />
               <input
                 aria-label={`Valor do detalhe ${index + 1}`}
-                value={attribute.value}
-                onChange={(e) =>
-                  setAttributes(
-                    attributes.map((a, i) =>
-                      i === index ? { ...a, value: e.target.value } : a,
-                    ),
-                  )
-                }
                 placeholder="Ex.: 220 V"
                 maxLength={120}
                 className={cn(inputClass, "flex-1")}
+                {...register(`attributes.${index}.value`)}
               />
               <button
                 type="button"
-                onClick={() =>
-                  setAttributes(attributes.filter((_, i) => i !== index))
-                }
+                onClick={() => remove(index)}
                 aria-label={`Remover detalhe ${index + 1}`}
                 className="inline-flex size-11 shrink-0 items-center justify-center rounded-full hover:bg-ink/5"
               >
@@ -471,9 +490,7 @@ export function ListingForm({
         {attributes.length < 20 && (
           <button
             type="button"
-            onClick={() =>
-              setAttributes([...attributes, { label: "", value: "" }])
-            }
+            onClick={() => append({ label: "", value: "" })}
             className="mt-2 inline-flex h-11 items-center gap-1.5 rounded-full px-3 text-sm font-semibold hover:bg-ink/5"
           >
             <Plus className="size-4" aria-hidden="true" />
@@ -485,70 +502,86 @@ export function ListingForm({
       {editing && (
         <div className="grid gap-6 sm:grid-cols-2">
           <Field label="Publicação" htmlFor="publication">
-            <Select
-              value={publication}
-              onValueChange={(next) => setPublication(next as Publication)}
-            >
-              <SelectTrigger id="publication" className={selectTriggerClass}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {PUBLICATIONS.map((value) => (
-                  <SelectItem key={value} value={value}>
-                    {PUBLICATION_LABELS[value]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Controller
+              control={control}
+              name="publication"
+              render={({ field }) => (
+                <Select
+                  value={field.value}
+                  onValueChange={(next) =>
+                    field.onChange(next as (typeof PUBLICATIONS)[number])
+                  }
+                >
+                  <SelectTrigger
+                    id="publication"
+                    className={selectTriggerClass}
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PUBLICATIONS.map((value) => (
+                      <SelectItem key={value} value={value}>
+                        {PUBLICATION_LABELS[value]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
           </Field>
           <Field label="Disponibilidade" htmlFor="availability">
-            <Select
-              value={availability}
-              onValueChange={(next) => setAvailability(next as Availability)}
-            >
-              <SelectTrigger id="availability" className={selectTriggerClass}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {AVAILABILITIES.map((value) => (
-                  <SelectItem key={value} value={value}>
-                    {AVAILABILITY_LABELS[value]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Controller
+              control={control}
+              name="availability"
+              render={({ field }) => (
+                <Select
+                  value={field.value}
+                  onValueChange={(next) =>
+                    field.onChange(next as (typeof AVAILABILITIES)[number])
+                  }
+                >
+                  <SelectTrigger
+                    id="availability"
+                    className={selectTriggerClass}
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {AVAILABILITIES.map((value) => (
+                      <SelectItem key={value} value={value}>
+                        {AVAILABILITY_LABELS[value]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
           </Field>
         </div>
       )}
 
-      {errors.form && (
-        <p
-          role="alert"
-          className="rounded-md bg-stamp/10 px-3 py-2 text-sm font-medium text-stamp"
-        >
-          {errors.form}
-        </p>
-      )}
-
       <div className="sticky bottom-0 -mx-4 flex flex-wrap items-center gap-3 border-t border-line bg-paper/95 px-4 py-3 backdrop-blur sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:px-0">
-        <Button type="submit" variant="outline" disabled={pending !== null}>
-          {editing ? "Salvar alterações" : "Salvar rascunho"}
+        <Button type="submit" variant="outline" disabled={save.isPending}>
+          {savingDraft
+            ? (progress ?? "Salvando...")
+            : editing
+              ? "Salvar alterações"
+              : "Salvar rascunho"}
         </Button>
         {publication !== "published" && (
           <Button
             type="button"
-            onClick={() => save(true)}
-            disabled={pending !== null || (!editing && files.length === 0)}
+            onClick={handleSubmit((values) => submit(values, true))}
+            disabled={save.isPending || (!editing && files.length === 0)}
           >
-            Salvar e publicar
+            {publishing ? (progress ?? "Publicando...") : "Salvar e publicar"}
           </Button>
         )}
-        <span role="status" aria-live="polite" className="text-sm text-muted">
-          {pending ??
-            (!editing && files.length === 0
-              ? "Adicione fotos para poder publicar."
-              : "")}
-        </span>
+        {!editing && files.length === 0 && (
+          <span className="text-sm text-muted">
+            Adicione fotos para poder publicar.
+          </span>
+        )}
       </div>
     </form>
   );
