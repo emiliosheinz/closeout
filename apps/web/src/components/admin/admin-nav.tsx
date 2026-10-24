@@ -3,6 +3,7 @@
 import { ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { storePath } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
 const LINKS = [
@@ -11,7 +12,13 @@ const LINKS = [
   { href: "/admin/loja", label: "Loja" },
 ];
 
-export function AdminNav({ storeName }: { storeName: string }) {
+export function AdminNav({
+  storeName,
+  storeSlug,
+}: {
+  storeName: string;
+  storeSlug: string;
+}) {
   const pathname = usePathname();
 
   return (
@@ -49,7 +56,7 @@ export function AdminNav({ storeName }: { storeName: string }) {
         </nav>
         <div className="ml-auto flex items-center gap-1">
           <a
-            href="/"
+            href={storePath(storeSlug)}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex h-11 items-center gap-1.5 rounded-full px-3 text-sm font-semibold text-ink-soft hover:bg-ink/5"

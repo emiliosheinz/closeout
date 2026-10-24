@@ -4,17 +4,20 @@ import { BackToCatalog } from "@/components/storefront/catalog-return";
 import { ListingView } from "@/components/storefront/listing-view";
 import { getListing, getStore } from "@/lib/catalog/api";
 import { formatPrice } from "@/lib/format";
-import { listingPath } from "@/lib/site";
+import { itemPath } from "@/lib/site";
 
 interface PageProps {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ slug: string; item: string }>;
 }
 
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
-  const { slug } = await params;
-  const [listing, store] = await Promise.all([getListing(slug), getStore()]);
+  const { slug, item } = await params;
+  const [listing, store] = await Promise.all([
+    getListing(slug, item),
+    getStore(slug),
+  ]);
   if (!listing || !store) return { title: "Item não encontrado" };
 
   const status =
@@ -28,7 +31,7 @@ export async function generateMetadata({
       .replace(/\s+/g, " ")
       .slice(0, 180);
   const cover = listing.images[0];
-  const path = listingPath(listing.slug);
+  const path = itemPath(slug, listing.slug);
   return {
     title: `${listing.title} | ${store.name}`,
     description,
@@ -53,14 +56,14 @@ export async function generateMetadata({
 }
 
 export default async function ListingPage({ params }: PageProps) {
-  const { slug } = await params;
-  const listing = await getListing(slug);
+  const { slug, item } = await params;
+  const listing = await getListing(slug, item);
   if (!listing) notFound();
 
   return (
     <main className="mx-auto max-w-6xl px-4 pt-4 pb-32 sm:px-6 lg:px-8 lg:pb-20">
-      <BackToCatalog />
-      <ListingView listing={listing} />
+      <BackToCatalog storeSlug={slug} />
+      <ListingView storeSlug={slug} listing={listing} />
     </main>
   );
 }

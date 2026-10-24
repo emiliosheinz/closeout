@@ -14,14 +14,17 @@ describe("ShareButton", () => {
     });
 
     render(
-      <ShareButton url="https://loja.example/itens/mesa-abc123" title="Mesa" />,
+      <ShareButton
+        url="https://loja.example/store/loja/items/mesa-abc123"
+        title="Mesa"
+      />,
     );
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Compartilhar" }));
     });
 
     expect(writeText).toHaveBeenCalledWith(
-      "https://loja.example/itens/mesa-abc123",
+      "https://loja.example/store/loja/items/mesa-abc123",
     );
     expect(
       screen.getByRole("button", { name: "Link copiado" }),
@@ -39,7 +42,10 @@ describe("ShareButton", () => {
     });
 
     render(
-      <ShareButton url="https://loja.example/itens/mesa-abc123" title="Mesa" />,
+      <ShareButton
+        url="https://loja.example/store/loja/items/mesa-abc123"
+        title="Mesa"
+      />,
     );
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Compartilhar" }));
@@ -47,7 +53,7 @@ describe("ShareButton", () => {
 
     expect(share).toHaveBeenCalledWith({
       title: "Mesa",
-      url: "https://loja.example/itens/mesa-abc123",
+      url: "https://loja.example/store/loja/items/mesa-abc123",
     });
   });
 });

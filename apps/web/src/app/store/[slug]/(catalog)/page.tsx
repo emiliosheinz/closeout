@@ -20,19 +20,23 @@ import {
   parseCatalogParams,
 } from "@/lib/catalog/params";
 import { pluralize } from "@/lib/format";
+import { storePath } from "@/lib/site";
 import { sellerContactUrl } from "@/lib/whatsapp";
 
 interface PageProps {
+  params: Promise<{ slug: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
 export async function generateMetadata({
+  params,
   searchParams,
 }: PageProps): Promise<Metadata> {
+  const { slug } = await params;
   const filters = parseCatalogParams(await searchParams);
   const [storeResult, coverResult] = await Promise.allSettled([
-    getStore(),
-    getListings({ ...parseCatalogParams({}) }, 1),
+    getStore(slug),
+    getListings(slug, DEFAULT_FILTERS, 1),
   ]);
   if (storeResult.status === "rejected") throw storeResult.reason;
   const store = storeResult.value;
@@ -50,7 +54,12 @@ export async function generateMetadata({
     // of the catalog are their own canonical.
     alternates: filtered
       ? undefined
-      : { canonical: catalogHref({ ...DEFAULT_FILTERS, page: filters.page }) },
+      : {
+          canonical: catalogHref(slug, {
+            ...DEFAULT_FILTERS,
+            page: filters.page,
+          }),
+        },
     robots: filtered ? { index: false, follow: true } : undefined,
     openGraph: {
       type: "website",
@@ -58,20 +67,21 @@ export async function generateMetadata({
       siteName: store.name,
       title: store.headline || store.name,
       description,
-      url: "/",
+      url: storePath(slug),
       images: cover ? [{ url: cover.og, width: 1200, height: 630 }] : undefined,
     },
     twitter: { card: cover ? "summary_large_image" : "summary" },
   };
 }
 
-export default async function CatalogPage({ searchParams }: PageProps) {
+export default async function CatalogPage({ params, searchParams }: PageProps) {
+  const { slug } = await params;
   const filters = parseCatalogParams(await searchParams);
   // getListings throws when the store is missing, so notFound must win over a
   // listings rejection: settle both and check the store first.
   const [storeResult, listingsResult] = await Promise.allSettled([
-    getStore(),
-    getListings(filters),
+    getStore(slug),
+    getListings(slug, filters),
   ]);
   if (storeResult.status === "rejected") throw storeResult.reason;
   const store = storeResult.value;
@@ -81,13 +91,15 @@ export default async function CatalogPage({ searchParams }: PageProps) {
   // A page past the end (old link, edited URL) shows the first page instead
   // of an empty catalog.
   if (results.items.length === 0 && results.total > 0 && filters.page > 1) {
-    redirect(catalogHref({ ...filters, page: 1 }));
+    redirect(catalogHref(slug, { ...filters, page: 1 }));
   }
 
   const filtered = hasActiveFilters(filters);
   const chips = activeFilterChips(
+    slug,
     filters,
-    (slug) => store.categories.find((category) => category.slug === slug)?.name,
+    (categorySlug) =>
+      store.categories.find((category) => category.slug === categorySlug)?.name,
   );
   const contactHref =
     store.sellers
@@ -95,7 +107,7 @@ export default async function CatalogPage({ searchParams }: PageProps) {
       .find((href) => href !== null) ?? null;
   return (
     <>
-      <RememberCatalogView href={catalogHref(filters)} />
+      <RememberCatalogView href={catalogHref(slug, filters)} />
       <StoreHeader store={store} compact={filtered || filters.page > 1} />
       <main
         id="catalogo"
@@ -103,20 +115,24 @@ export default async function CatalogPage({ searchParams }: PageProps) {
       >
         <div className="sticky top-0 z-30 -mx-4 bg-paper/90 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-paper/75 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
           <div className="flex items-center gap-2">
-            <SearchForm filters={filters} />
+            <SearchForm storeSlug={slug} filters={filters} />
             <FiltersSheet activeCount={activeFilterCount(filters)}>
-              <FilterForm filters={filters} />
+              <FilterForm storeSlug={slug} filters={filters} />
             </FiltersSheet>
           </div>
           <div className="mt-3">
-            <CategoryChips categories={store.categories} filters={filters} />
+            <CategoryChips
+              storeSlug={slug}
+              categories={store.categories}
+              filters={filters}
+            />
           </div>
         </div>
 
         <div className="mt-6 lg:grid lg:grid-cols-[16rem_1fr] lg:gap-10">
           <aside className="hidden lg:block" aria-label="Filtros">
             <div className="sticky top-36">
-              <FilterForm filters={filters} />
+              <FilterForm storeSlug={slug} filters={filters} />
             </div>
           </aside>
 
@@ -131,16 +147,21 @@ export default async function CatalogPage({ searchParams }: PageProps) {
                   {pluralize(results.total, "item", "itens")}
                 </span>
               </h2>
-              <ActiveFilters chips={chips} />
+              <ActiveFilters storeSlug={slug} chips={chips} />
             </div>
 
             {results.items.length === 0 ? (
-              <EmptyState filtered={filtered} contactHref={contactHref} />
+              <EmptyState
+                storeSlug={slug}
+                filtered={filtered}
+                contactHref={contactHref}
+              />
             ) : (
               <ul className="grid grid-cols-2 gap-x-4 gap-y-12 sm:grid-cols-3 sm:gap-x-6 xl:grid-cols-4">
                 {results.items.map((listing, index) => (
                   <li key={listing.slug}>
                     <ListingCard
+                      storeSlug={slug}
                       listing={listing}
                       priority={index < 4}
                       fetchPriority={index === 0 ? "high" : undefined}
@@ -151,6 +172,7 @@ export default async function CatalogPage({ searchParams }: PageProps) {
             )}
 
             <Pagination
+              storeSlug={slug}
               filters={filters}
               total={results.total}
               pageSize={PAGE_SIZE}

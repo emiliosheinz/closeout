@@ -17,7 +17,7 @@ import {
   joinNames,
   PUBLICATION_LABELS,
 } from "@/lib/format";
-import { listingPath } from "@/lib/site";
+import { itemPath } from "@/lib/site";
 import { ConfirmDialog } from "./confirm-dialog";
 
 const PUBLICATIONS: Publication[] = ["draft", "published", "archived"];
@@ -30,10 +30,12 @@ const selectClass =
  */
 export function ListingRows({
   storeId,
+  storeSlug,
   listings,
   unreachableSellerIds = [],
 }: {
   storeId: string;
+  storeSlug: string;
   listings: AdminListingSummary[];
   /** Sellers without a WhatsApp number; an item none of whose sellers has one shows no contact button. */
   unreachableSellerIds?: string[];
@@ -217,7 +219,7 @@ export function ListingRows({
               <a
                 href={
                   listing.publication === "published"
-                    ? listingPath(listing.slug)
+                    ? itemPath(storeSlug, listing.slug)
                     : `/admin/anuncios/${listing.id}/previa`
                 }
                 target="_blank"

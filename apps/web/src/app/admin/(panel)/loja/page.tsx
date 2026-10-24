@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { StoreSettingsForm } from "@/components/admin/store-settings-form";
 import { requireAdmin } from "@/lib/admin/current-store";
-import { absoluteUrl } from "@/lib/site";
+import { absoluteUrl, storePath } from "@/lib/site";
 
 export const metadata: Metadata = { title: "Loja" };
 
@@ -14,7 +14,10 @@ export default async function StorePage() {
         O que aparece no topo da página que vocês compartilham.
       </p>
       <div className="mt-8">
-        <StoreSettingsForm store={store} storeUrl={absoluteUrl("/")} />
+        <StoreSettingsForm
+          store={store}
+          storeUrl={absoluteUrl(storePath(store.slug))}
+        />
       </div>
     </>
   );

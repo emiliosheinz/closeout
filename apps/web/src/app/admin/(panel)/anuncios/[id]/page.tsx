@@ -8,7 +8,7 @@ import { requireAdmin } from "@/lib/admin/current-store";
 import { listingFormOptions } from "@/lib/admin/form-data";
 import { adminGet, isUuid } from "@/lib/admin/server-api";
 import type { AdminListingDetail } from "@/lib/admin/types";
-import { listingPath } from "@/lib/site";
+import { itemPath } from "@/lib/site";
 
 export const metadata: Metadata = { title: "Editar anúncio" };
 
@@ -54,7 +54,7 @@ export default async function EditListingPage({
         <a
           href={
             listing.publication === "published"
-              ? listingPath(listing.slug)
+              ? itemPath(store.slug, listing.slug)
               : `/admin/anuncios/${listing.id}/previa`
           }
           target="_blank"

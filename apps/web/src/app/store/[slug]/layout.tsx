@@ -3,11 +3,15 @@ import type { ReactNode } from "react";
 import { getStore } from "@/lib/catalog/api";
 
 // Checked above loading.tsx: once its shell streams, the status is fixed at 200.
-export default async function CatalogLayout({
+// An unknown store falls through to the site-wide not-found page.
+export default async function StoreLayout({
   children,
+  params,
 }: {
   children: ReactNode;
+  params: Promise<{ slug: string }>;
 }) {
-  if (!(await getStore())) notFound();
+  const { slug } = await params;
+  if (!(await getStore(slug))) notFound();
   return children;
 }

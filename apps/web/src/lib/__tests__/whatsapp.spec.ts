@@ -5,10 +5,10 @@ describe("listingContactUrl", () => {
     const url = listingContactUrl(
       "5511999998888",
       "Mesa & cadeiras",
-      "https://loja.example/itens/mesa-cadeiras-abc123",
+      "https://loja.example/store/loja/items/mesa-cadeiras-abc123",
     );
     expect(url).toBe(
-      "https://wa.me/5511999998888?text=Oi!%20Tenho%20interesse%20no%20item%20%22Mesa%20%26%20cadeiras%22%20que%20vi%20no%20cat%C3%A1logo%20de%20voc%C3%AAs%3A%20https%3A%2F%2Floja.example%2Fitens%2Fmesa-cadeiras-abc123.%20Ele%20ainda%20est%C3%A1%20dispon%C3%ADvel%3F",
+      "https://wa.me/5511999998888?text=Oi!%20Tenho%20interesse%20no%20item%20%22Mesa%20%26%20cadeiras%22%20que%20vi%20no%20cat%C3%A1logo%20de%20voc%C3%AAs%3A%20https%3A%2F%2Floja.example%2Fstore%2Floja%2Fitems%2Fmesa-cadeiras-abc123.%20Ele%20ainda%20est%C3%A1%20dispon%C3%ADvel%3F",
     );
   });
 

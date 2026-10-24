@@ -11,7 +11,6 @@ const REQUIRED_ENV = [
   "API_BASE_URL",
   "PUBLIC_BASE_URL",
   "INTERNAL_API_SECRET",
-  "STORE_SLUG",
 ] as const;
 
 const URL_ENV = new Set<string>(["API_BASE_URL", "PUBLIC_BASE_URL"]);

@@ -28,7 +28,7 @@ export default async function PreviewPage({
         Pré-visualização: é assim que o anúncio vai aparecer depois de
         publicado.
       </p>
-      <ListingView listing={listing} />
+      <ListingView storeSlug={store.slug} listing={listing} />
     </>
   );
 }

@@ -128,6 +128,7 @@ export default async function DashboardPage({
         {shown.length > 0 ? (
           <ListingRows
             storeId={store.id}
+            storeSlug={store.slug}
             listings={shown}
             unreachableSellerIds={unreachableSellerIds}
           />

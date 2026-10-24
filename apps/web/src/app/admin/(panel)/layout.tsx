@@ -9,7 +9,7 @@ export default async function PanelLayout({
   const { store } = await requireAdmin();
   return (
     <>
-      <AdminNav storeName={store.name} />
+      <AdminNav storeName={store.name} storeSlug={store.slug} />
       <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">{children}</main>
     </>
   );
