@@ -330,4 +330,43 @@ describe("ListingForm", () => {
       expect(revokeObjectURL).toHaveBeenCalledWith("blob:preview-1");
     });
   });
+
+  it("picks the category from the keyboard and saves it", async () => {
+    apiMock.mockResolvedValue({ id: "new-listing" });
+    render(
+      <ListingForm
+        storeId="store"
+        categories={[
+          { id: "c1", slug: "moveis", name: "Móveis" },
+          { id: "c2", slug: "livros", name: "Livros" },
+        ]}
+        sellers={sellers}
+        ownSellerId="bia"
+        canAssignSellers={false}
+      />,
+    );
+    const category = screen.getByRole("combobox", { name: "Categoria" });
+    expect(category).toHaveTextContent("Móveis");
+    category.focus();
+    fireEvent.keyDown(category, { key: "Enter" });
+    await screen.findByRole("listbox");
+    const options = screen.getAllByRole("option");
+    await waitFor(() => expect(options[0]).toHaveFocus());
+    fireEvent.keyDown(options[0] as HTMLElement, { key: "ArrowDown" });
+    await waitFor(() => expect(options[1]).toHaveFocus());
+    fireEvent.keyDown(options[1] as HTMLElement, { key: "Enter" });
+
+    await waitFor(() => expect(category).toHaveTextContent("Livros"));
+    fireEvent.change(screen.getByLabelText("Nome do item"), {
+      target: { value: "Livro" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Salvar rascunho" }));
+    await waitFor(() =>
+      expect(apiMock).toHaveBeenCalledWith(
+        "POST",
+        "/stores/store/listings",
+        expect.objectContaining({ categoryId: "c2" }),
+      ),
+    );
+  });
 });

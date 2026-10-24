@@ -1,10 +1,19 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import type { MockedFunction } from "vitest";
 import type { AdminListingSummary } from "@/entities/listing";
+import { api } from "@/shared/api";
 import { ListingRows } from "../listing-rows";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
 }));
+
+vi.mock("@/shared/api", async () => ({
+  ...(await vi.importActual("@/shared/api")),
+  api: vi.fn(),
+}));
+
+const apiMock = api as MockedFunction<typeof api>;
 
 const row = (
   id: string,
@@ -73,5 +82,61 @@ describe("ListingRows", () => {
     expect(
       screen.getByRole("link", { name: "Pré-visualizar Item b" }),
     ).toHaveAttribute("href", "/admin/anuncios/b/previa");
+  });
+
+  it("names each status control after its item and shows the selected label", () => {
+    render(
+      <ListingRows
+        storeId="store"
+        storeSlug="loja"
+        listings={[row("a", []), row("b", [], "draft")]}
+      />,
+    );
+    expect(
+      screen.getByRole("combobox", { name: "Publicação de Item a" }),
+    ).toHaveTextContent("Publicado");
+    expect(
+      screen.getByRole("combobox", { name: "Publicação de Item b" }),
+    ).toHaveTextContent("Rascunho");
+    expect(
+      screen.getByRole("combobox", { name: "Disponibilidade de Item a" }),
+    ).toHaveTextContent("Disponível");
+  });
+
+  it("changes availability from the keyboard: open, move, select", async () => {
+    apiMock.mockReset();
+    apiMock.mockResolvedValue(undefined);
+    render(
+      <ListingRows
+        storeId="store"
+        storeSlug="loja"
+        listings={[row("a", [])]}
+      />,
+    );
+    const select = screen.getByRole("combobox", {
+      name: "Disponibilidade de Item a",
+    });
+    select.focus();
+    fireEvent.keyDown(select, { key: "Enter" });
+
+    await screen.findByRole("listbox");
+    const options = screen.getAllByRole("option");
+    expect(options.map((option) => option.textContent)).toEqual([
+      "Disponível",
+      "Reservado",
+      "Vendido",
+    ]);
+    await waitFor(() => expect(options[0]).toHaveFocus());
+    fireEvent.keyDown(options[0] as HTMLElement, { key: "ArrowDown" });
+    await waitFor(() => expect(options[1]).toHaveFocus());
+    fireEvent.keyDown(options[1] as HTMLElement, { key: "Enter" });
+
+    await waitFor(() =>
+      expect(apiMock).toHaveBeenCalledWith(
+        "PATCH",
+        "/stores/store/listings/a/status",
+        { availability: "reserved" },
+      ),
+    );
   });
 });

@@ -28,7 +28,17 @@ import { centsToInput, parsePriceToCents } from "@/shared/lib/money";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
 import { Field, inputClass } from "@/shared/ui/field";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/ui/select";
 import { createListingWithPhotos } from "../api/create-listing";
+
+const selectTriggerClass =
+  "h-11 border-line-strong bg-surface px-3 text-base text-ink shadow-none";
 
 interface ListingFormProps {
   storeId: string;
@@ -294,18 +304,18 @@ export function ListingForm({
           </label>
         </Field>
         <Field label="Categoria" htmlFor="category">
-          <select
-            id="category"
-            value={categoryId}
-            onChange={(e) => setCategoryId(e.target.value)}
-            className={inputClass}
-          >
-            {categories.map((category) => (
-              <option key={category.id} value={category.id}>
-                {category.name}
-              </option>
-            ))}
-          </select>
+          <Select value={categoryId} onValueChange={setCategoryId}>
+            <SelectTrigger id="category" className={selectTriggerClass}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {categories.map((category) => (
+                <SelectItem key={category.id} value={category.id}>
+                  {category.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </Field>
       </div>
 
@@ -468,32 +478,38 @@ export function ListingForm({
       {editing && (
         <div className="grid gap-6 sm:grid-cols-2">
           <Field label="Publicação" htmlFor="publication">
-            <select
-              id="publication"
+            <Select
               value={publication}
-              onChange={(e) => setPublication(e.target.value as Publication)}
-              className={inputClass}
+              onValueChange={(next) => setPublication(next as Publication)}
             >
-              {PUBLICATIONS.map((value) => (
-                <option key={value} value={value}>
-                  {PUBLICATION_LABELS[value]}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger id="publication" className={selectTriggerClass}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {PUBLICATIONS.map((value) => (
+                  <SelectItem key={value} value={value}>
+                    {PUBLICATION_LABELS[value]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </Field>
           <Field label="Disponibilidade" htmlFor="availability">
-            <select
-              id="availability"
+            <Select
               value={availability}
-              onChange={(e) => setAvailability(e.target.value as Availability)}
-              className={inputClass}
+              onValueChange={(next) => setAvailability(next as Availability)}
             >
-              {AVAILABILITIES.map((value) => (
-                <option key={value} value={value}>
-                  {AVAILABILITY_LABELS[value]}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger id="availability" className={selectTriggerClass}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {AVAILABILITIES.map((value) => (
+                  <SelectItem key={value} value={value}>
+                    {AVAILABILITY_LABELS[value]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </Field>
         </div>
       )}

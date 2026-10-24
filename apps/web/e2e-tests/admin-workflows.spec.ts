@@ -32,8 +32,12 @@ test.describe
 
       await expect(page.getByText("Alterações salvas.")).toBeVisible();
       editUrl = page.url().split("?")[0] ?? "";
-      await expect(page.getByLabel("Publicação")).toHaveValue("draft");
-      await expect(page.getByLabel("Disponibilidade")).toHaveValue("available");
+      await expect(
+        page.getByRole("combobox", { name: "Publicação" }),
+      ).toHaveText("Rascunho");
+      await expect(
+        page.getByRole("combobox", { name: "Disponibilidade" }),
+      ).toHaveText("Disponível");
       await expect(page.getByLabel("Preço (R$)")).toHaveValue("");
 
       await page.goto("/admin");
@@ -181,7 +185,7 @@ test.describe
       await page
         .getByRole("button", { name: `Excluir ${TITLE}`, exact: true })
         .click();
-      const dialog = page.getByRole("dialog");
+      const dialog = page.getByRole("alertdialog");
       await expect(dialog).toContainText(
         "o link compartilhado deixa de funcionar",
       );

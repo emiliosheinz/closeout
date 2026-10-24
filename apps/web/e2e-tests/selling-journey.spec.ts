@@ -21,9 +21,11 @@ test.describe
       await hydrated(page);
       await page.getByLabel("Nome do item").fill(TITLE);
       await page.getByLabel("Preço (R$)").fill("1.234,50");
-      await page
-        .getByLabel("Categoria")
-        .selectOption({ label: "Casa e decoração" });
+      await page.getByRole("combobox", { name: "Categoria" }).click();
+      await page.getByRole("option", { name: "Casa e decoração" }).click();
+      await expect(
+        page.getByRole("combobox", { name: "Categoria" }),
+      ).toHaveText("Casa e decoração");
       await page.getByLabel("Descrição").fill("Luz quente, cúpula de linho.");
       const photo = await samplePhoto(page);
       await page.locator("#photos").setInputFiles([
@@ -153,7 +155,12 @@ test.describe
       const row = page
         .getByTestId("admin-listing-row")
         .filter({ hasText: TITLE });
-      await row.getByLabel("Disponibilidade").selectOption("reserved");
+      const availability = row.getByRole("combobox", {
+        name: `Disponibilidade de ${TITLE}`,
+      });
+      await availability.click();
+      await page.getByRole("option", { name: "Reservado" }).click();
+      await expect(availability).toHaveText("Reservado");
       await expect(
         page.getByText(`"${TITLE}" marcado como reservado.`),
       ).toBeVisible();
@@ -164,7 +171,9 @@ test.describe
         visitor.getByRole("article").filter({ hasText: TITLE }),
       ).toContainText("Reservado");
 
-      await row.getByLabel("Disponibilidade").selectOption("sold");
+      await availability.click();
+      await page.getByRole("option", { name: "Vendido" }).click();
+      await expect(availability).toHaveText("Vendido");
       await expect(
         page.getByText(`"${TITLE}" marcado como vendido.`),
       ).toBeVisible();

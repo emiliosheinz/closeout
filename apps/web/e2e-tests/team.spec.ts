@@ -144,7 +144,11 @@ test.describe
       ).toBeVisible();
 
       await hydrated(page);
-      await page.getByLabel("Publicação").selectOption("draft");
+      await page.getByRole("combobox", { name: "Publicação" }).click();
+      await page.getByRole("option", { name: "Rascunho" }).click();
+      await expect(
+        page.getByRole("combobox", { name: "Publicação" }),
+      ).toHaveText("Rascunho");
       await page.getByRole("button", { name: "Salvar alterações" }).click();
       await expect(page.getByText("Alterações salvas.")).toBeVisible();
       await visitor.goto(search);
@@ -275,7 +279,7 @@ test.describe
         .click();
       await page.getByRole("menuitem", { name: "Remover" }).click();
       await page
-        .getByRole("dialog")
+        .getByRole("alertdialog")
         .getByRole("button", { name: "Remover da equipe" })
         .click();
       await expect(card).toHaveCount(0);

@@ -20,9 +20,16 @@ import {
 } from "@/shared/lib/format";
 import { itemPath } from "@/shared/lib/site";
 import { ConfirmDialog } from "@/shared/ui/confirm-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/ui/select";
 
-const selectClass =
-  "h-11 w-full rounded-md border border-line bg-surface px-2 text-sm font-medium text-ink";
+const selectTriggerClass =
+  "h-11 border-line bg-surface px-2 text-sm font-medium text-ink shadow-none";
 
 /**
  * Listing table with inline status changes, so marking an item reserved or
@@ -56,36 +63,35 @@ export function ListingRows({
     if (busyId) return;
     setBusyId(id);
     setMessage(null);
-    try {
-      await action();
-      setMessage({ text: success, error: false });
-      router.refresh();
-    } catch (err) {
-      setMessage({
-        text: err instanceof Error ? err.message : "Algo deu errado.",
-        error: true,
-      });
-    } finally {
-      setBusyId(null);
+    const failure = await action().then(
+      () => null,
+      (err: unknown) =>
+        err instanceof Error ? err.message : "Algo deu errado.",
+    );
+    setBusyId(null);
+    if (failure) {
+      setMessage({ text: failure, error: true });
+      return;
     }
+    setMessage({ text: success, error: false });
+    router.refresh();
   }
 
   async function duplicate(listing: AdminListingSummary) {
     if (busyId) return;
     setBusyId(listing.id);
-    try {
-      const copy = await api<{ id: string }>(
-        "POST",
-        `${base}/${listing.id}/duplicate`,
-      );
-      router.push(`/admin/anuncios/${copy.id}?copiado=1`);
-    } catch (err) {
+    const copy = await api<{ id: string }>(
+      "POST",
+      `${base}/${listing.id}/duplicate`,
+    ).catch((err: unknown) => {
       setBusyId(null);
       setMessage({
         text: err instanceof Error ? err.message : "Algo deu errado.",
         error: true,
       });
-    }
+      return null;
+    });
+    if (copy) router.push(`/admin/anuncios/${copy.id}?copiado=1`);
   }
 
   return (
@@ -161,52 +167,66 @@ export function ListingRows({
                 )}
             </div>
             <div className="col-span-2 grid grid-cols-2 gap-3 md:col-span-1 md:flex">
-              <label className="flex min-w-0 flex-col gap-1 text-xs text-muted md:w-36">
-                Publicação
-                <select
-                  className={selectClass}
+              <div className="flex min-w-0 flex-col gap-1 text-xs text-muted md:w-36">
+                <span aria-hidden="true">Publicação</span>
+                <Select
                   value={listing.publication}
-                  onChange={(event) =>
+                  onValueChange={(next) =>
                     run(
                       listing.id,
                       () =>
                         api("PATCH", `${base}/${listing.id}/status`, {
-                          publication: event.target.value,
+                          publication: next,
                         }),
-                      `"${listing.title}" agora está ${PUBLICATION_LABELS[event.target.value as Publication].toLowerCase()}.`,
+                      `"${listing.title}" agora está ${PUBLICATION_LABELS[next as Publication].toLowerCase()}.`,
                     )
                   }
                 >
-                  {PUBLICATIONS.map((p) => (
-                    <option key={p} value={p}>
-                      {PUBLICATION_LABELS[p]}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="flex min-w-0 flex-col gap-1 text-xs text-muted md:w-36">
-                Disponibilidade
-                <select
-                  className={selectClass}
+                  <SelectTrigger
+                    aria-label={`Publicação de ${listing.title}`}
+                    className={selectTriggerClass}
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PUBLICATIONS.map((p) => (
+                      <SelectItem key={p} value={p}>
+                        {PUBLICATION_LABELS[p]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex min-w-0 flex-col gap-1 text-xs text-muted md:w-36">
+                <span aria-hidden="true">Disponibilidade</span>
+                <Select
                   value={listing.availability}
-                  onChange={(event) =>
+                  onValueChange={(next) =>
                     run(
                       listing.id,
                       () =>
                         api("PATCH", `${base}/${listing.id}/status`, {
-                          availability: event.target.value,
+                          availability: next,
                         }),
-                      `"${listing.title}" marcado como ${AVAILABILITY_LABELS[event.target.value as Availability].toLowerCase()}.`,
+                      `"${listing.title}" marcado como ${AVAILABILITY_LABELS[next as Availability].toLowerCase()}.`,
                     )
                   }
                 >
-                  {AVAILABILITIES.map((a) => (
-                    <option key={a} value={a}>
-                      {AVAILABILITY_LABELS[a]}
-                    </option>
-                  ))}
-                </select>
-              </label>
+                  <SelectTrigger
+                    aria-label={`Disponibilidade de ${listing.title}`}
+                    className={selectTriggerClass}
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {AVAILABILITIES.map((a) => (
+                      <SelectItem key={a} value={a}>
+                        {AVAILABILITY_LABELS[a]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <div className="col-span-2 flex flex-wrap gap-1 md:col-span-1 md:justify-end">
               <Link
