@@ -28,7 +28,7 @@
   "src/lib/__tests__/format.spec.ts": "src/shared/lib/__tests__/format.spec.ts",
   "src/lib/__tests__/site.spec.ts": "src/shared/lib/__tests__/site.spec.ts",
   "src/lib/__tests__/whatsapp.spec.ts": "src/shared/lib/__tests__/whatsapp.spec.ts",
-  "src/lib/admin/__tests__/client-api.spec.ts": "src/shared/api/__tests__/client-api.spec.ts",
+  "src/lib/admin/__tests__/client-api.spec.ts": "src/shared/api/http/__tests__/http.spec.ts",
   "src/lib/admin/__tests__/current-store.spec.ts": "src/entities/session/model/__tests__/is-manager.spec.ts",
   "src/lib/admin/__tests__/money.spec.ts": "src/shared/lib/__tests__/money.spec.ts",
   "src/lib/admin/__tests__/origin.spec.ts": "src/shared/lib/__tests__/origin.spec.ts",

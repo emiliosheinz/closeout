@@ -12,6 +12,7 @@ import {
   publicListingPageSchema,
   sellerRequestSchema,
   sellerSchema,
+  sessionResponseSchema,
   storeRequestSchema,
   teamMemberSchema,
 } from "../schemas";
@@ -319,5 +320,29 @@ describe("request messages", () => {
     expect(
       messageFor(sellerRequestSchema.safeParse({ displayName: " " })),
     ).toBe("Informe o nome.");
+  });
+
+  it("accepts a session response and ignores unknown keys", () => {
+    const body = {
+      sessionToken: "tok",
+      expiresAt: "2026-01-01T00:00:00.000Z",
+      extra: 1,
+    };
+    expect(sessionResponseSchema.parse(body)).toEqual({
+      sessionToken: "tok",
+      expiresAt: "2026-01-01T00:00:00.000Z",
+    });
+  });
+
+  it("rejects a session response without a usable token or expiry", () => {
+    const expiresAt = "2026-01-01T00:00:00.000Z";
+    for (const body of [
+      {},
+      { expiresAt },
+      { sessionToken: "", expiresAt },
+      { sessionToken: "tok", expiresAt: "tomorrow" },
+    ]) {
+      expect(sessionResponseSchema.safeParse(body).success).toBe(false);
+    }
   });
 });

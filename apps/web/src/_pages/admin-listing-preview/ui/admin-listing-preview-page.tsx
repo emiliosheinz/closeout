@@ -1,6 +1,6 @@
+import { publicListingDetailSchema } from "@closeout/contracts/schemas";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import type { ListingDetail } from "@/entities/listing";
 import { requireMember } from "@/entities/session/index.server";
 import { adminGet, isUuid } from "@/shared/api/index.server";
 import { ListingView } from "@/widgets/listing-view";
@@ -15,8 +15,9 @@ export async function PreviewPage({
   const { id } = await params;
   if (!isUuid(id)) notFound();
   const { store } = await requireMember();
-  const listing = await adminGet<ListingDetail>(
+  const listing = await adminGet(
     `/stores/${store.id}/listings/${id}/preview`,
+    publicListingDetailSchema,
   );
   if (!listing) notFound();
   return (

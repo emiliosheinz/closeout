@@ -1,4 +1,5 @@
-import { api } from "@/shared/api";
+import { adminImageSchema } from "@closeout/contracts/schemas";
+import { apiParsed, listOf } from "@/shared/api";
 import type { AdminImage } from "../model/types";
 
 /** Matches the API's per-request upload limit. */
@@ -12,7 +13,8 @@ export async function uploadPhotos(
   onBatch: (progress: {
     done: number;
     total: number;
-    images: AdminImage[];
+    /** Absent when the API's answer could not be read; the upload still happened. */
+    images?: AdminImage[];
   }) => void,
 ): Promise<void> {
   for (let i = 0; i < files.length; i += MAX_FILES_PER_UPLOAD) {
@@ -20,15 +22,16 @@ export async function uploadPhotos(
     for (const file of files.slice(i, i + MAX_FILES_PER_UPLOAD)) {
       body.append("files", file);
     }
-    const { items } = await api<{ items: AdminImage[] }>(
+    const result = await apiParsed(
       "POST",
       `/stores/${storeId}/listings/${listingId}/images`,
       body,
+      listOf(adminImageSchema),
     );
     onBatch({
       done: Math.min(i + MAX_FILES_PER_UPLOAD, files.length),
       total: files.length,
-      images: items,
+      images: result.parsed ? result.data.items : undefined,
     });
   }
 }

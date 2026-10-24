@@ -1,3 +1,4 @@
+import { sessionResponseSchema } from "@closeout/contracts/schemas";
 import { type NextRequest, NextResponse } from "next/server";
 import {
   readJsonObject,
@@ -44,10 +45,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message }, { status: response.status });
   }
 
-  const { sessionToken, expiresAt } = (await response.json()) as {
-    sessionToken: string;
-    expiresAt: string;
-  };
+  const session = sessionResponseSchema.safeParse(await response.json());
+  if (!session.success) {
+    console.error("Session response failed its schema", session.error);
+    return NextResponse.json(
+      { message: "Não foi possível entrar agora." },
+      { status: 502 },
+    );
+  }
+  const { sessionToken, expiresAt } = session.data;
   const result = NextResponse.json({ ok: true });
   setSessionCookie(result.cookies, sessionToken, new Date(expiresAt));
   return result;

@@ -7,7 +7,7 @@ import {
 } from "@testing-library/react";
 import type { MockedFunction } from "vitest";
 import type { TeamMember } from "@/entities/member";
-import { ApiError, api } from "@/shared/api";
+import { ApiError, api, apiParsed } from "@/shared/api";
 import { TeamView } from "../team-view";
 
 vi.mock("next/navigation", () => ({
@@ -17,9 +17,11 @@ vi.mock("next/navigation", () => ({
 vi.mock("@/shared/api", async () => ({
   ...(await vi.importActual("@/shared/api")),
   api: vi.fn(),
+  apiParsed: vi.fn(),
 }));
 
 const apiMock = api as MockedFunction<typeof api>;
+const parsedMock = apiParsed as MockedFunction<typeof apiParsed>;
 
 const member = (
   userId: string,
@@ -62,6 +64,7 @@ const openMenu = (label: string) => {
 describe("TeamView for a manager", () => {
   beforeEach(() => {
     apiMock.mockReset();
+    parsedMock.mockReset();
   });
 
   const renderManager = () =>
@@ -265,9 +268,12 @@ describe("TeamView for a manager", () => {
   });
 
   it("shows the invite link after creating an invite", async () => {
-    apiMock.mockResolvedValue({
-      invite: { id: "inv-2", email: "eva@loja.test", role: "seller" },
-      link: "https://closeout.test/invite/xyz",
+    parsedMock.mockResolvedValue({
+      parsed: true,
+      data: {
+        invite: { id: "inv-2", email: "eva@loja.test", role: "seller" },
+        link: "https://closeout.test/invite/xyz",
+      },
     });
     renderManager();
     fireEvent.click(screen.getByRole("button", { name: "Convidar pessoas" }));
@@ -278,10 +284,12 @@ describe("TeamView for a manager", () => {
     expect(
       await screen.findByRole("dialog", { name: "Convite para eva@loja.test" }),
     ).toBeInTheDocument();
-    expect(apiMock).toHaveBeenCalledWith("POST", "/stores/store/invites", {
-      email: "eva@loja.test",
-      role: "seller",
-    });
+    expect(parsedMock).toHaveBeenCalledWith(
+      "POST",
+      "/stores/store/invites",
+      { email: "eva@loja.test", role: "seller" },
+      expect.anything(),
+    );
   });
 
   it("offers a new link or revocation for a pending invite", async () => {

@@ -1,8 +1,8 @@
+import { adminListingDetailSchema } from "@closeout/contracts/schemas";
 import { ArrowLeft } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import type { AdminListingDetail } from "@/entities/listing";
 import { listingFormOptions } from "@/entities/listing/index.server";
 import { isManager } from "@/entities/session";
 import { requireMember } from "@/entities/session/index.server";
@@ -30,7 +30,7 @@ export async function EditListingPage({
   const query = await searchParams;
   const { store, role, sellerId } = await requireMember();
   const [listing, options] = await Promise.all([
-    adminGet<AdminListingDetail>(`/stores/${store.id}/listings/${id}`),
+    adminGet(`/stores/${store.id}/listings/${id}`, adminListingDetailSchema),
     listingFormOptions(store.id),
   ]);
   if (!listing) notFound();

@@ -11,7 +11,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { AdminListingSummary } from "@/entities/listing";
-import { api } from "@/shared/api";
+import { api, apiParsed, withId } from "@/shared/api";
 import {
   AVAILABILITY_LABELS,
   formatPrice,
@@ -80,9 +80,11 @@ export function ListingRows({
   async function duplicate(listing: AdminListingSummary) {
     if (busyId) return;
     setBusyId(listing.id);
-    const copy = await api<{ id: string }>(
+    const copy = await apiParsed(
       "POST",
       `${base}/${listing.id}/duplicate`,
+      undefined,
+      withId,
     ).catch((err: unknown) => {
       setBusyId(null);
       setMessage({
@@ -91,7 +93,10 @@ export function ListingRows({
       });
       return null;
     });
-    if (copy) router.push(`/admin/anuncios/${copy.id}?copiado=1`);
+    if (!copy) return;
+    router.push(
+      copy.parsed ? `/admin/anuncios/${copy.data.id}?copiado=1` : "/admin",
+    );
   }
 
   return (

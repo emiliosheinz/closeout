@@ -1,14 +1,19 @@
 "use client";
 
+import { adminImageSchema } from "@closeout/contracts/schemas";
 import { ArrowLeft, ArrowRight, Star, Trash2, Upload } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { AdminImage } from "@/entities/listing";
 import { uploadPhotos } from "@/entities/listing";
-import { ApiError, api } from "@/shared/api";
+import { ApiError, apiParsed, listOf, type WriteResult } from "@/shared/api";
 import { cn } from "@/shared/lib/utils";
 
 const MAX_PHOTOS = 20;
+const imageList = listOf(adminImageSchema);
+
+const changeImages = (method: "PUT" | "DELETE", path: string, body?: unknown) =>
+  apiParsed(method, path, body, imageList);
 
 /**
  * Photos of an existing listing: upload more, pick the cover (first
@@ -34,14 +39,14 @@ export function PhotoManager({
   const base = `/stores/${storeId}/listings/${listingId}/images`;
 
   async function act(
-    action: () => Promise<{ items: AdminImage[] }>,
+    action: () => Promise<WriteResult<{ items: AdminImage[] }>>,
     success: string,
   ) {
     setBusy(true);
     setStatus(null);
     try {
-      const { items } = await action();
-      setImages(items);
+      const result = await action();
+      if (result.parsed) setImages(result.data.items);
       setStatus({ text: success, error: false });
       router.refresh();
     } catch (err) {
@@ -70,15 +75,17 @@ export function PhotoManager({
           ({ done, total, images: items }) => {
             // Keep the list in step with the server after every batch, so a
             // later failing batch cannot leave the screen behind the server.
-            latest = items;
-            setImages(items);
+            if (items) {
+              latest = items;
+              setImages(items);
+            }
             setStatus({
               text: `Enviando ${done} de ${total}...`,
               error: false,
             });
           },
         );
-        return { items: latest };
+        return { parsed: true, data: { items: latest } };
       },
       files.length === 1
         ? "Foto adicionada."
@@ -87,7 +94,7 @@ export function PhotoManager({
   }
 
   function reorder(ids: string[], success: string) {
-    return act(() => api("PUT", `${base}/order`, { ids }), success);
+    return act(() => changeImages("PUT", `${base}/order`, { ids }), success);
   }
 
   function move(index: number, to: number) {
@@ -206,7 +213,7 @@ export function PhotoManager({
                   disabled={busy}
                   onClick={() =>
                     act(
-                      () => api("DELETE", `${base}/${image.id}`),
+                      () => changeImages("DELETE", `${base}/${image.id}`),
                       "Foto removida.",
                     )
                   }

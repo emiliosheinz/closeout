@@ -22,9 +22,19 @@ describe("store layout", () => {
   });
 
   it("renders the store that the path names", async () => {
-    fetchMock = vi
-      .spyOn(global, "fetch")
-      .mockResolvedValue(Response.json({ name: "Loja" }));
+    fetchMock = vi.spyOn(global, "fetch").mockResolvedValue(
+      Response.json({
+        slug: "nosso-desapego",
+        name: "Loja",
+        headline: "",
+        intro: "",
+        locale: "pt-BR",
+        currency: "BRL",
+        counts: { available: 0, reserved: 0, sold: 0 },
+        categories: [],
+        sellers: [],
+      }),
+    );
     await expect(render("nosso-desapego")).resolves.toBe("catalog");
     expect(fetchMock).toHaveBeenCalledWith(
       "http://api:3000/public/stores/nosso-desapego",

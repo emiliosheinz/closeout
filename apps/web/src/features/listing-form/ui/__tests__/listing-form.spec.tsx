@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { MockedFunction } from "vitest";
 import type { AdminListingDetail } from "@/entities/listing";
-import { api } from "@/shared/api";
+import { api, apiParsed } from "@/shared/api";
 import { ListingForm } from "../listing-form";
 
 const { push } = vi.hoisted(() => ({ push: vi.fn() }));
@@ -13,9 +13,11 @@ vi.mock("next/navigation", () => ({
 vi.mock("@/shared/api", async () => ({
   ...(await vi.importActual("@/shared/api")),
   api: vi.fn(),
+  apiParsed: vi.fn(),
 }));
 
 const apiMock = api as MockedFunction<typeof api>;
+const parsedMock = apiParsed as MockedFunction<typeof apiParsed>;
 
 const seller = (id: string, displayName: string) => ({
   id,
@@ -63,6 +65,7 @@ const renderNew = (canAssignSellers = true) =>
 
 beforeEach(() => {
   apiMock.mockReset();
+  parsedMock.mockReset();
   push.mockReset();
 });
 
@@ -112,7 +115,7 @@ describe("ListingForm", () => {
   });
 
   it("shows a seller their own name instead of a picker and lets the API assign them", async () => {
-    apiMock.mockResolvedValue({ id: "new-listing" });
+    parsedMock.mockResolvedValue({ parsed: true, data: { id: "new-listing" } });
     renderNew(false);
     expect(screen.queryAllByRole("checkbox", { name: /Ana|Bia/ })).toHaveLength(
       0,
@@ -124,15 +127,15 @@ describe("ListingForm", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Salvar rascunho" }));
 
-    await waitFor(() => expect(apiMock).toHaveBeenCalled());
-    const [method, path, body] = apiMock.mock.calls[0] ?? [];
+    await waitFor(() => expect(parsedMock).toHaveBeenCalled());
+    const [method, path, body] = parsedMock.mock.calls[0] ?? [];
     expect(method).toBe("POST");
     expect(path).toBe("/stores/store/listings");
     expect(body).not.toHaveProperty("sellerIds");
   });
 
   it("shows a seller every assigned name on an edit and never sends the assignment", async () => {
-    apiMock.mockResolvedValue({});
+    apiMock.mockResolvedValue();
     render(
       <ListingForm
         storeId="store"
@@ -156,7 +159,7 @@ describe("ListingForm", () => {
   });
 
   it("sends the picked sellers when a manager saves", async () => {
-    apiMock.mockResolvedValue({});
+    apiMock.mockResolvedValue();
     render(
       <ListingForm
         storeId="store"
@@ -188,7 +191,7 @@ describe("ListingForm", () => {
       );
 
     it("publishes a draft being edited and lands on its page with the published notice", async () => {
-      apiMock.mockResolvedValue({});
+      apiMock.mockResolvedValue();
       renderEdit("draft");
       fireEvent.click(
         screen.getByRole("button", { name: "Salvar e publicar" }),
@@ -205,7 +208,7 @@ describe("ListingForm", () => {
     });
 
     it("keeps an archived listing archived on a plain save", async () => {
-      apiMock.mockResolvedValue({});
+      apiMock.mockResolvedValue();
       renderEdit("archived");
       fireEvent.click(
         screen.getByRole("button", { name: "Salvar alterações" }),
@@ -220,7 +223,7 @@ describe("ListingForm", () => {
     });
 
     it("keeps a draft a draft on a plain save", async () => {
-      apiMock.mockResolvedValue({});
+      apiMock.mockResolvedValue();
       renderEdit("draft");
       fireEvent.click(
         screen.getByRole("button", { name: "Salvar alterações" }),
@@ -235,7 +238,10 @@ describe("ListingForm", () => {
     });
 
     it("saves a new listing as a draft and opens it with the plain saved notice", async () => {
-      apiMock.mockResolvedValue({ id: "new-listing" });
+      parsedMock.mockResolvedValue({
+        parsed: true,
+        data: { id: "new-listing" },
+      });
       renderNew();
       fireEvent.change(screen.getByLabelText("Nome do item"), {
         target: { value: "Mesa" },
@@ -247,11 +253,15 @@ describe("ListingForm", () => {
           "/admin/anuncios/new-listing?salvo=1",
         ),
       );
-      expect(apiMock).toHaveBeenCalledTimes(1);
+      expect(parsedMock).toHaveBeenCalledTimes(1);
+      expect(apiMock).not.toHaveBeenCalled();
     });
 
     it("publishes a new listing after its photos and opens it with the published notice", async () => {
-      apiMock.mockResolvedValue({ id: "new-listing", items: [] });
+      parsedMock.mockResolvedValue({
+        parsed: true,
+        data: { id: "new-listing", items: [] },
+      });
       const createObjectURL = vi.fn(() => "blob:preview");
       const original = {
         create: URL.createObjectURL,
@@ -288,6 +298,19 @@ describe("ListingForm", () => {
         URL.revokeObjectURL = original.revoke;
       }
     });
+  });
+
+  it("goes to the listings page, without retrying, when the created listing's answer is unreadable", async () => {
+    parsedMock.mockResolvedValue({ parsed: false, data: { oops: true } });
+    renderNew();
+    fireEvent.change(screen.getByLabelText("Nome do item"), {
+      target: { value: "Mesa" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Salvar rascunho" }));
+
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/admin"));
+    expect(parsedMock).toHaveBeenCalledTimes(1);
+    expect(apiMock).not.toHaveBeenCalled();
   });
 
   describe("photo previews", () => {
@@ -349,7 +372,7 @@ describe("ListingForm", () => {
   });
 
   it("picks the category from the keyboard and saves it", async () => {
-    apiMock.mockResolvedValue({ id: "new-listing" });
+    parsedMock.mockResolvedValue({ parsed: true, data: { id: "new-listing" } });
     render(
       <ListingForm
         storeId="store"
@@ -379,16 +402,17 @@ describe("ListingForm", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Salvar rascunho" }));
     await waitFor(() =>
-      expect(apiMock).toHaveBeenCalledWith(
+      expect(parsedMock).toHaveBeenCalledWith(
         "POST",
         "/stores/store/listings",
         expect.objectContaining({ categoryId: "c2" }),
+        expect.anything(),
       ),
     );
   });
 
   it("saves the publication and availability picked by keyboard on an edit", async () => {
-    apiMock.mockResolvedValue({});
+    apiMock.mockResolvedValue();
     render(
       <ListingForm
         storeId="store"

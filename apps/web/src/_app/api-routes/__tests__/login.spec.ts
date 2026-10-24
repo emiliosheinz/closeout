@@ -1,6 +1,8 @@
 /** @vitest-environment node */
+
 import { NextRequest } from "next/server";
 import { POST } from "@/_app/api-routes/login";
+import oracle from "@/test/copy-oracle.json";
 
 beforeEach(() => {
   vi.spyOn(console, "warn").mockImplementation(() => undefined);
@@ -74,6 +76,22 @@ describe("login route body cap", () => {
       password,
     });
     fetchMock.mockRestore();
+  });
+
+  it("sets no cookie and answers with the generic failure when the session body is malformed", async () => {
+    process.env.API_BASE_URL = "http://api:3001";
+    process.env.INTERNAL_API_SECRET = "secret";
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(global, "fetch").mockResolvedValue(
+      Response.json({ sessionToken: "tok" }),
+    );
+    const res = await login(
+      JSON.stringify({ email: "a@b.co", password: "senha" }),
+    );
+    expect(res.status).toBe(502);
+    expect(await res.json()).toEqual({ message: oracle.loginFallback });
+    expect(res.headers.get("set-cookie")).toBeNull();
+    expect(logged).toHaveBeenCalled();
   });
 
   it("answers 400 to a body that is not JSON", async () => {

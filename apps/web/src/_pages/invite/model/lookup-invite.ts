@@ -1,11 +1,10 @@
-import type { AssignableRole } from "@closeout/contracts/enums";
+import {
+  type InviteDetails,
+  inviteDetailsSchema,
+} from "@closeout/contracts/schemas";
 import { apiUrl, internalAuthHeaders } from "@/shared/api/index.server";
 
-export interface InviteDetails {
-  storeName: string;
-  email: string;
-  role: AssignableRole;
-}
+export type { InviteDetails };
 
 export type InviteLookup =
   | { state: "valid"; invite: InviteDetails }
@@ -28,7 +27,12 @@ export async function lookupInvite(
     cache: "no-store",
   });
   if (response.ok) {
-    return { state: "valid", invite: (await response.json()) as InviteDetails };
+    const result = inviteDetailsSchema.safeParse(await response.json());
+    if (!result.success) {
+      console.error("Invite lookup response failed its schema", result.error);
+      throw new Error("Invite lookup response failed its schema");
+    }
+    return { state: "valid", invite: result.data };
   }
   if (response.status === 429) return { state: "too-many" };
   if (response.status === 400 || response.status === 404) {

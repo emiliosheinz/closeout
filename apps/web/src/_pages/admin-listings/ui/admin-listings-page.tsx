@@ -1,11 +1,11 @@
+import {
+  adminListingSummarySchema,
+  dashboardCountsSchema,
+  sellerSchema,
+} from "@closeout/contracts/schemas";
 import { Plus, Search } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import type {
-  AdminListingSummary,
-  DashboardCounts,
-  Seller,
-} from "@/entities/listing";
 import {
   dashboardHref,
   findStatusFilter,
@@ -13,6 +13,7 @@ import {
 } from "@/entities/listing";
 import { requireMember } from "@/entities/session/index.server";
 import { ListingRows } from "@/features/listing-actions";
+import { listOf } from "@/shared/api";
 import { adminGet } from "@/shared/api/index.server";
 import { cn } from "@/shared/lib/utils";
 
@@ -28,11 +29,12 @@ export async function DashboardPage({
   const q = (query.q ?? "").trim().slice(0, 100);
   const status = findStatusFilter(query.status);
   const [counts, listings, sellers] = await Promise.all([
-    adminGet<DashboardCounts>(`/stores/${store.id}/dashboard`),
-    adminGet<{ items: AdminListingSummary[] }>(
+    adminGet(`/stores/${store.id}/dashboard`, dashboardCountsSchema),
+    adminGet(
       `/stores/${store.id}/listings${q ? `?q=${encodeURIComponent(q)}` : ""}`,
+      listOf(adminListingSummarySchema),
     ),
-    adminGet<{ items: Seller[] }>(`/stores/${store.id}/sellers`),
+    adminGet(`/stores/${store.id}/sellers`, listOf(sellerSchema)),
   ]);
   const shown = (listings?.items ?? []).filter(
     (listing) => !status || status.matches(listing),

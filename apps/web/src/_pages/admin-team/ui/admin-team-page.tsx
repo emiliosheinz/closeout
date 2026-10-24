@@ -1,9 +1,14 @@
+import {
+  pendingInviteSchema,
+  sellerSchema,
+  teamMemberSchema,
+} from "@closeout/contracts/schemas";
 import type { Metadata } from "next";
 import type { PendingInvite } from "@/entities/invite";
-import type { Seller } from "@/entities/listing";
 import type { TeamMember } from "@/entities/member";
 import { isManager, type Member } from "@/entities/session";
 import { requireMember } from "@/entities/session/index.server";
+import { listOf } from "@/shared/api";
 import { adminGet } from "@/shared/api/index.server";
 import { TeamView } from "./team-view";
 
@@ -19,13 +24,14 @@ async function loadTeam({ me, store, role, sellerId }: Member): Promise<{
 }> {
   if (isManager(role)) {
     const [team, pending] = await Promise.all([
-      adminGet<{ items: TeamMember[] }>(`/stores/${store.id}/members`),
-      adminGet<{ items: PendingInvite[] }>(`/stores/${store.id}/invites`),
+      adminGet(`/stores/${store.id}/members`, listOf(teamMemberSchema)),
+      adminGet(`/stores/${store.id}/invites`, listOf(pendingInviteSchema)),
     ]);
     return { members: team?.items ?? [], invites: pending?.items ?? [] };
   }
-  const sellers = await adminGet<{ items: Seller[] }>(
+  const sellers = await adminGet(
     `/stores/${store.id}/sellers`,
+    listOf(sellerSchema),
   );
   const own = sellers?.items.find((seller) => seller.id === sellerId);
   if (!own) return { members: [], invites: null };

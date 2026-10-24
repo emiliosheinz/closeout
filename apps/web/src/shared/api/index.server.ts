@@ -1,43 +1,20 @@
 import "server-only";
 
-import { cookies } from "next/headers";
 import { requireEnv } from "@/shared/config/env";
 import {
   CLIENT_IP_HEADER,
   INTERNAL_SECRET_HEADER,
 } from "@/shared/config/internal-headers";
 import { clientIpFrom } from "@/shared/lib/origin";
-import { SESSION_COOKIE_NAME } from "@/shared/lib/session-cookie";
 
+export { adminGet } from "./server/admin-get";
+export { apiUrl } from "./server/api-url";
 export { INTERNAL_SECRET_HEADER };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export function isUuid(value: string): boolean {
   return UUID.test(value);
-}
-
-export function apiUrl(path: string): string {
-  return `${requireEnv("API_BASE_URL").replace(/\/$/, "")}${path}`;
-}
-
-/**
- * Server-side admin request carrying the visitor's session cookie. Returns
- * null on 400/401/404 so pages can redirect or render not-found.
- */
-export async function adminGet<T>(path: string): Promise<T | null> {
-  const token = (await cookies()).get(SESSION_COOKIE_NAME)?.value;
-  if (!token) return null;
-  const response = await fetch(apiUrl(path), {
-    headers: { Cookie: `${SESSION_COOKIE_NAME}=${token}` },
-    cache: "no-store",
-  });
-  // 400 here means a malformed id in the URL: as absent as an unknown one.
-  if ([400, 401, 404].includes(response.status)) return null;
-  if (!response.ok) {
-    throw new Error(`Admin request ${path} failed with ${response.status}`);
-  }
-  return (await response.json()) as T;
 }
 
 /**

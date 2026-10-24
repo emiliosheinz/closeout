@@ -1,5 +1,5 @@
-import { type AdminListingDetail, uploadPhotos } from "@/entities/listing";
-import { api } from "@/shared/api";
+import { uploadPhotos } from "@/entities/listing";
+import { api, apiParsed, withId } from "@/shared/api";
 
 export interface ListingFields {
   title: string;
@@ -15,7 +15,8 @@ export interface ListingFields {
 /**
  * Create a listing, attach its photos and optionally publish it. The id is
  * reported as soon as the listing exists, so a later failure can continue
- * on that listing instead of creating a duplicate.
+ * on that listing instead of creating a duplicate. Resolves null when the
+ * listing was created but the API's answer could not be read.
  */
 export async function createListingWithPhotos(
   storeId: string,
@@ -26,12 +27,17 @@ export async function createListingWithPhotos(
     onCreated: (id: string) => void;
     onProgress: (message: string) => void;
   },
-): Promise<string> {
-  const created = await api<AdminListingDetail>(
+): Promise<string | null> {
+  const result = await apiParsed(
     "POST",
     `/stores/${storeId}/listings`,
     fields,
+    withId,
   );
+  // The listing exists but its id is unknown: carrying on would mean guessing,
+  // and a retry would create a duplicate.
+  if (!result.parsed) return null;
+  const created = result.data;
   options.onCreated(created.id);
   await uploadPhotos(storeId, created.id, files, ({ done, total }) =>
     options.onProgress(`Enviando fotos (${done} de ${total})...`),

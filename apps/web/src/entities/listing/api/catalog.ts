@@ -1,3 +1,11 @@
+import {
+  publicListingDetailSchema,
+  publicListingPageSchema,
+  publicListingSummarySchema,
+  publicStoreIndexSchema,
+  publicStoreSchema,
+} from "@closeout/contracts/schemas";
+import { dropInvalid, itemsEnvelope, type Schema } from "@/shared/api";
 import { requireEnv } from "@/shared/config/env";
 import {
   type CatalogFilters,
@@ -24,6 +32,7 @@ const UNCACHED: RequestInit = { cache: "no-store" };
 
 async function getPublic<T>(
   path: string,
+  schema: Schema<T>,
   init: RequestInit = CACHED,
 ): Promise<T | null> {
   const base = requireEnv("API_BASE_URL").replace(/\/$/, "");
@@ -32,7 +41,12 @@ async function getPublic<T>(
   if (!response.ok) {
     throw new Error(`Catalog request ${path} failed with ${response.status}`);
   }
-  return (await response.json()) as T;
+  const result = schema.safeParse(await response.json());
+  if (!result.success) {
+    console.error(`Catalog response ${path} failed its schema`, result.error);
+    throw new Error(`Catalog response ${path} failed its schema`);
+  }
+  return result.data;
 }
 
 function storeApiPath(slug: string): string {
@@ -40,7 +54,7 @@ function storeApiPath(slug: string): string {
 }
 
 export function getStore(slug: string): Promise<StoreInfo | null> {
-  return getPublic<StoreInfo>(storeApiPath(slug));
+  return getPublic(storeApiPath(slug), publicStoreSchema);
 }
 
 export async function getListings(
@@ -48,26 +62,37 @@ export async function getListings(
   filters: CatalogFilters,
   pageSize = PAGE_SIZE,
 ): Promise<ListingPage> {
-  const page = await getPublic<ListingPage>(
-    `${storeApiPath(slug)}/listings?${toApiQuery(filters, pageSize)}`,
+  const path = `${storeApiPath(slug)}/listings?${toApiQuery(filters, pageSize)}`;
+  const page = await getPublic(
+    path,
+    publicListingPageSchema,
     hasActiveFilters(filters) || filters.page > 1 ? UNCACHED : CACHED,
   );
   if (!page) throw new Error(`Store ${slug} not found`);
-  return page;
+  return {
+    ...page,
+    items: dropInvalid(page.items, publicListingSummarySchema, path),
+    received: page.items.length,
+  };
 }
 
 export function getListing(
   slug: string,
   item: string,
 ): Promise<ListingDetail | null> {
-  return getPublic<ListingDetail>(
+  return getPublic(
     `${storeApiPath(slug)}/listings/${encodeURIComponent(item)}`,
+    publicListingDetailSchema,
   );
 }
 
 /** Slugs of every store, for the sitemap. */
 export async function getStoreSlugs(): Promise<string[]> {
-  const index = await getPublic<{ items: { slug: string }[] }>("", UNCACHED);
+  const index = await getPublic("", itemsEnvelope, UNCACHED);
   if (!index) throw new Error("Store index not found");
-  return index.items.map((store) => store.slug);
+  return dropInvalid(
+    index.items,
+    publicStoreIndexSchema.shape.items.element,
+    "the store index",
+  ).map((store) => store.slug);
 }

@@ -1,7 +1,9 @@
 /** @vitest-environment node */
+
 import { NextRequest } from "next/server";
 import type { MockInstance } from "vitest";
 import { POST } from "@/_app/api-routes/invite";
+import oracle from "@/test/copy-oracle.json";
 
 function accept(body: unknown, headers: Record<string, string> = {}) {
   return POST(
@@ -71,6 +73,18 @@ describe("invite accept route", () => {
     const cookie = res.headers.get("set-cookie") ?? "";
     expect(cookie).toContain("closeout_session=session-abc");
     expect(cookie).toContain("HttpOnly");
+  });
+
+  it("sets no cookie and answers with the generic failure when the session body is malformed", async () => {
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    fetchMock.mockResolvedValue(Response.json({ expiresAt: "2030-01-01" }));
+    const res = await accept(input);
+    expect(res.status).toBe(502);
+    expect(await res.json()).toEqual({
+      message: oracle.inviteAcceptFallback,
+    });
+    expect(res.headers.get("set-cookie")).toBeNull();
+    expect(logged).toHaveBeenCalled();
   });
 
   it("passes the API's messages through with its status and sets no cookie", async () => {

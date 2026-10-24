@@ -1,19 +1,7 @@
 import type { StoreRole } from "@closeout/contracts/enums";
+import type { Me, StoreSettings } from "@closeout/contracts/schemas";
 
-export interface StoreSettings {
-  id: string;
-  slug: string;
-  name: string;
-  headline: string;
-  intro: string;
-  locale: string;
-  currency: string;
-}
-
-export interface Me {
-  user: { id: string; name: string; email: string };
-  memberships: { role: StoreRole; sellerId: string; store: StoreSettings }[];
-}
+export type { Me, StoreSettings };
 
 export interface Member {
   me: Me;

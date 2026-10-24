@@ -41,7 +41,10 @@ describe("team page", () => {
     });
     render(await TeamPage());
     expect(adminGet).toHaveBeenCalledTimes(1);
-    expect(adminGet).toHaveBeenCalledWith("/stores/store-1/sellers");
+    expect(adminGet).toHaveBeenCalledWith(
+      "/stores/store-1/sellers",
+      expect.anything(),
+    );
     expect(screen.getAllByRole("listitem")).toHaveLength(1);
     expect(screen.getByText("Caio Vendedor")).toBeInTheDocument();
     expect(screen.getByText("caio@loja.test")).toBeInTheDocument();
@@ -80,8 +83,14 @@ describe("team page", () => {
         : { items: [] },
     );
     render(await TeamPage());
-    expect(adminGet).toHaveBeenCalledWith("/stores/store-1/members");
-    expect(adminGet).toHaveBeenCalledWith("/stores/store-1/invites");
+    expect(adminGet).toHaveBeenCalledWith(
+      "/stores/store-1/members",
+      expect.anything(),
+    );
+    expect(adminGet).toHaveBeenCalledWith(
+      "/stores/store-1/invites",
+      expect.anything(),
+    );
     expect(screen.getByText("Ana")).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Convidar pessoas" }),

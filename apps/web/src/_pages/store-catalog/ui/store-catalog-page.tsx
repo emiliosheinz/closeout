@@ -96,7 +96,7 @@ export async function CatalogPage({ params, searchParams }: PageProps) {
   const results = listingsResult.value;
   // A page past the end (old link, edited URL) shows the first page instead
   // of an empty catalog.
-  if (results.items.length === 0 && results.total > 0 && filters.page > 1) {
+  if (results.received === 0 && results.total > 0 && filters.page > 1) {
     redirect(catalogHref(slug, { ...filters, page: 1 }));
   }
 

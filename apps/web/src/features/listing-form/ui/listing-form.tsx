@@ -166,13 +166,20 @@ export function ListingForm({
         return;
       }
 
-      id = await createListingWithPhotos(storeId, fields, files, {
+      const created = await createListingWithPhotos(storeId, fields, files, {
         publish,
         onCreated: (createdId) => {
           id = createdId;
         },
         onProgress: setPending,
       });
+      if (created === null) {
+        setPending(null);
+        router.push("/admin");
+        router.refresh();
+        return;
+      }
+      id = created;
       router.push(`/admin/anuncios/${id}?salvo=${savedParam}`);
     } catch (err) {
       setPending(null);

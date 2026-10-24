@@ -1,12 +1,13 @@
 "use client";
 
 import type { AssignableRole } from "@closeout/contracts/enums";
+import { issuedInviteSchema } from "@closeout/contracts/schemas";
 import { Mail, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { IssuedInvite, PendingInvite } from "@/entities/invite";
 import { RoleToggle } from "@/entities/member";
-import { ApiError, api } from "@/shared/api";
+import { ApiError, api, apiParsed } from "@/shared/api";
 import {
   formatDate,
   ROLE_DESCRIPTIONS,
@@ -47,7 +48,7 @@ export function InviteButton({ storeId }: { storeId: string }) {
           onClose={() => setOpen(false)}
           onIssued={(issued) => {
             setOpen(false);
-            setShown(toShown(issued));
+            if (issued) setShown(toShown(issued));
             router.refresh();
           }}
         />
@@ -64,7 +65,8 @@ function InviteDialog({
 }: {
   storeId: string;
   onClose: () => void;
-  onIssued: (issued: IssuedInvite) => void;
+  /** Null when the API created the invite but its link could not be read. */
+  onIssued: (issued: IssuedInvite | null) => void;
 }) {
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<AssignableRole>("seller");
@@ -76,12 +78,14 @@ function InviteDialog({
     setPending(true);
     setError(null);
     try {
-      onIssued(
-        await api<IssuedInvite>("POST", `/stores/${storeId}/invites`, {
-          email,
-          role,
-        }),
+      const issued = await apiParsed(
+        "POST",
+        `/stores/${storeId}/invites`,
+        { email, role },
+        issuedInviteSchema,
       );
+      if (issued.parsed) onIssued(issued.data);
+      else onIssued(null);
     } catch (err) {
       setError(
         err instanceof ApiError ? err.message : "Não foi possível convidar.",
@@ -164,7 +168,13 @@ function InviteRow({
   async function regenerate() {
     setError(null);
     try {
-      setShown(toShown(await api<IssuedInvite>("POST", `${base}/regenerate`)));
+      const issued = await apiParsed(
+        "POST",
+        `${base}/regenerate`,
+        undefined,
+        issuedInviteSchema,
+      );
+      if (issued.parsed) setShown(toShown(issued.data));
       router.refresh();
     } catch (err) {
       setError(
