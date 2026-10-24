@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { getListings, getStoreSlugs } from "@/lib/catalog/api";
 import sitemap from "../sitemap";
 
@@ -57,5 +59,13 @@ describe("sitemap", () => {
       expect(filters.availability).toBe("all");
       expect(size).toBe(100);
     }
+  });
+
+  it("renders byte for byte the recorded output", async () => {
+    const baseline = readFileSync(
+      join(__dirname, "sitemap.baseline.txt"),
+      "utf8",
+    );
+    expect(JSON.stringify(await sitemap(), null, 2)).toBe(baseline);
   });
 });

@@ -1,0 +1,420 @@
+[
+  {
+    "url": "https://closeout.example/store/nosso-desapego",
+    "changeFrequency": "daily",
+    "priority": 1
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-1",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-2",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-3",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-4",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-5",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-6",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-7",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-8",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-9",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-10",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-11",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-12",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-13",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-14",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-15",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-16",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-17",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-18",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-19",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-20",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-21",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-22",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-23",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-24",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-25",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-26",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-27",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-28",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-29",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-30",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-31",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-32",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-33",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-34",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-35",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-36",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-37",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-38",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-39",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-40",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-41",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-42",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-43",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-44",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-45",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-46",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-47",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-48",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-49",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-50",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-51",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-52",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-53",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-54",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-55",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-56",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-57",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-58",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-59",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-60",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-61",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-62",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-63",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-64",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-65",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-66",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-67",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-68",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-69",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-70",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-71",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-72",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-73",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-74",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-75",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-76",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-77",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-78",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-79",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-80",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-81",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-82",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-83",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-84",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-85",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-86",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-87",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-88",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-89",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-90",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-91",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-92",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-93",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-94",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-95",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-96",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-97",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-98",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-99",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-100",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/nosso-desapego/items/a-101",
+    "priority": 0.7
+  },
+  {
+    "url": "https://closeout.example/store/loja-da-bia",
+    "changeFrequency": "daily",
+    "priority": 1
+  },
+  {
+    "url": "https://closeout.example/store/loja-da-bia/items/b-1",
+    "priority": 0.7
+  }
+]

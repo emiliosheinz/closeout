@@ -1,0 +1,654 @@
+[
+  {
+    "params": {},
+    "filters": {
+      "q": "",
+      "category": null,
+      "condition": null,
+      "availability": "listed",
+      "minPrice": null,
+      "maxPrice": null,
+      "sort": "recent",
+      "page": 1
+    },
+    "entries": [],
+    "href": "/store/nosso-desapego"
+  },
+  {
+    "params": {
+      "q": "  bicicleta  "
+    },
+    "filters": {
+      "q": "bicicleta",
+      "category": null,
+      "condition": null,
+      "availability": "listed",
+      "minPrice": null,
+      "maxPrice": null,
+      "sort": "recent",
+      "page": 1
+    },
+    "entries": [["q", "bicicleta"]],
+    "href": "/store/nosso-desapego?q=bicicleta"
+  },
+  {
+    "params": {
+      "q": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    },
+    "filters": {
+      "q": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "category": null,
+      "condition": null,
+      "availability": "listed",
+      "minPrice": null,
+      "maxPrice": null,
+      "sort": "recent",
+      "page": 1
+    },
+    "entries": [
+      [
+        "q",
+        "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      ]
+    ],
+    "href": "/store/nosso-desapego?q=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+  },
+  {
+    "params": {
+      "q": ["a", "b"]
+    },
+    "filters": {
+      "q": "a",
+      "category": null,
+      "condition": null,
+      "availability": "listed",
+      "minPrice": null,
+      "maxPrice": null,
+      "sort": "recent",
+      "page": 1
+    },
+    "entries": [["q", "a"]],
+    "href": "/store/nosso-desapego?q=a"
+  },
+  {
+    "params": {
+      "categoria": "moveis"
+    },
+    "filters": {
+      "q": "",
+      "category": "moveis",
+      "condition": null,
+      "availability": "listed",
+      "minPrice": null,
+      "maxPrice": null,
+      "sort": "recent",
+      "page": 1
+    },
+    "entries": [["categoria", "moveis"]],
+    "href": "/store/nosso-desapego?categoria=moveis"
+  },
+  {
+    "params": {
+      "categoria": "Bad Slug"
+    },
+    "filters": {
+      "q": "",
+      "category": null,
+      "condition": null,
+      "availability": "listed",
+      "minPrice": null,
+      "maxPrice": null,
+      "sort": "recent",
+      "page": 1
+    },
+    "entries": [],
+    "href": "/store/nosso-desapego"
+  },
+  {
+    "params": {
+      "categoria": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    "filters": {
+      "q": "",
+      "category": null,
+      "condition": null,
+      "availability": "listed",
+      "minPrice": null,
+      "maxPrice": null,
+      "sort": "recent",
+      "page": 1
+    },
+    "entries": [],
+    "href": "/store/nosso-desapego"
+  },
+  {
+    "params": {
+      "estado": "novo"
+    },
+    "filters": {
+      "q": "",
+      "category": null,
+      "condition": "new",
+      "availability": "listed",
+      "minPrice": null,
+      "maxPrice": null,
+      "sort": "recent",
+      "page": 1
+    },
+    "entries": [["estado", "novo"]],
+    "href": "/store/nosso-desapego?estado=novo"
+  },
+  {
+    "params": {
+      "estado": "como-novo"
+    },
+    "filters": {
+      "q": "",
+      "category": null,
+      "condition": "like_new",
+      "availability": "listed",
+      "minPrice": null,
+      "maxPrice": null,
+      "sort": "recent",
+      "page": 1
+    },
+    "entries": [["estado", "como-novo"]],
+    "href": "/store/nosso-desapego?estado=como-novo"
+  },
+  {
+    "params": {
+      "estado": "bom"
+    },
+    "filters": {
+      "q": "",
+      "category": null,
+      "condition": "good",
+      "availability": "listed",
+      "minPrice": null,
+      "maxPrice": null,
+      "sort": "recent",
+      "page": 1
+    },
+    "entries": [["estado", "bom"]],
+    "href": "/store/nosso-desapego?estado=bom"
+  },
+  {
+    "params": {
+      "estado": "marcas-de-uso"
+    },
+    "filters": {
+      "q": "",
+      "category": null,
+      "condition": "fair",
+      "availability": "listed",
+      "minPrice": null,
+      "maxPrice": null,
+      "sort": "recent",
+      "page": 1
+    },
+    "entries": [["estado", "marcas-de-uso"]],
+    "href": "/store/nosso-desapego?estado=marcas-de-uso"
+  },
+  {
+    "params": {
+      "estado": "conserto"
+    },
+    "filters": {
+      "q": "",
+      "category": null,
+      "condition": "for_parts",
+      "availability": "listed",
+      "minPrice": null,
+      "maxPrice": null,
+      "sort": "recent",
+      "page": 1
+    },
+    "entries": [["estado", "conserto"]],
+    "href": "/store/nosso-desapego?estado=conserto"
+  },
+  {
+    "params": {
+      "estado": "invalido"
+    },
+    "filters": {
+      "q": "",
+      "category": null,
+      "condition": null,
+      "availability": "listed",
+      "minPrice": null,
+      "maxPrice": null,
+      "sort": "recent",
+      "page": 1
+    },
+    "entries": [],
+    "href": "/store/nosso-desapego"
+  },
+  {
+    "params": {
+      "disponibilidade": "disponivel"
+    },
+    "filters": {
+      "q": "",
+      "category": null,
+      "condition": null,
+      "availability": "available",
+      "minPrice": null,
+      "maxPrice": null,
+      "sort": "recent",
+      "page": 1
+    },
+    "entries": [["disponibilidade", "disponivel"]],
+    "href": "/store/nosso-desapego?disponibilidade=disponivel"
+  },
+  {
+    "params": {
+      "disponibilidade": "reservado"
+    },
+    "filters": {
+      "q": "",
+      "category": null,
+      "condition": null,
+      "availability": "reserved",
+      "minPrice": null,
+      "maxPrice": null,
+      "sort": "recent",
+      "page": 1
+    },
+    "entries": [["disponibilidade", "reservado"]],
+    "href": "/store/nosso-desapego?disponibilidade=reservado"
+  },
+  {
+    "params": {
+      "disponibilidade": "vendido"
+    },
+    "filters": {
+      "q": "",
+      "category": null,
+      "condition": null,
+      "availability": "sold",
+      "minPrice": null,
+      "maxPrice": null,
+      "sort": "recent",
+      "page": 1
+    },
+    "entries": [["disponibilidade", "vendido"]],
+    "href": "/store/nosso-desapego?disponibilidade=vendido"
+  },
+  {
+    "params": {
+      "disponibilidade": "todos"
+    },
+    "filters": {
+      "q": "",
+      "category": null,
+      "condition": null,
+      "availability": "all",
+      "minPrice": null,
+      "maxPrice": null,
+      "sort": "recent",
+      "page": 1
+    },
+    "entries": [["disponibilidade", "todos"]],
+    "href": "/store/nosso-desapego?disponibilidade=todos"
+  },
+  {
+    "params": {
+      "disponibilidade": "invalido"
+    },
+    "filters": {
+      "q": "",
+      "category": null,
+      "condition": null,
+      "availability": "listed",
+      "minPrice": null,
+      "maxPrice": null,
+      "sort": "recent",
+      "page": 1
+    },
+    "entries": [],
+    "href": "/store/nosso-desapego"
+  },
+  {
+    "params": {
+      "ordem": "recentes"
+    },
+    "filters": {
+      "q": "",
+      "category": null,
+      "condition": null,
+      "availability": "listed",
+      "minPrice": null,
+      "maxPrice": null,
+      "sort": "recent",
+      "page": 1
+    },
+    "entries": [],
+    "href": "/store/nosso-desapego"
+  },
+  {
+    "params": {
+      "ordem": "menor-preco"
+    },
+    "filters": {
+      "q": "",
+      "category": null,
+      "condition": null,
+      "availability": "listed",
+      "minPrice": null,
+      "maxPrice": null,
+      "sort": "price_asc",
+      "page": 1
+    },
+    "entries": [["ordem", "menor-preco"]],
+    "href": "/store/nosso-desapego?ordem=menor-preco"
+  },
+  {
+    "params": {
+      "ordem": "maior-preco"
+    },
+    "filters": {
+      "q": "",
+      "category": null,
+      "condition": null,
+      "availability": "listed",
+      "minPrice": null,
+      "maxPrice": null,
+      "sort": "price_desc",
+      "page": 1
+    },
+    "entries": [["ordem", "maior-preco"]],
+    "href": "/store/nosso-desapego?ordem=maior-preco"
+  },
+  {
+    "params": {
+      "ordem": "invalido"
+    },
+    "filters": {
+      "q": "",
+      "category": null,
+      "condition": null,
+      "availability": "listed",
+      "minPrice": null,
+      "maxPrice": null,
+      "sort": "recent",
+      "page": 1
+    },
+    "entries": [],
+    "href": "/store/nosso-desapego"
+  },
+  {
+    "params": {
+      "min": "10",
+      "max": "50"
+    },
+    "filters": {
+      "q": "",
+      "category": null,
+      "condition": null,
+      "availability": "listed",
+      "minPrice": 10,
+      "maxPrice": 50,
+      "sort": "recent",
+      "page": 1
+    },
+    "entries": [["min", "10"], ["max", "50"]],
+    "href": "/store/nosso-desapego?min=10&max=50"
+  },
+  {
+    "params": {
+      "min": "50",
+      "max": "10"
+    },
+    "filters": {
+      "q": "",
+      "category": null,
+      "condition": null,
+      "availability": "listed",
+      "minPrice": 10,
+      "maxPrice": 50,
+      "sort": "recent",
+      "page": 1
+    },
+    "entries": [["min", "10"], ["max", "50"]],
+    "href": "/store/nosso-desapego?min=10&max=50"
+  },
+  {
+    "params": {
+      "min": "0"
+    },
+    "filters": {
+      "q": "",
+      "category": null,
+      "condition": null,
+      "availability": "listed",
+      "minPrice": 0,
+      "maxPrice": null,
+      "sort": "recent",
+      "page": 1
+    },
+    "entries": [["min", "0"]],
+    "href": "/store/nosso-desapego?min=0"
+  },
+  {
+    "params": {
+      "max": "0"
+    },
+    "filters": {
+      "q": "",
+      "category": null,
+      "condition": null,
+      "availability": "listed",
+      "minPrice": null,
+      "maxPrice": 0,
+      "sort": "recent",
+      "page": 1
+    },
+    "entries": [["max", "0"]],
+    "href": "/store/nosso-desapego?max=0"
+  },
+  {
+    "params": {
+      "min": "1000000",
+      "max": "1000001"
+    },
+    "filters": {
+      "q": "",
+      "category": null,
+      "condition": null,
+      "availability": "listed",
+      "minPrice": 1000000,
+      "maxPrice": null,
+      "sort": "recent",
+      "page": 1
+    },
+    "entries": [["min", "1000000"]],
+    "href": "/store/nosso-desapego?min=1000000"
+  },
+  {
+    "params": {
+      "min": "-5",
+      "max": "abc"
+    },
+    "filters": {
+      "q": "",
+      "category": null,
+      "condition": null,
+      "availability": "listed",
+      "minPrice": null,
+      "maxPrice": null,
+      "sort": "recent",
+      "page": 1
+    },
+    "entries": [],
+    "href": "/store/nosso-desapego"
+  },
+  {
+    "params": {
+      "min": "1.5"
+    },
+    "filters": {
+      "q": "",
+      "category": null,
+      "condition": null,
+      "availability": "listed",
+      "minPrice": null,
+      "maxPrice": null,
+      "sort": "recent",
+      "page": 1
+    },
+    "entries": [],
+    "href": "/store/nosso-desapego"
+  },
+  {
+    "params": {
+      "min": "1234567890"
+    },
+    "filters": {
+      "q": "",
+      "category": null,
+      "condition": null,
+      "availability": "listed",
+      "minPrice": null,
+      "maxPrice": null,
+      "sort": "recent",
+      "page": 1
+    },
+    "entries": [],
+    "href": "/store/nosso-desapego"
+  },
+  {
+    "params": {
+      "pagina": "2"
+    },
+    "filters": {
+      "q": "",
+      "category": null,
+      "condition": null,
+      "availability": "listed",
+      "minPrice": null,
+      "maxPrice": null,
+      "sort": "recent",
+      "page": 2
+    },
+    "entries": [["pagina", "2"]],
+    "href": "/store/nosso-desapego?pagina=2"
+  },
+  {
+    "params": {
+      "pagina": "1000"
+    },
+    "filters": {
+      "q": "",
+      "category": null,
+      "condition": null,
+      "availability": "listed",
+      "minPrice": null,
+      "maxPrice": null,
+      "sort": "recent",
+      "page": 1000
+    },
+    "entries": [["pagina", "1000"]],
+    "href": "/store/nosso-desapego?pagina=1000"
+  },
+  {
+    "params": {
+      "pagina": "1001"
+    },
+    "filters": {
+      "q": "",
+      "category": null,
+      "condition": null,
+      "availability": "listed",
+      "minPrice": null,
+      "maxPrice": null,
+      "sort": "recent",
+      "page": 1
+    },
+    "entries": [],
+    "href": "/store/nosso-desapego"
+  },
+  {
+    "params": {
+      "pagina": "0"
+    },
+    "filters": {
+      "q": "",
+      "category": null,
+      "condition": null,
+      "availability": "listed",
+      "minPrice": null,
+      "maxPrice": null,
+      "sort": "recent",
+      "page": 1
+    },
+    "entries": [],
+    "href": "/store/nosso-desapego"
+  },
+  {
+    "params": {
+      "pagina": "abc"
+    },
+    "filters": {
+      "q": "",
+      "category": null,
+      "condition": null,
+      "availability": "listed",
+      "minPrice": null,
+      "maxPrice": null,
+      "sort": "recent",
+      "page": 1
+    },
+    "entries": [],
+    "href": "/store/nosso-desapego"
+  },
+  {
+    "params": {
+      "pagina": "-3"
+    },
+    "filters": {
+      "q": "",
+      "category": null,
+      "condition": null,
+      "availability": "listed",
+      "minPrice": null,
+      "maxPrice": null,
+      "sort": "recent",
+      "page": 1
+    },
+    "entries": [],
+    "href": "/store/nosso-desapego"
+  },
+  {
+    "params": {
+      "q": "tênis",
+      "categoria": "calcados",
+      "estado": "bom",
+      "disponibilidade": "todos",
+      "min": "80",
+      "max": "20",
+      "ordem": "maior-preco",
+      "pagina": "7"
+    },
+    "filters": {
+      "q": "tênis",
+      "category": "calcados",
+      "condition": "good",
+      "availability": "all",
+      "minPrice": 20,
+      "maxPrice": 80,
+      "sort": "price_desc",
+      "page": 7
+    },
+    "entries": [
+      ["q", "tênis"],
+      ["categoria", "calcados"],
+      ["estado", "bom"],
+      ["disponibilidade", "todos"],
+      ["min", "20"],
+      ["max", "80"],
+      ["ordem", "maior-preco"],
+      ["pagina", "7"]
+    ],
+    "href": "/store/nosso-desapego?q=t%C3%AAnis&categoria=calcados&estado=bom&disponibilidade=todos&min=20&max=80&ordem=maior-preco&pagina=7"
+  }
+]
