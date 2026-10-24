@@ -211,6 +211,25 @@ describe("team management", () => {
       await as(ctx.app, member.cookie).get("/me").expect(200);
     });
 
+    it("names a single listing in the singular when refusing", async () => {
+      const member = await addMember(ctx, owner, {
+        email: "vendedora@example.com",
+        name: "Vendedora",
+        role: "seller",
+      });
+      await insertListing(ctx.dataSource, owner, {
+        sellerIds: [member.sellerId],
+      });
+      const res = await asOwner()
+        .delete(`${members()}/${member.userId}`)
+        .expect(409);
+      expect(res.body.message).toBe(
+        "Reatribua o 1 anúncio em que esta pessoa é a única vendedora antes de removê-la.",
+      );
+      expect(await exists("users", "id", member.userId)).toBe(true);
+      expect(await exists("sellers", "id", member.sellerId)).toBe(true);
+    });
+
     it("deletes the account, unassigns it from shared listings and ends every session", async () => {
       const member = await addMember(ctx, owner, {
         email: "vendedora@example.com",

@@ -176,6 +176,41 @@ describe("operator commands", () => {
         timeout: 30_000,
       });
 
+    it("creates a store and its owner from the command line", async () => {
+      const { stdout } = await promisify(execFile)(
+        "pnpm",
+        [
+          "exec",
+          "tsx",
+          "src/cli/main.ts",
+          "admin:create",
+          "--store",
+          "loja-cli",
+          "--store-name",
+          "Loja da CLI",
+          "--email",
+          "cli@example.com",
+          "--name",
+          "Pela CLI",
+        ],
+        {
+          cwd: path.join(__dirname, ".."),
+          timeout: 30_000,
+          env: { ...process.env, CLOSEOUT_PASSWORD: PASSWORD },
+        },
+      );
+      expect(stdout).toContain(
+        "Created owner cli@example.com for store loja-cli.",
+      );
+      const [created] = await ctx.dataSource.query(
+        `SELECT name FROM stores WHERE slug = 'loja-cli'`,
+      );
+      expect(created).toEqual({ name: "Loja da CLI" });
+      expect(await members("loja-cli")).toEqual([
+        { email: "cli@example.com", role: "owner", profiles: 1 },
+      ]);
+    });
+
     it.each([
       "admin:create",
       "seed:demo",
@@ -258,6 +293,22 @@ describe("operator commands", () => {
         `SELECT COUNT(*)::int AS loginless FROM sellers WHERE user_id IS NULL`,
       );
       expect(loginless).toBe(0);
+    });
+
+    it("creates a demo owner for a store whose members include no owner", async () => {
+      const existing = await admin("emilio@example.com");
+      await ctx.dataSource.query(
+        `UPDATE store_members SET role = 'admin' WHERE user_id = $1`,
+        [existing.userId],
+      );
+      const result = await seed();
+      expect(result.accounts).toContain("owner@nosso-desapego.test");
+      expect(await members(store.slug)).toEqual([
+        { email: "admin@nosso-desapego.test", role: "admin", profiles: 1 },
+        { email: "emilio@example.com", role: "admin", profiles: 1 },
+        { email: "owner@nosso-desapego.test", role: "owner", profiles: 1 },
+        { email: "seller@nosso-desapego.test", role: "seller", profiles: 1 },
+      ]);
     });
 
     it("reuses the store's owner instead of creating a second one", async () => {

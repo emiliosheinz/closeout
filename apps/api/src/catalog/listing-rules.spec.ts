@@ -93,6 +93,7 @@ describe("listing assignment", () => {
     ["seller", ["own", "a"], ["own"], false],
     ["seller", ["own"], ["own", "a"], false],
     ["seller", ["own"], ["a"], false],
+    ["seller", ["own", "a"], ["own", "b"], false],
   ] as const)("an %s editing sellers %j to %j is allowed: %s", (role, current, submitted, allowed) => {
     expect(
       canSetSellers(actor(role), [...current], submitted && [...submitted]),

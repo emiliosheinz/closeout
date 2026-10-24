@@ -353,6 +353,19 @@ describe("store invites", () => {
       expect(row).toEqual({ role: "admin", whatsapp_number: null });
     });
 
+    it.each([
+      "admin",
+      "seller",
+    ])("gives the accepted member exactly the invited role %s", async (role) => {
+      const { token } = await invite("nova@example.com", role);
+      await accept(token).expect(200);
+      const rows = await ctx.dataSource.query(
+        `SELECT m.store_id, m.role FROM store_members m
+           JOIN users u ON u.id = m.user_id WHERE u.email = 'nova@example.com'`,
+      );
+      expect(rows).toEqual([{ store_id: owner.storeId, role }]);
+    });
+
     it("refuses a second accept of the same link", async () => {
       const { token } = await invite("nova@example.com");
       await accept(token).expect(200);
@@ -455,6 +468,29 @@ describe("store invites", () => {
     it("does not count valid links against the client", async () => {
       const { token } = await invite("nova@example.com");
       for (let i = 0; i < 12; i++) await lookup(token).expect(200);
+      for (let i = 0; i < 9; i++) await lookup(`desconhecido-${i}`).expect(404);
+      await lookup(token).expect(200);
+      await accept(token).expect(200);
+      await lookup("desconhecido-9").expect(404);
+      const blocked = await lookup("desconhecido-10").expect(429);
+      expect(blocked.body.message).toBe(TOO_MANY);
+    });
+
+    it("lets a blocked client try again once 15 minutes have passed", async () => {
+      const start = Date.now();
+      const clock = jest.spyOn(Date, "now").mockReturnValue(start);
+      try {
+        const { token } = await invite("nova@example.com");
+        for (let i = 0; i < 10; i++) {
+          await lookup(`desconhecido-${i}`).expect(404);
+        }
+        clock.mockReturnValue(start + 15 * 60 * 1000 - 1);
+        await lookup(token).expect(429);
+        clock.mockReturnValue(start + 15 * 60 * 1000);
+        await lookup(token).expect(200);
+      } finally {
+        clock.mockRestore();
+      }
     });
 
     it("answers only internal calls that carry the visitor's IP", async () => {

@@ -231,6 +231,30 @@ const CAPABILITIES: Capability[] = [
     expected: [200, 200, 404, 404],
   },
   {
+    name: "reorder photos of an assigned listing",
+    call: async (fx) => ({
+      method: "put",
+      url: `${await assigned(fx)}/images/order`,
+      body: { ids: [] },
+    }),
+    expected: [200, 200, 200, 404],
+  },
+  {
+    name: "delete a photo of an assigned listing",
+    call: async (fx) => {
+      const url = await assigned(fx);
+      const uploaded = await as(ctx.app, fx.owner.cookie)
+        .post(`${url}/images`)
+        .attach("files", await photo(), "a.jpg")
+        .expect(201);
+      return {
+        method: "delete",
+        url: `${url}/images/${uploaded.body.items[0].id}`,
+      };
+    },
+    expected: [200, 200, 200, 404],
+  },
+  {
     name: "delete a photo of an unassigned listing",
     call: async (fx) => {
       const url = await unassigned(fx);

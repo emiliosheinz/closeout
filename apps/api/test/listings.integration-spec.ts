@@ -789,6 +789,13 @@ describe("listing administration", () => {
           sellerIds: [seller.sellerId, partner.sellerId, admin.sellerId],
         })
         .expect(403);
+      const swapped = await asSeller()
+        .patch(url)
+        .send({ sellerIds: [seller.sellerId, admin.sellerId] })
+        .expect(403);
+      expect(swapped.body.message).toBe(
+        "Você não tem permissão para esta ação.",
+      );
 
       const after = await asSeller().get(url).expect(200);
       expect(after.body).toMatchObject({
