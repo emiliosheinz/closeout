@@ -1,4 +1,11 @@
-import { screen, within } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { stubAdminApi } from "@/test/admin-api";
 import { listingSummary, meResponse, seller } from "@/test/fixtures";
 import { renderPage } from "@/test/render-page";
@@ -6,7 +13,7 @@ import { DashboardPage } from "../admin-listings-page";
 
 vi.mock("next/navigation", async () => ({
   ...(await vi.importActual("next/navigation")),
-  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
+  useRouter: () => ({ push: vi.fn() }),
 }));
 vi.mock("next/headers", () => ({
   cookies: async () => ({ get: () => ({ value: "token" }) }),
@@ -117,5 +124,107 @@ describe("admin listings page", () => {
     await expect(
       DashboardPage({ searchParams: Promise.resolve({}) }),
     ).rejects.toMatchObject({ digest: expect.stringContaining("404") });
+  });
+
+  it("keeps a row under the filtered tab after its status change and moves the counts", async () => {
+    stubAdminApi({
+      "/me": meResponse(),
+      "/stores/store-1/listings": { items: listings },
+      "/stores/store-1/sellers": { items: [] },
+    });
+    await show({ status: "vendidos" });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => new Promise<Response>(() => {})),
+    );
+    const trigger = screen.getByRole("combobox", {
+      name: "Disponibilidade de Cadeira",
+    });
+    trigger.focus();
+    fireEvent.keyDown(trigger, { key: "Enter" });
+    fireEvent.keyDown(
+      await screen.findByRole("option", { name: "Disponível" }),
+      {
+        key: "Enter",
+      },
+    );
+
+    await waitFor(() =>
+      expect(screen.getByTestId("count-sold")).toHaveTextContent("0"),
+    );
+    expect(screen.getByTestId("count-available")).toHaveTextContent("2");
+    expect(screen.getByText("Cadeira")).toBeInTheDocument();
+    expect(trigger).toHaveTextContent("Disponível");
+  });
+
+  async function changeCadeiraToAvailable(patch: Promise<Response>) {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => patch),
+    );
+    const trigger = screen.getByRole("combobox", {
+      name: "Disponibilidade de Cadeira",
+    });
+    trigger.focus();
+    fireEvent.keyDown(trigger, { key: "Enter" });
+    fireEvent.keyDown(
+      await screen.findByRole("option", { name: "Disponível" }),
+      { key: "Enter" },
+    );
+    return trigger;
+  }
+
+  it("drops the kept row once the filter or the search changes", async () => {
+    const routes = {
+      "/me": meResponse(),
+      "/stores/store-1/listings": { items: listings },
+      "/stores/store-1/sellers": { items: [] },
+    };
+    stubAdminApi(routes);
+    const client = new QueryClient();
+    const page = async (searchParams: { q?: string; status?: string }) => (
+      <QueryClientProvider client={client}>
+        {await DashboardPage({ searchParams: Promise.resolve(searchParams) })}
+      </QueryClientProvider>
+    );
+    const view = render(await page({ status: "vendidos" }));
+    await changeCadeiraToAvailable(new Promise<Response>(() => {}));
+    await waitFor(() =>
+      expect(screen.getByTestId("count-sold")).toHaveTextContent("0"),
+    );
+    expect(screen.getByText("Cadeira")).toBeInTheDocument();
+
+    view.rerender(await page({ status: "disponiveis" }));
+    expect(screen.getByText("Cadeira")).toBeInTheDocument();
+    view.rerender(await page({ status: "vendidos" }));
+    expect(screen.queryByText("Cadeira")).toBeNull();
+    expect(screen.getByText("Nenhum anúncio em Vendidos.")).toBeInTheDocument();
+  });
+
+  it("restores the tab count when the status change is rejected", async () => {
+    stubAdminApi({
+      "/me": meResponse(),
+      "/stores/store-1/listings": { items: listings },
+      "/stores/store-1/sellers": { items: [] },
+    });
+    await show();
+    let reject!: (response: Response) => void;
+    await changeCadeiraToAvailable(
+      new Promise<Response>((resolve) => {
+        reject = resolve;
+      }),
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId("count-sold")).toHaveTextContent("0"),
+    );
+
+    reject(
+      Response.json({ message: "Servidor indisponível." }, { status: 500 }),
+    );
+
+    await waitFor(() =>
+      expect(screen.getByTestId("count-sold")).toHaveTextContent("1"),
+    );
+    expect(screen.getByTestId("count-available")).toHaveTextContent("1");
   });
 });

@@ -1,71 +1,135 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import type { MockedFunction } from "vitest";
-import type { AdminListingSummary } from "@/entities/listing";
-import { ApiError, api } from "@/shared/api";
+import {
+  QueryClient as Client,
+  dehydrate,
+  type QueryClient,
+} from "@tanstack/react-query";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { listingKeys, tabCounts } from "@/entities/listing";
 import { renderWithFeedback } from "@/test/feedback-harness";
+import { listingSummary } from "@/test/fixtures";
+import { useListings } from "../../model/use-listings";
 import { ListingRows } from "../listing-rows";
 
+const push = vi.fn();
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
+  useRouter: () => ({ push }),
 }));
 
-vi.mock("@/shared/api", async () => ({
-  ...(await vi.importActual("@/shared/api")),
-  api: vi.fn(),
-}));
+type Row = ReturnType<typeof listingSummary>;
+type Handler = (method: string, path: string) => Response | Promise<Response>;
 
-const apiMock = api as MockedFunction<typeof api>;
+let serverRows: Row[];
+let handler: Handler;
+let fetchMock: ReturnType<typeof vi.fn>;
 
-const row = (
-  id: string,
-  sellerIds: string[],
-  publication: AdminListingSummary["publication"] = "published",
-): AdminListingSummary => ({
-  id,
-  slug: id,
-  title: `Item ${id}`,
-  priceCents: 1000,
-  condition: "good",
-  availability: "available",
-  publication,
-  category: { id: "c", name: "Móveis" },
-  sellers: sellerIds.map((id) => ({ id, displayName: id })),
-  coverUrl: null,
-  imageCount: 1,
-  updatedAt: "2026-10-17T12:00:00.000Z",
+beforeEach(() => {
+  push.mockReset();
+  handler = () => new Response(null, { status: 204 });
+  fetchMock = vi.fn((url: string, init: RequestInit = {}) => {
+    const path = String(url).replace("/api/v1", "");
+    if (init.method === "GET" && path === "/stores/store/listings") {
+      return Response.json({ items: serverRows });
+    }
+    return handler(init.method ?? "GET", path);
+  });
+  vi.stubGlobal("fetch", fetchMock);
 });
+afterEach(() => vi.unstubAllGlobals());
 
-async function pickByKeyboard(trigger: HTMLElement, steps: number) {
+const row = (id: string, overrides: Partial<Row> = {}): Row =>
+  listingSummary({
+    id,
+    slug: id,
+    title: `Item ${id}`,
+    sellers: [],
+    ...overrides,
+  });
+
+function Host({
+  storeSlug = "loja",
+  unreachableSellerIds,
+}: {
+  storeSlug?: string;
+  unreachableSellerIds?: string[];
+}) {
+  const listings = useListings("store");
+  return (
+    <>
+      <h1 id="listings-heading" tabIndex={-1}>
+        Anúncios
+      </h1>
+      <output data-testid="reserved">{tabCounts(listings).reserved}</output>
+      <ListingRows
+        storeId="store"
+        storeSlug={storeSlug}
+        listings={listings}
+        unreachableSellerIds={unreachableSellerIds}
+      />
+    </>
+  );
+}
+
+function renderRows(rows: Row[], props: Parameters<typeof Host>[0] = {}) {
+  serverRows = rows;
+  const seed: QueryClient = new Client();
+  seed.setQueryData(listingKeys.list("store"), { items: rows });
+  return renderWithFeedback(<Host {...props} />, dehydrate(seed));
+}
+
+const writes = (method: string) =>
+  fetchMock.mock.calls
+    .filter(([, init]) => (init as RequestInit | undefined)?.method === method)
+    .map(([url, init]) => ({
+      url: String(url).replace("/api/v1", ""),
+      body: (init as RequestInit).body,
+    }))
+    .filter(({ url }) => !url.startsWith("/api/catalog"));
+const listFetches = () =>
+  fetchMock.mock.calls.filter(
+    ([url, init]) =>
+      String(url) === "/api/v1/stores/store/listings" &&
+      (init as RequestInit | undefined)?.method === "GET",
+  ).length;
+
+function deferred() {
+  let resolve!: (response: Response) => void;
+  const promise = new Promise<Response>((r) => {
+    resolve = r;
+  });
+  return { promise, resolve };
+}
+
+const status = (kind: "Publicação" | "Disponibilidade", title: string) =>
+  screen.getByRole("combobox", { name: `${kind} de ${title}` });
+
+async function pick(trigger: HTMLElement, option: string) {
   trigger.focus();
   fireEvent.keyDown(trigger, { key: "Enter" });
-  await screen.findByRole("listbox");
-  const options = screen.getAllByRole("option");
-  const start = options.findIndex(
-    (option) => option.getAttribute("aria-selected") === "true",
+  const choice = await screen.findByRole("option", { name: option });
+  fireEvent.keyDown(choice, { key: "Enter" });
+  await waitFor(() =>
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument(),
   );
-  for (let step = 0; step < steps; step += 1) {
-    fireEvent.keyDown(options[start + step] as HTMLElement, {
-      key: "ArrowDown",
-    });
-    await waitFor(() => expect(options[start + step + 1]).toHaveFocus());
-  }
-  fireEvent.keyDown(options[start + steps] as HTMLElement, { key: "Enter" });
 }
 
 describe("ListingRows", () => {
   it("warns on published items whose seller cannot be reached", () => {
-    render(
-      <ListingRows
-        storeId="store"
-        storeSlug="loja"
-        listings={[
-          row("a", ["no-phone"]),
-          row("b", ["with-phone"]),
-          row("c", ["no-phone"], "draft"),
-          row("d", ["no-phone", "with-phone"]),
-        ]}
-        unreachableSellerIds={["no-phone"]}
-      />,
+    renderRows(
+      [
+        row("a", { sellers: [{ id: "no-phone", displayName: "x" }] }),
+        row("b", { sellers: [{ id: "with-phone", displayName: "y" }] }),
+        row("c", {
+          publication: "draft",
+          sellers: [{ id: "no-phone", displayName: "x" }],
+        }),
+        row("d", {
+          sellers: [
+            { id: "no-phone", displayName: "x" },
+            { id: "with-phone", displayName: "y" },
+          ],
+        }),
+      ],
+      { unreachableSellerIds: ["no-phone"] },
     );
     const warnings = screen.getAllByRole("link", { name: /sem WhatsApp/ });
     expect(warnings).toHaveLength(1);
@@ -77,157 +141,345 @@ describe("ListingRows", () => {
     ["nosso-desapego", "/store/nosso-desapego/items/a"],
     ["loja-da-bia", "/store/loja-da-bia/items/a"],
   ])("links published items to their page in %s", (slug, href) => {
-    render(
-      <ListingRows
-        storeId="store"
-        storeSlug={slug}
-        listings={[row("a", [])]}
-      />,
-    );
+    renderRows([row("a")], { storeSlug: slug });
     expect(
       screen.getByRole("link", { name: "Ver Item a na loja" }),
     ).toHaveAttribute("href", href);
   });
 
   it("links unpublished items to the admin preview", () => {
-    render(
-      <ListingRows
-        storeId="store"
-        storeSlug="loja"
-        listings={[row("b", [], "draft")]}
-      />,
-    );
+    renderRows([row("b", { publication: "draft" })]);
     expect(
       screen.getByRole("link", { name: "Pré-visualizar Item b" }),
     ).toHaveAttribute("href", "/admin/anuncios/b/previa");
   });
 
   it("names each status control after its item and shows the selected label", () => {
-    render(
-      <ListingRows
-        storeId="store"
-        storeSlug="loja"
-        listings={[row("a", []), row("b", [], "draft")]}
-      />,
-    );
-    expect(
-      screen.getByRole("combobox", { name: "Publicação de Item a" }),
-    ).toHaveTextContent("Publicado");
-    expect(
-      screen.getByRole("combobox", { name: "Publicação de Item b" }),
-    ).toHaveTextContent("Rascunho");
-    expect(
-      screen.getByRole("combobox", { name: "Disponibilidade de Item a" }),
-    ).toHaveTextContent("Disponível");
+    renderRows([row("a"), row("b", { publication: "draft" })]);
+    expect(status("Publicação", "Item a")).toHaveTextContent("Publicado");
+    expect(status("Publicação", "Item b")).toHaveTextContent("Rascunho");
+    expect(status("Disponibilidade", "Item a")).toHaveTextContent("Disponível");
   });
 
-  it("changes availability from the keyboard: open, move, select", async () => {
-    apiMock.mockReset();
-    apiMock.mockResolvedValue(undefined);
-    render(
-      <ListingRows
-        storeId="store"
-        storeSlug="loja"
-        listings={[row("a", [])]}
-      />,
-    );
-    const select = screen.getByRole("combobox", {
-      name: "Disponibilidade de Item a",
+  it("lists the availability options and sends the chosen one", async () => {
+    renderRows([row("a")]);
+    const trigger = status("Disponibilidade", "Item a");
+    trigger.focus();
+    fireEvent.keyDown(trigger, { key: "Enter" });
+    expect(
+      (await screen.findAllByRole("option")).map((o) => o.textContent),
+    ).toEqual(["Disponível", "Reservado", "Vendido"]);
+    fireEvent.keyDown(screen.getByRole("option", { name: "Reservado" }), {
+      key: "Enter",
     });
-    select.focus();
-    fireEvent.keyDown(select, { key: "Enter" });
-
-    await screen.findByRole("listbox");
-    const options = screen.getAllByRole("option");
-    expect(options.map((option) => option.textContent)).toEqual([
-      "Disponível",
-      "Reservado",
-      "Vendido",
-    ]);
-    await waitFor(() => expect(options[0]).toHaveFocus());
-    fireEvent.keyDown(options[0] as HTMLElement, { key: "ArrowDown" });
-    await waitFor(() => expect(options[1]).toHaveFocus());
-    fireEvent.keyDown(options[1] as HTMLElement, { key: "Enter" });
 
     await waitFor(() =>
-      expect(apiMock).toHaveBeenCalledWith(
-        "PATCH",
-        "/stores/store/listings/a/status",
-        { availability: "reserved" },
-      ),
+      expect(writes("PATCH")).toEqual([
+        {
+          url: "/stores/store/listings/a/status",
+          body: JSON.stringify({ availability: "reserved" }),
+        },
+      ]),
     );
   });
 
-  it("changes publication from the keyboard", async () => {
-    apiMock.mockReset();
-    apiMock.mockResolvedValue(undefined);
-    render(
-      <ListingRows
-        storeId="store"
-        storeSlug="loja"
-        listings={[row("a", [])]}
-      />,
-    );
-
-    await pickByKeyboard(
-      screen.getByRole("combobox", { name: "Publicação de Item a" }),
-      1,
-    );
+  it("sends only the publication when it changes", async () => {
+    renderRows([row("a")]);
+    await pick(status("Publicação", "Item a"), "Arquivado");
 
     await waitFor(() =>
-      expect(apiMock).toHaveBeenCalledWith(
-        "PATCH",
-        "/stores/store/listings/a/status",
-        { publication: "archived" },
-      ),
+      expect(writes("PATCH")).toEqual([
+        {
+          url: "/stores/store/listings/a/status",
+          body: JSON.stringify({ publication: "archived" }),
+        },
+      ]),
     );
   });
 
-  it("moves focus to the page heading after a listing is deleted", async () => {
-    apiMock.mockReset();
-    apiMock.mockResolvedValue(undefined);
-    render(
-      <>
-        <h1 id="listings-heading" tabIndex={-1}>
-          Anúncios
-        </h1>
-        <ListingRows
-          storeId="store"
-          storeSlug="loja"
-          listings={[row("a", [])]}
-        />
-      </>,
-    );
+  describe("status changes", () => {
+    it("show the new value and the counts before the response, then toast once", async () => {
+      const gate = deferred();
+      handler = (method) =>
+        method === "PATCH" ? gate.promise : new Response(null, { status: 204 });
+      renderRows([row("a"), row("b")]);
 
-    fireEvent.click(screen.getByRole("button", { name: "Excluir Item a" }));
-    fireEvent.click(
-      await screen.findByRole("button", { name: "Excluir anúncio" }),
-    );
+      await pick(status("Disponibilidade", "Item a"), "Reservado");
 
-    await waitFor(() =>
-      expect(screen.getByRole("heading", { name: "Anúncios" })).toHaveFocus(),
-    );
+      expect(status("Disponibilidade", "Item a")).toHaveTextContent(
+        "Reservado",
+      );
+      expect(status("Disponibilidade", "Item b")).toHaveTextContent(
+        "Disponível",
+      );
+      expect(screen.getByTestId("reserved")).toHaveTextContent("1");
+
+      gate.resolve(new Response(null, { status: 204 }));
+      expect(
+        await screen.findByText('"Item a" marcado como reservado.'),
+      ).toBeInTheDocument();
+      expect(screen.getAllByText(/marcado como/)).toHaveLength(1);
+    });
+
+    it("say the publication in lowercase in the toast", async () => {
+      renderRows([row("a")]);
+      await pick(status("Publicação", "Item a"), "Rascunho");
+      expect(
+        await screen.findByText('"Item a" agora está rascunho.'),
+      ).toBeInTheDocument();
+    });
+
+    it("restore only the row that was rejected and keep the later change", async () => {
+      const first = deferred();
+      const second = deferred();
+      handler = (method, path) => {
+        if (method !== "PATCH") return new Response(null, { status: 204 });
+        return path.includes("/a/") ? first.promise : second.promise;
+      };
+      renderRows([row("a"), row("b")]);
+
+      await pick(status("Disponibilidade", "Item a"), "Reservado");
+      await pick(status("Disponibilidade", "Item b"), "Vendido");
+      first.resolve(
+        Response.json({ message: "Servidor indisponível." }, { status: 500 }),
+      );
+
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "Servidor indisponível.",
+      );
+      await waitFor(() =>
+        expect(status("Disponibilidade", "Item a")).toHaveTextContent(
+          "Disponível",
+        ),
+      );
+      expect(status("Disponibilidade", "Item b")).toHaveTextContent("Vendido");
+      expect(screen.getByTestId("reserved")).toHaveTextContent("0");
+      second.resolve(new Response(null, { status: 204 }));
+      await waitFor(() =>
+        expect(
+          screen.getByText('"Item b" marcado como vendido.'),
+        ).toBeVisible(),
+      );
+    });
+
+    it("survive a refetch that lands while they are pending", async () => {
+      const gate = deferred();
+      handler = (method) =>
+        method === "PATCH" ? gate.promise : new Response(null, { status: 204 });
+      const { client } = renderRows([row("a")]);
+
+      await pick(status("Disponibilidade", "Item a"), "Reservado");
+      await client.refetchQueries({ queryKey: listingKeys.list("store") });
+
+      expect(status("Disponibilidade", "Item a")).toHaveTextContent(
+        "Reservado",
+      );
+      gate.resolve(new Response(null, { status: 204 }));
+    });
+
+    it("refetch the list once, after the last change settles", async () => {
+      const first = deferred();
+      const second = deferred();
+      handler = (method, path) => {
+        if (method !== "PATCH") return new Response(null, { status: 204 });
+        return path.includes("/a/") ? first.promise : second.promise;
+      };
+      renderRows([row("a"), row("b")]);
+
+      await pick(status("Disponibilidade", "Item a"), "Reservado");
+      await pick(status("Disponibilidade", "Item b"), "Vendido");
+      first.resolve(new Response(null, { status: 204 }));
+      await screen.findByText('"Item a" marcado como reservado.');
+      expect(listFetches()).toBe(0);
+
+      second.resolve(new Response(null, { status: 204 }));
+      await waitFor(() => expect(listFetches()).toBe(1));
+      await screen.findByText('"Item b" marcado como vendido.');
+      expect(listFetches()).toBe(1);
+    });
+
+    it("keep a settled change in the cache while another is still pending", async () => {
+      const first = deferred();
+      const second = deferred();
+      handler = (method, path) => {
+        if (method !== "PATCH") return new Response(null, { status: 204 });
+        return path.includes("/a/") ? first.promise : second.promise;
+      };
+      const { client } = renderRows([row("a"), row("b")]);
+
+      await pick(status("Disponibilidade", "Item a"), "Reservado");
+      await pick(status("Disponibilidade", "Item b"), "Vendido");
+      first.resolve(new Response(null, { status: 204 }));
+      await screen.findByText('"Item a" marcado como reservado.');
+
+      expect(status("Disponibilidade", "Item a")).toHaveTextContent(
+        "Reservado",
+      );
+      const cached = client.getQueryData<{ items: Row[] }>(
+        listingKeys.list("store"),
+      );
+      expect(cached?.items.find((item) => item.id === "a")?.availability).toBe(
+        "reserved",
+      );
+      expect(cached?.items.find((item) => item.id === "b")?.availability).toBe(
+        "available",
+      );
+      second.resolve(new Response(null, { status: 204 }));
+    });
+
+    it("refetch after the last status change even while another kind of mutation is pending", async () => {
+      const copying = deferred();
+      handler = (method, path) =>
+        method === "POST" && path.endsWith("/duplicate")
+          ? copying.promise
+          : new Response(null, { status: 204 });
+      renderRows([row("a"), row("b")]);
+
+      fireEvent.click(screen.getByRole("button", { name: "Duplicar Item b" }));
+      await waitFor(() => expect(writes("POST")).toHaveLength(1));
+      await pick(status("Disponibilidade", "Item a"), "Reservado");
+
+      await screen.findByText('"Item a" marcado como reservado.');
+      await waitFor(() => expect(listFetches()).toBe(1));
+      copying.resolve(Response.json({ message: "Erro." }, { status: 500 }));
+    });
+
+    it("ignore another change on the same row while one is pending", async () => {
+      const gate = deferred();
+      handler = (method) =>
+        method === "PATCH" ? gate.promise : new Response(null, { status: 204 });
+      renderRows([row("a")]);
+
+      await pick(status("Disponibilidade", "Item a"), "Reservado");
+      await pick(status("Publicação", "Item a"), "Arquivado");
+
+      expect(writes("PATCH")).toHaveLength(1);
+      expect(status("Publicação", "Item a")).toHaveTextContent("Publicado");
+      gate.resolve(new Response(null, { status: 204 }));
+    });
+
+    it.each([
+      ["succeeds", new Response(null, { status: 204 })],
+      ["fails", Response.json({ message: "Erro." }, { status: 500 })],
+    ])("accept a new change after one %s", async (_name, outcome) => {
+      let result: Response | undefined = outcome;
+      handler = (method) =>
+        method === "PATCH" && result
+          ? result
+          : new Response(null, { status: 204 });
+      renderRows([row("a")]);
+
+      await pick(status("Disponibilidade", "Item a"), "Reservado");
+      await waitFor(() => expect(writes("PATCH")).toHaveLength(1));
+      result = new Response(null, { status: 204 });
+      await waitFor(() =>
+        expect(status("Disponibilidade", "Item a")).toBeInTheDocument(),
+      );
+      await pick(status("Publicação", "Item a"), "Arquivado");
+
+      await waitFor(() => expect(writes("PATCH")).toHaveLength(2));
+    });
   });
 
-  it("toasts the error and keeps the dialog open when the deletion fails", async () => {
-    apiMock.mockReset();
-    apiMock.mockRejectedValue(new ApiError(500, "Falhou no servidor."));
-    renderWithFeedback(
-      <ListingRows
-        storeId="store"
-        storeSlug="loja"
-        listings={[row("a", [])]}
-      />,
-    );
+  describe("Duplicar", () => {
+    it("posts the copy for that row and opens it with the copied notice", async () => {
+      handler = (method) =>
+        method === "POST"
+          ? Response.json({ id: "copy-1" }, { status: 201 })
+          : new Response(null, { status: 204 });
+      renderRows([row("a"), row("b")]);
 
-    fireEvent.click(screen.getByRole("button", { name: "Excluir Item a" }));
-    fireEvent.click(
-      await screen.findByRole("button", { name: "Excluir anúncio" }),
-    );
+      fireEvent.click(screen.getByRole("button", { name: "Duplicar Item b" }));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Falhou no servidor.",
-    );
-    expect(screen.getByRole("alertdialog")).toBeInTheDocument();
+      await waitFor(() =>
+        expect(push).toHaveBeenCalledWith("/admin/anuncios/copy-1?copiado=1"),
+      );
+      expect(writes("POST")).toEqual([
+        { url: "/stores/store/listings/b/duplicate", body: undefined },
+      ]);
+    });
+
+    it("stays on the list with the copied toast when the answer cannot be read", async () => {
+      handler = (method) =>
+        method === "POST"
+          ? Response.json({ unexpected: true }, { status: 201 })
+          : new Response(null, { status: 204 });
+      const log = vi.spyOn(console, "error").mockImplementation(() => {});
+      renderRows([row("a")]);
+
+      fireEvent.click(screen.getByRole("button", { name: "Duplicar Item a" }));
+
+      expect(
+        await screen.findByText(/Cópia criada como rascunho/),
+      ).toBeInTheDocument();
+      expect(push).not.toHaveBeenCalled();
+      log.mockRestore();
+    });
+
+    it("disables the button while copying and enables it after a failure", async () => {
+      const gate = deferred();
+      handler = (method) =>
+        method === "POST" ? gate.promise : new Response(null, { status: 204 });
+      renderRows([row("a")]);
+      const button = screen.getByRole("button", { name: "Duplicar Item a" });
+
+      fireEvent.click(button);
+      await waitFor(() => expect(button).toBeDisabled());
+      gate.resolve(
+        Response.json({ message: "Servidor indisponível." }, { status: 500 }),
+      );
+
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "Servidor indisponível.",
+      );
+      await waitFor(() => expect(button).toBeEnabled());
+      expect(push).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("Excluir", () => {
+    it("deletes the listing, toasts once and moves focus to the heading", async () => {
+      handler = (method) => {
+        if (method === "DELETE") serverRows = [];
+        return new Response(null, { status: 204 });
+      };
+      renderRows([row("a")]);
+
+      fireEvent.click(screen.getByRole("button", { name: "Excluir Item a" }));
+      fireEvent.click(
+        await screen.findByRole("button", { name: "Excluir anúncio" }),
+      );
+
+      await waitFor(() =>
+        expect(screen.getByRole("heading", { name: "Anúncios" })).toHaveFocus(),
+      );
+      expect(writes("DELETE")).toEqual([
+        { url: "/stores/store/listings/a", body: undefined },
+      ]);
+      expect(screen.getAllByText('"Item a" foi excluído.')).toHaveLength(1);
+      expect(screen.queryByRole("link", { name: "Item a" })).toBeNull();
+    });
+
+    it("toasts the error once and keeps the dialog open when the deletion fails", async () => {
+      handler = (method) =>
+        method === "DELETE"
+          ? Response.json(
+              { message: "Servidor indisponível." },
+              { status: 500 },
+            )
+          : new Response(null, { status: 204 });
+      renderRows([row("a")]);
+
+      fireEvent.click(screen.getByRole("button", { name: "Excluir Item a" }));
+      fireEvent.click(
+        await screen.findByRole("button", { name: "Excluir anúncio" }),
+      );
+
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "Servidor indisponível.",
+      );
+      expect(screen.getAllByText("Servidor indisponível.")).toHaveLength(1);
+      expect(screen.getByRole("alertdialog")).toBeInTheDocument();
+    });
   });
 });
