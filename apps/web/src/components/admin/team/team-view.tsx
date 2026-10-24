@@ -1,11 +1,11 @@
 import type { PendingInvite, TeamMember } from "@/lib/admin/types";
 import { pluralize } from "@/lib/format";
-import { Invites } from "./invites";
-import { MemberCard } from "./member-card";
+import { InviteButton, PendingInvites } from "./invites";
+import { MemberRow } from "./member-row";
 
 /**
  * The Equipe page body. Managers get every member and the invites; a seller
- * gets only their own card (pass just that member and `invites: null`,
+ * gets only their own row (pass just that member and `invites: null`,
  * which is also what hides every team control).
  */
 export function TeamView({
@@ -21,27 +21,23 @@ export function TeamView({
 }) {
   const canManage = invites !== null;
   return (
-    <div className="flex flex-col gap-12">
+    <div className="flex flex-col gap-10">
       <section aria-labelledby="team-members">
-        {canManage && (
-          <h2
-            id="team-members"
-            className="mb-4 flex items-baseline gap-2 text-xl font-bold"
-          >
-            Pessoas
-            <span className="text-base font-semibold text-muted">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+          {canManage ? (
+            <h2 id="team-members" className="text-sm font-semibold text-muted">
               {pluralize(members.length, "pessoa", "pessoas")}
-            </span>
-          </h2>
-        )}
-        {!canManage && (
-          <h2 id="team-members" className="sr-only">
-            Seu contato
-          </h2>
-        )}
-        <ul className="grid gap-4 md:grid-cols-2">
+            </h2>
+          ) : (
+            <h2 id="team-members" className="sr-only">
+              Seu contato
+            </h2>
+          )}
+          {canManage && <InviteButton storeId={storeId} />}
+        </div>
+        <ul className="divide-y divide-line rounded-xl border border-line bg-surface">
           {members.map((member) => (
-            <MemberCard
+            <MemberRow
               key={member.userId}
               storeId={storeId}
               member={member}
@@ -53,14 +49,16 @@ export function TeamView({
       </section>
       {invites && (
         <section aria-labelledby="team-invites">
-          <h2 id="team-invites" className="text-xl font-bold">
-            Convidar
+          <h2
+            id="team-invites"
+            className="mb-3 text-sm font-semibold text-muted"
+          >
+            Convites pendentes{" "}
+            {invites.length > 0 && (
+              <span className="font-medium">({invites.length})</span>
+            )}
           </h2>
-          <p className="mt-1 mb-4 max-w-[60ch] text-ink-soft">
-            Gere um link de convite e mande para a pessoa. Ela cria a própria
-            senha e entra direto na loja.
-          </p>
-          <Invites storeId={storeId} invites={invites} />
+          <PendingInvites storeId={storeId} invites={invites} />
         </section>
       )}
     </div>

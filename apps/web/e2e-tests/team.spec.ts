@@ -33,14 +33,16 @@ async function invite(
 ): Promise<string> {
   await page.goto("/admin/equipe");
   await hydrated(page);
-  await page.getByLabel("E-mail da pessoa").fill(email);
-  const radio = page.getByRole("radio", {
-    name: role === "Admin" ? /^Admin/ : /^Vendedor\(a\)/,
-  });
+  await page.getByRole("button", { name: "Convidar pessoas" }).click();
+  const form = page.getByRole("dialog", { name: "Convidar pessoas" });
+  await form.getByLabel("E-mail da pessoa").fill(email);
+  const radio = form
+    .getByRole("radiogroup", { name: "Papel", exact: true })
+    .getByRole("radio", { name: role, exact: true });
   // The radio is visually hidden; people click its card, the label.
-  await page.locator("label").filter({ has: radio }).click();
+  await radio.locator("xpath=ancestor::label").click();
   await expect(radio).toBeChecked();
-  await page.getByRole("button", { name: "Criar convite" }).click();
+  await form.getByRole("button", { name: "Criar convite" }).click();
   const dialog = page.getByRole("dialog", { name: `Convite para ${email}` });
   const link = await dialog.getByLabel("Link do convite").inputValue();
   expect(link).toMatch(new RegExp(`^${BASE_URL}/invite/[\\w-]+$`));
@@ -165,11 +167,11 @@ test.describe
       ).toHaveCount(0);
       await nav.getByRole("link", { name: "Equipe", exact: true }).click();
       await expect(page).toHaveURL(/\/admin\/equipe$/);
-      const cards = page.getByRole("listitem");
-      await expect(cards).toHaveCount(1);
-      await expect(cards).toContainText(SELLER.email);
+      const rows = page.getByRole("listitem");
+      await expect(rows).toHaveCount(1);
+      await expect(rows).toContainText(SELLER.name);
       await expect(
-        page.getByRole("button", { name: "Criar convite" }),
+        page.getByRole("button", { name: "Convidar pessoas" }),
       ).toHaveCount(0);
 
       for (const path of ["/admin/loja", "/admin/vendedores"]) {
@@ -212,15 +214,13 @@ test.describe
       await signIn(page);
       leaverLink = await invite(page, LEAVER.email, "Admin");
 
-      const members = page.getByRole("region", { name: /Pessoas/ });
+      const members = page.getByRole("region", { name: /pessoas/ });
       const owner = members
         .getByRole("listitem")
         .filter({ hasText: ADMIN_EMAIL });
       await expect(owner).toContainText("Ana Teste");
       await expect(owner).toContainText("Dono(a)");
-      await expect(owner.getByLabel("WhatsApp")).toHaveValue(
-        `+${ADMIN_WHATSAPP}`,
-      );
+      await expect(owner).toContainText(`+${ADMIN_WHATSAPP}`);
       const seller = members
         .getByRole("listitem")
         .filter({ hasText: SELLER.email });
@@ -228,7 +228,7 @@ test.describe
       await expect(seller).toContainText("Vendedor(a)");
       await expect(seller).toContainText("Sem WhatsApp");
 
-      const invites = page.getByRole("region", { name: "Convidar" });
+      const invites = page.getByRole("region", { name: /Convites pendentes/ });
       await expect(
         invites.getByRole("listitem").filter({ hasText: LEAVER.email }),
       ).toContainText(`Admin, vale até ${expiryDate()}`);
@@ -236,8 +236,8 @@ test.describe
         .getByRole("region")
         .evaluateAll((regions) => regions.map((r) => r.id || r.textContent));
       expect(
-        order.findIndex((id) => id?.includes("Pessoas")) <
-          order.findIndex((id) => id?.includes("Convidar")),
+        order.findIndex((id) => id?.includes("pessoas")) <
+          order.findIndex((id) => id?.includes("Convites pendentes")),
       ).toBe(true);
     });
 
@@ -270,7 +270,10 @@ test.describe
       await page.goto("/admin/equipe");
       await hydrated(page);
       const card = page.getByRole("listitem").filter({ hasText: LEAVER.email });
-      await card.getByRole("button", { name: "Remover" }).click();
+      await card
+        .getByRole("button", { name: `Ações para ${LEAVER.name}` })
+        .click();
+      await page.getByRole("menuitem", { name: "Remover" }).click();
       await page
         .getByRole("dialog")
         .getByRole("button", { name: "Remover da equipe" })

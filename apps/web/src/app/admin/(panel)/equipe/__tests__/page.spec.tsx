@@ -31,7 +31,7 @@ const asMember = (role: "owner" | "seller") =>
 describe("team page", () => {
   beforeEach(() => jest.mocked(adminGet).mockReset());
 
-  it("gives a seller only their own card, from the sellers list", async () => {
+  it("gives a seller only their own row, from the sellers list", async () => {
     asMember("seller");
     jest.mocked(adminGet).mockResolvedValue({
       items: [seller("s-ana", "Ana"), seller("s-caio", "Caio Vendedor")],
@@ -39,21 +39,22 @@ describe("team page", () => {
     render(await TeamPage());
     expect(adminGet).toHaveBeenCalledTimes(1);
     expect(adminGet).toHaveBeenCalledWith("/stores/store-1/sellers");
-    expect(
-      screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent),
-    ).toEqual(["Caio Vendedor"]);
+    expect(screen.getAllByRole("listitem")).toHaveLength(1);
+    expect(screen.getByText("Caio Vendedor")).toBeInTheDocument();
     expect(screen.getByText("caio@loja.test")).toBeInTheDocument();
     expect(screen.queryByText("Ana")).toBeNull();
-    expect(screen.queryByLabelText("E-mail da pessoa")).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Convidar pessoas" }),
+    ).toBeNull();
   });
 
-  it("shows a seller no card when their profile is not in the list", async () => {
+  it("shows a seller no row when their profile is not in the list", async () => {
     asMember("seller");
     jest
       .mocked(adminGet)
       .mockResolvedValue({ items: [seller("s-ana", "Ana")] });
     render(await TeamPage());
-    expect(screen.queryAllByRole("heading", { level: 3 })).toEqual([]);
+    expect(screen.queryAllByRole("listitem")).toEqual([]);
   });
 
   it("gives a manager every member and the invites", async () => {
@@ -80,7 +81,9 @@ describe("team page", () => {
     render(await TeamPage());
     expect(adminGet).toHaveBeenCalledWith("/stores/store-1/members");
     expect(adminGet).toHaveBeenCalledWith("/stores/store-1/invites");
-    expect(screen.getByRole("heading", { name: "Ana" })).toBeInTheDocument();
-    expect(screen.getByLabelText("E-mail da pessoa")).toBeInTheDocument();
+    expect(screen.getByText("Ana")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Convidar pessoas" }),
+    ).toBeInTheDocument();
   });
 });

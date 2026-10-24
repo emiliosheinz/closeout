@@ -124,21 +124,25 @@ test.describe
         .click();
       await expect(page).toHaveURL(/\/admin\/equipe$/);
       await hydrated(page);
-      const card = page.getByRole("listitem").filter({ hasText: ADMIN_EMAIL });
-      const number = card.getByLabel("WhatsApp");
-      const save = card.getByRole("button", { name: "Salvar contato" });
-      const status = card.getByRole("status");
+      const row = page.getByRole("listitem").filter({ hasText: ADMIN_EMAIL });
+      const dialog = page.getByRole("dialog");
+      const edit = async (value: string) => {
+        await row.getByRole("button", { name: /^Ações para / }).click();
+        await page.getByRole("menuitem", { name: "Editar" }).click();
+        await dialog.getByLabel("WhatsApp").fill(value);
+        await dialog.getByRole("button", { name: "Salvar alterações" }).click();
+      };
 
-      await number.fill("11 9999-0000");
-      await save.click();
-      await expect(status).toContainText(
+      await edit("11 9999-0000");
+      await expect(dialog.getByRole("alert")).toContainText(
         "Informe o WhatsApp com o código do país",
       );
-      await expect(number).toHaveValue("11 9999-0000");
+      await expect(dialog.getByLabel("WhatsApp")).toHaveValue("11 9999-0000");
+      await dialog.getByRole("button", { name: "Cancelar" }).click();
 
-      await number.fill("+55 21 97777-1234");
-      await save.click();
-      await expect(status).toHaveText("Contato salvo.");
+      await edit("+55 21 97777-1234");
+      await expect(dialog).toBeHidden();
+      await expect(row).toContainText("+5521977771234");
 
       await page.goto(publicPath);
       const href = await page
@@ -150,9 +154,9 @@ test.describe
       // Restore the fixture number the other journeys expect.
       await page.goto("/admin/equipe");
       await hydrated(page);
-      await number.fill("+55 11 98888-7777");
-      await save.click();
-      await expect(status).toHaveText("Contato salvo.");
+      await edit("+55 11 98888-7777");
+      await expect(dialog).toBeHidden();
+      await expect(row).toContainText("+5511988887777");
     });
 
     test("duplicating opens a draft copy", async ({ page }) => {

@@ -100,9 +100,15 @@ test.describe
       const card = page
         .getByRole("listitem")
         .filter({ hasText: "seller@loja-e2e.test" });
-      await card.getByLabel("WhatsApp").fill("+55 21 97777-0000");
-      await card.getByRole("button", { name: "Salvar contato" }).click();
-      await expect(card.getByText("Contato salvo.")).toBeVisible();
+      await card.getByRole("button", { name: /^Ações para / }).click();
+      await page.getByRole("menuitem", { name: "Editar" }).click();
+      const editDialog = page.getByRole("dialog");
+      await editDialog.getByLabel("WhatsApp").fill("+55 21 97777-0000");
+      await editDialog
+        .getByRole("button", { name: "Salvar alterações" })
+        .click();
+      await expect(editDialog).toBeHidden();
+      await expect(card).toContainText("+5521977770000");
 
       await page.goto("/admin");
       await findInAdmin(page, TITLE);
