@@ -46,3 +46,9 @@ describe("next config headers", () => {
     }
   });
 });
+
+describe("next config compiler", () => {
+  it("compiles components with the React Compiler", () => {
+    expect(nextConfig.reactCompiler).toBe(true);
+  });
+});
