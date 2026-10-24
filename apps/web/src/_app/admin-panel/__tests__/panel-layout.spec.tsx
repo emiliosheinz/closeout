@@ -1,5 +1,7 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import { PanelLayout } from "@/_app/admin-panel/panel-layout";
+import { getQueryClient } from "@/shared/api";
 import { stubAdminApi } from "@/test/admin-api";
 import { meResponse, STORE } from "@/test/fixtures";
 
@@ -47,5 +49,22 @@ describe("panel layout", () => {
     ).rejects.toMatchObject({
       digest: expect.stringContaining("/admin/entrar"),
     });
+  });
+
+  it("hands the browser only the session, not other data the request loaded", async () => {
+    stubAdminApi({ "/me": meResponse("owner") });
+    getQueryClient().setQueryData(["listings"], [{ id: "l-1" }]);
+    const Probe = () => {
+      const client = useQueryClient();
+      return (
+        <p>
+          {client.getQueryData(["listings"]) === undefined
+            ? "sem listagens"
+            : "com listagens"}
+        </p>
+      );
+    };
+    render(await PanelLayout({ children: <Probe /> }));
+    expect(screen.getByText("sem listagens")).toBeInTheDocument();
   });
 });

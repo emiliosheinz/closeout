@@ -48,4 +48,26 @@ describe("loadRead", () => {
     await expect(loadRead(read)).rejects.toThrow();
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
+
+  it("calls onUnauthorized when the API says the session is gone", async () => {
+    vi.spyOn(global, "fetch").mockResolvedValue(
+      new Response(null, { status: 401 }),
+    );
+    const onUnauthorized = vi.fn(() => {
+      throw new Error("to-login");
+    });
+    await expect(loadRead(read, onUnauthorized)).rejects.toThrow("to-login");
+    expect(onUnauthorized).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not call onUnauthorized for a missing resource", async () => {
+    vi.spyOn(global, "fetch").mockResolvedValue(
+      new Response(null, { status: 404 }),
+    );
+    const onUnauthorized = vi.fn(() => {
+      throw new Error("to-login");
+    });
+    await expect(loadRead(read, onUnauthorized)).resolves.toBeNull();
+    expect(onUnauthorized).not.toHaveBeenCalled();
+  });
 });

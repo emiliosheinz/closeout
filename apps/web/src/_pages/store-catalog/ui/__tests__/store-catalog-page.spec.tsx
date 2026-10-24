@@ -60,4 +60,20 @@ describe("catalog page past the last page", () => {
     });
     await expect(render()).resolves.toBeTruthy();
   });
+
+  it("renders the first page even when it has no items, instead of redirecting to itself", async () => {
+    vi.mocked(getListings).mockResolvedValue({
+      items: [],
+      received: 0,
+      total: 30,
+      page: 1,
+      pageSize: 24,
+    });
+    await expect(
+      CatalogPage({
+        params: Promise.resolve({ slug: "loja" }),
+        searchParams: Promise.resolve({}),
+      }),
+    ).resolves.toBeTruthy();
+  });
 });

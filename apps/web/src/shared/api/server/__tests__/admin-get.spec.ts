@@ -1,5 +1,5 @@
 /** @vitest-environment node */
-import { adminGet } from "../admin-get";
+import { adminFetch, adminGet } from "../admin-get";
 
 const { cookieGet } = vi.hoisted(() => ({ cookieGet: vi.fn() }));
 vi.mock("next/headers", () => ({
@@ -51,5 +51,23 @@ describe("adminGet", () => {
       new Response(null, { status: 500 }),
     );
     await expect(adminGet("/me", widget)).rejects.toThrow();
+  });
+
+  it("throws on a server error even when the body is valid JSON", async () => {
+    vi.spyOn(global, "fetch").mockResolvedValue(
+      Response.json({ id: "x" }, { status: 500 }),
+    );
+    await expect(adminGet("/me", widget)).rejects.toThrow(
+      "Admin request /me failed with 500",
+    );
+  });
+});
+
+describe("adminFetch without a session", () => {
+  it("reports a 401 and does not call the API", async () => {
+    cookieGet.mockReturnValue(undefined);
+    const fetchMock = vi.spyOn(global, "fetch");
+    await expect(adminFetch("/me", widget)).resolves.toEqual({ status: 401 });
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });
