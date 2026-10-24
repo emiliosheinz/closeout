@@ -1,7 +1,7 @@
 import { Plus, Search } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import {
   dashboardHref,
   findStatusFilter,
@@ -9,13 +9,13 @@ import {
   STATUS_FILTERS,
   tabCounts,
 } from "@/entities/listing";
-import { SESSION_EXPIRED_HREF } from "@/entities/session";
-import { requireMember } from "@/entities/session/index.server";
+import {
+  redirectToSessionExpired,
+  requireMember,
+} from "@/entities/session/index.server";
 import { ListingRows } from "@/features/listing-actions";
 import { Hydrated, loadRead } from "@/shared/api/index.server";
 import { cn } from "@/shared/lib/utils";
-
-const sessionEnded = (): never => redirect(SESSION_EXPIRED_HREF);
 
 export const metadata: Metadata = { title: "Anúncios" };
 
@@ -29,8 +29,8 @@ export async function DashboardPage({
   const q = (query.q ?? "").trim().slice(0, 100);
   const status = findStatusFilter(query.status);
   const [listings, sellers] = await Promise.all([
-    loadRead(listingReads.list(store.id), sessionEnded),
-    loadRead(listingReads.sellers(store.id), sessionEnded),
+    loadRead(listingReads.list(store.id), redirectToSessionExpired),
+    loadRead(listingReads.sellers(store.id), redirectToSessionExpired),
   ]);
   if (!listings || !sellers) notFound();
   const counts = tabCounts(listings.items);

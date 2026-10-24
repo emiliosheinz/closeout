@@ -5,7 +5,10 @@ import { notFound } from "next/navigation";
 import { listingReads } from "@/entities/listing";
 import { listingFormOptions } from "@/entities/listing/index.server";
 import { isManager } from "@/entities/session";
-import { requireMember } from "@/entities/session/index.server";
+import {
+  redirectToSessionExpired,
+  requireMember,
+} from "@/entities/session/index.server";
 import { ListingForm } from "@/features/listing-form";
 import { PhotoManager } from "@/features/manage-photos";
 import { Hydrated, isUuid, loadRead } from "@/shared/api/index.server";
@@ -31,8 +34,8 @@ export async function EditListingPage({
   const query = await searchParams;
   const { store, role, sellerId } = await requireMember();
   const [listing, options] = await Promise.all([
-    loadRead(listingReads.detail(store.id, id)),
-    listingFormOptions(store.id),
+    loadRead(listingReads.detail(store.id, id), redirectToSessionExpired),
+    listingFormOptions(store.id, redirectToSessionExpired),
   ]);
   if (!listing) notFound();
 

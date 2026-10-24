@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { isManager } from "@/entities/session";
-import { requireMember } from "@/entities/session/index.server";
+import {
+  redirectToSessionExpired,
+  requireMember,
+} from "@/entities/session/index.server";
 import { storeReads } from "@/entities/store";
 import { StoreSettingsForm } from "@/features/edit-store";
 import { loadRead } from "@/shared/api/index.server";
@@ -13,7 +16,10 @@ export async function StorePage() {
   const { store: current, role } = await requireMember();
   // Also checked here: layouts do not re-run on every client navigation.
   if (!isManager(role)) notFound();
-  const store = await loadRead(storeReads.settings(current.id));
+  const store = await loadRead(
+    storeReads.settings(current.id),
+    redirectToSessionExpired,
+  );
   if (!store) notFound();
   return (
     <>

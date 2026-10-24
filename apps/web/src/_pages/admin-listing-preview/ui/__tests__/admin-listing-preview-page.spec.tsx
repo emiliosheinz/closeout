@@ -44,4 +44,11 @@ describe("listing preview page", () => {
       digest: expect.stringContaining("404"),
     });
   });
+
+  it("rejects when the listing has the wrong shape", async () => {
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    stubAdminApi({ "/me": meResponse(), [path]: { slug: "sofa-azul" } });
+    await expect(PreviewPage(props)).rejects.toThrow();
+    expect(logged).toHaveBeenCalled();
+  });
 });

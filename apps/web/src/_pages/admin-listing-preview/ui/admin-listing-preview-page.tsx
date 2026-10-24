@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { listingReads } from "@/entities/listing";
-import { requireMember } from "@/entities/session/index.server";
+import {
+  redirectToSessionExpired,
+  requireMember,
+} from "@/entities/session/index.server";
 import { isUuid, loadRead } from "@/shared/api/index.server";
 import { ListingView } from "@/widgets/listing-view";
 
@@ -16,7 +19,10 @@ export async function PreviewPage({
   // Also checked here: layouts do not re-run on every client navigation.
   if (!isUuid(id)) notFound();
   const { store } = await requireMember();
-  const listing = await loadRead(listingReads.preview(store.id, id));
+  const listing = await loadRead(
+    listingReads.preview(store.id, id),
+    redirectToSessionExpired,
+  );
   if (!listing) notFound();
   return (
     <>

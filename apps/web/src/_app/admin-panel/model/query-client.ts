@@ -4,7 +4,7 @@ import {
   type QueryClient,
 } from "@tanstack/react-query";
 import { SESSION_EXPIRED_HREF } from "@/entities/session";
-import { ApiError, GENERIC_ERROR, makeQueryClient } from "@/shared/api";
+import { ApiError, makeQueryClient } from "@/shared/api";
 import { notify } from "@/shared/ui/sonner";
 
 function isSessionExpired(error: unknown): boolean {
@@ -38,7 +38,7 @@ export function makeAdminQueryClient(): QueryClient {
       onError(error, _variables, _result, mutation) {
         if (isSessionExpired(error)) return expireSession();
         if (mutation.meta?.handlesError?.(error)) return;
-        notify.error(error instanceof ApiError ? error.message : GENERIC_ERROR);
+        notify.failure(error);
       },
     }),
   });

@@ -40,8 +40,9 @@ test("admin pages carry their data in the first server response", async ({
   const newListing = await documentWithoutScripts(page, "/admin/anuncios/novo");
   expect(newListing).toMatch(/<label[^>]*>Nome do item<\/label>/);
   expect(newListing).toMatch(/<input[^>]*id="title"/);
-  expect(newListing).toMatch(/<button[^>]*role="combobox"[^>]*/);
-  expect(newListing).toContain("Categoria");
+  expect(newListing).toMatch(
+    /<label[^>]*for="category"[^>]*>Categoria<\/label>[\s\S]*?<button(?=[^>]*role="combobox")(?=[^>]*id="category")/,
+  );
 
   const edit = await documentWithoutScripts(page, href);
   expect(edit).toMatch(

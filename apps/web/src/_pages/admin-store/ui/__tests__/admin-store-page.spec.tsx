@@ -35,4 +35,14 @@ describe("store settings page", () => {
       digest: expect.stringContaining("404"),
     });
   });
+
+  it("rejects when the store has the wrong shape", async () => {
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    stubAdminApi({
+      "/me": meResponse("owner"),
+      "/stores/store-1": { name: "Sem slug" },
+    });
+    await expect(StorePage()).rejects.toThrow();
+    expect(logged).toHaveBeenCalled();
+  });
 });

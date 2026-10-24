@@ -3,14 +3,20 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { listingFormOptions } from "@/entities/listing/index.server";
 import { isManager } from "@/entities/session";
-import { requireMember } from "@/entities/session/index.server";
+import {
+  redirectToSessionExpired,
+  requireMember,
+} from "@/entities/session/index.server";
 import { ListingForm } from "@/features/listing-form";
 
 export const metadata: Metadata = { title: "Novo anúncio" };
 
 export async function NewListingPage() {
   const { store, role, sellerId } = await requireMember();
-  const { categories, sellers } = await listingFormOptions(store.id);
+  const { categories, sellers } = await listingFormOptions(
+    store.id,
+    redirectToSessionExpired,
+  );
 
   return (
     <div className="max-w-2xl">

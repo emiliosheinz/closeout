@@ -35,7 +35,7 @@ describe("Toaster", () => {
     act(() => void notify.success("Foto removida."));
     await screen.findByText("Foto removida.");
     expect(
-      screen.getByRole("button", { name: /close|fechar/i }),
+      screen.getByRole("button", { name: "Fechar notificação" }),
     ).toBeInTheDocument();
   });
 
@@ -43,10 +43,10 @@ describe("Toaster", () => {
     act(() => void notify.success("Ordem atualizada."));
     await screen.findByText("Ordem atualizada.");
 
-    await act(() => vi.advanceTimersByTimeAsync(3900));
+    await act(() => vi.advanceTimersByTimeAsync(4000));
     expect(screen.getByText("Ordem atualizada.")).toBeInTheDocument();
 
-    await act(() => vi.advanceTimersByTimeAsync(2600));
+    await act(() => vi.advanceTimersByTimeAsync(2000));
     expect(screen.queryByText("Ordem atualizada.")).not.toBeInTheDocument();
   });
 
@@ -58,8 +58,8 @@ describe("Toaster", () => {
     );
   });
 
-  it("falls back to the generic message for any other failure", async () => {
-    expect(() => notifyFailure("boom")).toThrow();
+  it("shows the generic copy for a failure that is not an ApiError", async () => {
+    notify.failure(new TypeError("boom"));
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Não foi possível salvar. Tente de novo.",
     );

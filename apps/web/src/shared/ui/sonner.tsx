@@ -22,11 +22,13 @@ export const notify = {
       </span>,
       options,
     ),
+  failure: (error: unknown) =>
+    notify.error(error instanceof ApiError ? error.message : GENERIC_ERROR),
 };
 
 /** Toasts a failed action's message, then rethrows so the caller still sees the failure. */
 export function notifyFailure(error: unknown): never {
-  notify.error(error instanceof ApiError ? error.message : GENERIC_ERROR);
+  notify.failure(error);
   throw error;
 }
 
@@ -39,6 +41,7 @@ export function Toaster(props: ToasterProps) {
       closeButton
       containerAriaLabel="Notificações"
       toastOptions={{
+        closeButtonAriaLabel: "Fechar notificação",
         classNames: {
           toast:
             "!rounded-xl !border-line !bg-surface !text-ink !shadow-xl !font-sans",

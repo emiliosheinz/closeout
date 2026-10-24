@@ -82,7 +82,7 @@ describe("admin listings page", () => {
   });
 
   it("rejects when a listing is missing a required field", async () => {
-    vi.spyOn(console, "error").mockImplementation(() => {});
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
     const { title: _title, ...broken } = listings[0] ?? listingSummary();
     stubAdminApi({
       "/me": meResponse(),
@@ -92,6 +92,7 @@ describe("admin listings page", () => {
     await expect(
       DashboardPage({ searchParams: Promise.resolve({}) }),
     ).rejects.toThrow();
+    expect(logged).toHaveBeenCalled();
   });
 
   it("sends the member to login when the API says the session ended", async () => {

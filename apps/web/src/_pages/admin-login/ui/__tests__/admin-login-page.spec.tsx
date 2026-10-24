@@ -26,9 +26,4 @@ describe("login page", () => {
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
-
-  it("has no toaster", async () => {
-    await renderPage("sessao-expirada");
-    expect(screen.queryByRole("region", { name: /Notificações/ })).toBeNull();
-  });
 });

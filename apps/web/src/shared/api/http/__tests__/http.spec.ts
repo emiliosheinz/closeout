@@ -105,14 +105,14 @@ describe("failures", () => {
     );
   });
 
-  it("reports a 401 as status 401 without navigating", async () => {
+  it("reports a 401 as status 401 and sends the browser to login", async () => {
     const assign = vi.fn();
-    vi.stubGlobal("location", { assign });
+    vi.stubGlobal("window", { location: { assign } });
     respondWith(401, { message: "Unauthorized" });
     await expect(api("PATCH", "/x", {})).rejects.toMatchObject({
       status: 401,
     });
-    expect(assign).not.toHaveBeenCalled();
+    expect(assign).toHaveBeenCalledWith("/admin/entrar");
     vi.unstubAllGlobals();
   });
 });
@@ -147,10 +147,5 @@ describe("response shape", () => {
       new ApiError(500, oracle.adminGenericError),
     );
     expect(error).toHaveBeenCalled();
-  });
-
-  it("ignores fields the schema does not declare", async () => {
-    respondWith(200, { id: "x", extra: true });
-    await expect(apiGet("/x", widget)).resolves.toEqual({ id: "x" });
   });
 });

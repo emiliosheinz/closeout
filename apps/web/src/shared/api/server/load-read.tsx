@@ -21,7 +21,7 @@ export async function loadRead<T>(
     queryFn: async () => {
       const outcome = await adminFetch(path, schema);
       if ("data" in outcome) return outcome.data;
-      if (outcome.missing === 401) onUnauthorized?.();
+      if (outcome.status === 401) onUnauthorized?.();
       return null;
     },
     retry: false,

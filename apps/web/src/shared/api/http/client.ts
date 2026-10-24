@@ -70,7 +70,12 @@ async function send(
   } catch {
     throw new ApiError(0, NETWORK_FAILURE);
   }
-  if (response.status === 401) throw new ApiError(401, SESSION_EXPIRED);
+  if (response.status === 401) {
+    // ponytail: interim until every admin write is a Query mutation whose
+    // global handler redirects; then remove.
+    if (typeof window !== "undefined") window.location.assign("/admin/entrar");
+    throw new ApiError(401, SESSION_EXPIRED);
+  }
   if (!response.ok) throw await readError(response);
   if (method !== "GET") await expireCatalogCache();
   return response;
@@ -91,8 +96,8 @@ async function parseBody<T>(
 /**
  * Browser-side calls to the API through the same-origin `/api/v1` proxy; the
  * session cookie travels automatically. Failures throw an `ApiError`: status
- * 0 when the request never arrived, 401 when the session ended. The client
- * never navigates; callers react to the error.
+ * 0 when the request never arrived, 401 when the session ended, in which
+ * case the browser is also sent to the login page.
  */
 export async function apiGet<T>(path: string, schema: Schema<T>): Promise<T> {
   const response = await send("GET", path);

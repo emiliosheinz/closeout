@@ -1,8 +1,7 @@
-import { meSchema } from "@closeout/contracts/schemas";
 import { revalidateTag } from "next/cache";
 import { type NextRequest, NextResponse } from "next/server";
 import { CATALOG_CACHE_TAG } from "@/entities/listing/index.server";
-import { adminGet } from "@/shared/api/index.server";
+import { getMe } from "@/entities/session/index.server";
 import { requireEnv } from "@/shared/config/env";
 import { isSameOrigin } from "@/shared/lib/origin";
 
@@ -20,7 +19,7 @@ export async function POST(request: NextRequest) {
       { status: 403 },
     );
   }
-  if (!(await adminGet("/me", meSchema))) {
+  if (!(await getMe())) {
     return NextResponse.json(
       { message: "Sua sessão expirou. Entre de novo." },
       { status: 401 },

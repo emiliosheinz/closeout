@@ -1,15 +1,15 @@
 import "server-only";
 
 import { cookies } from "next/headers";
-import type { Schema } from "@/shared/api/http/schema";
 import { SESSION_COOKIE_NAME } from "@/shared/lib/session-cookie";
+import type { Schema } from "../http/schema";
 import { apiUrl } from "./api-url";
 
-export type AdminOutcome<T> = { data: T } | { missing: 400 | 401 | 404 };
+export type AdminOutcome<T> = { data: T } | { status: 400 | 401 | 404 };
 
 /**
  * Server-side admin request carrying the visitor's session cookie. A missing
- * resource or session comes back as `missing` with its status; a body that
+ * resource or session comes back as `status`; a body that
  * fails the schema is logged and thrown for the route's error boundary.
  */
 export async function adminFetch<T>(
@@ -17,7 +17,7 @@ export async function adminFetch<T>(
   schema: Schema<T>,
 ): Promise<AdminOutcome<T>> {
   const token = (await cookies()).get(SESSION_COOKIE_NAME)?.value;
-  if (!token) return { missing: 401 };
+  if (!token) return { status: 401 };
   const response = await fetch(apiUrl(path), {
     headers: { Cookie: `${SESSION_COOKIE_NAME}=${token}` },
     cache: "no-store",
@@ -28,7 +28,7 @@ export async function adminFetch<T>(
     response.status === 401 ||
     response.status === 404
   ) {
-    return { missing: response.status };
+    return { status: response.status };
   }
   if (!response.ok) {
     throw new Error(`Admin request ${path} failed with ${response.status}`);

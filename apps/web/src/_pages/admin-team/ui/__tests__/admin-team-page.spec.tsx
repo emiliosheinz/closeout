@@ -69,12 +69,11 @@ describe("team page", () => {
       "/stores/store-1/invites": { items: [] },
     });
     renderPage(await TeamPage());
-    expect(calls).toEqual(
-      expect.arrayContaining([
-        "/stores/store-1/members",
-        "/stores/store-1/invites",
-      ]),
-    );
+    expect(calls).toEqual([
+      "/me",
+      "/stores/store-1/members",
+      "/stores/store-1/invites",
+    ]);
     expect(screen.getByText("Ana")).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Convidar pessoas" }),
@@ -82,12 +81,13 @@ describe("team page", () => {
   });
 
   it("rejects when a member has the wrong shape", async () => {
-    vi.spyOn(console, "error").mockImplementation(() => {});
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
     stubAdminApi({
       ...asMember("owner"),
       "/stores/store-1/members": { items: [{ userId: "u-ana" }] },
       "/stores/store-1/invites": { items: [] },
     });
     await expect(TeamPage()).rejects.toThrow();
+    expect(logged).toHaveBeenCalled();
   });
 });

@@ -1,18 +1,15 @@
 import type { Metadata } from "next";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { inviteReads, type PendingInvite } from "@/entities/invite";
 import { listingReads } from "@/entities/listing";
 import { memberReads, type TeamMember } from "@/entities/member";
+import { isManager, type Member } from "@/entities/session";
 import {
-  isManager,
-  type Member,
-  SESSION_EXPIRED_HREF,
-} from "@/entities/session";
-import { requireMember } from "@/entities/session/index.server";
+  redirectToSessionExpired,
+  requireMember,
+} from "@/entities/session/index.server";
 import { Hydrated, loadRead } from "@/shared/api/index.server";
 import { TeamView } from "./team-view";
-
-const sessionEnded = (): never => redirect(SESSION_EXPIRED_HREF);
 
 export const metadata: Metadata = { title: "Equipe" };
 
@@ -26,13 +23,16 @@ async function loadTeam({ me, store, role, sellerId }: Member): Promise<{
 }> {
   if (isManager(role)) {
     const [team, pending] = await Promise.all([
-      loadRead(memberReads.list(store.id), sessionEnded),
-      loadRead(inviteReads.pending(store.id), sessionEnded),
+      loadRead(memberReads.list(store.id), redirectToSessionExpired),
+      loadRead(inviteReads.pending(store.id), redirectToSessionExpired),
     ]);
     if (!team || !pending) notFound();
     return { members: team.items, invites: pending.items };
   }
-  const sellers = await loadRead(listingReads.sellers(store.id), sessionEnded);
+  const sellers = await loadRead(
+    listingReads.sellers(store.id),
+    redirectToSessionExpired,
+  );
   if (!sellers) notFound();
   const own = sellers.items.find((seller) => seller.id === sellerId);
   if (!own) return { members: [], invites: null };

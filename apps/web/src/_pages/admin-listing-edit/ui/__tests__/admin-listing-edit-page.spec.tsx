@@ -48,8 +48,9 @@ describe("edit listing page", () => {
   });
 
   it("rejects when the listing has the wrong shape", async () => {
-    vi.spyOn(console, "error").mockImplementation(() => {});
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
     stubAdminApi(api({ id: LISTING_ID }));
     await expect(EditListingPage(props)).rejects.toThrow();
+    expect(logged).toHaveBeenCalled();
   });
 });
