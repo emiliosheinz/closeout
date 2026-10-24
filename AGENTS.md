@@ -44,7 +44,7 @@ apps/api/src/
   database/    data source, entity list, migrations (generated)
 apps/api/test/ integration suites (*.integration-spec.ts)
 apps/web/src/
-  app/         Next routing tree: route files only re-export from _pages / _app; proxy, robots, sitemap
+  app/         Next routing tree: route files only re-export from _pages / _app; robots, sitemap (proxy.ts sits beside it)
   _app/        admin panel layout and nav, root/store layouts and error pages, api route handlers (auth, revalidate, health)
   _pages/      one slice per page (admin-listings, admin-team, store-catalog, invite, ...) with its own ui/model
   widgets/     listing-view, the one block shared by the item page and the admin preview
@@ -73,8 +73,9 @@ apps/web/e2e-tests/   Playwright journeys
 - Web code follows Feature-Sliced Design: layers import only downward
   (`_app` > `_pages` > `widgets` > `features` > `entities` > `shared`), slices never import
   each other within a layer, and a slice is imported through its `index.ts` (or
-  `index.server.ts` for server-only code). Enforced by
-  `bin/closeout sh apps/web/scripts/check-fsd-imports.sh`.
+  `index.server.ts` for server-only code). `shared` and `_app` have no slices, so their
+  modules are imported directly; `app/` route files are not checked. Enforced by
+  `apps/web/scripts/check-fsd-imports.sh`, which `pnpm check` runs.
 - An API response-shape change and the web change that consumes it ship in a separate PR
   each (or the new field stays optional on the web for one release). Both services deploy
   from one commit and the API waits on its migration, so for a moment the web runs against

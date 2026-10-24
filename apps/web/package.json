@@ -8,7 +8,7 @@
     "start:dev": "next dev",
     "lint": "biome lint .",
     "format": "biome format .",
-    "check": "biome check .",
+    "check": "biome check . && sh scripts/check-fsd-imports.sh src",
     "typecheck": "tsc --noEmit",
     "lint:fix": "biome lint . --fix",
     "format:fix": "biome format . --write",
