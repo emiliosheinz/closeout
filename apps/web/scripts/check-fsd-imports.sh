@@ -115,6 +115,8 @@ if [ "${1:-}" = "--self-test" ]; then
   case_ pass features/b/ok.ts 'import { y } from "./index";'
   case_ pass features/a/model/ok.ts 'import { y } from "../index";'
   case_ pass features/a/ok.ts 'import { y } from "@/shared/lib/x";'
+  case_ pass shared/lib/ok.ts 'import { y } from "@/shared/config/x";'
+  case_ pass shared/lib/ok.ts 'import { y } from "../../../../features/a";'
   [ "$fails" = 0 ] && echo "self-test ok"
   exit "$fails"
 fi
