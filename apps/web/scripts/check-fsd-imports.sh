@@ -67,7 +67,12 @@ violations() {
         elif [ "$t_layer" = "$layer" ] && [ "$layer" != "shared" ] && [ "$t_slice" != "$slice" ]; then
           echo "$file: imports another slice $spec"
         elif [ "$t_layer" != "shared" ] && [ "$t_layer" != "_app" ] && [ "$t_layer/$t_slice" != "$layer/$slice" ]; then
-          case "$rest" in */*) echo "$file: imports past slice index $spec" ;; esac
+          sub=""
+          case $rest in */*) sub=${rest#*/} ;; esac
+          case $sub in
+            ""|index|index.server) ;;
+            *) echo "$file: imports past slice index $spec" ;;
+          esac
         fi
       done
     done
@@ -105,6 +110,8 @@ if [ "${1:-}" = "--self-test" ]; then
   case_ fail features/b/bad.ts 'import { y } from "@/features/a";'
   case_ fail features/b/bad.ts 'import { y } from "../a";'
   case_ fail features/b/bad.ts 'import { y } from "@/features/a/model/x";'
+  case_ pass features/b/ok2.ts 'import { y } from "@/entities/a/index.server";'
+  case_ fail features/b/bad2.ts 'import { y } from "@/entities/a/model/x";'
   case_ pass features/b/ok.ts 'import { y } from "./index";'
   case_ pass features/a/model/ok.ts 'import { y } from "../index";'
   case_ pass features/a/ok.ts 'import { y } from "@/shared/lib/x";'

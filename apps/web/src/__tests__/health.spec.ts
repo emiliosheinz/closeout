@@ -1,5 +1,5 @@
 /** @jest-environment node */
-import { GET } from "../app/health/route";
+import { GET } from "@/_app/api-routes/health";
 
 const VALID = {
   PORT: "3000",
