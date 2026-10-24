@@ -18,7 +18,7 @@ import {
 import { SessionsService } from "./sessions.service";
 
 const INVALID_CREDENTIALS = "E-mail ou senha inválidos.";
-const TOO_MANY_ATTEMPTS =
+export const TOO_MANY_ATTEMPTS =
   "Muitas tentativas. Tente novamente em alguns minutos.";
 
 @Injectable()

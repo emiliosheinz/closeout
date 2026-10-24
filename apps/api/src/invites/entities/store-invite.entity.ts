@@ -10,9 +10,7 @@ import {
   UpdateDateColumn,
 } from "typeorm";
 import { Store } from "@/stores/entities/store.entity";
-
-export const INVITE_ROLES = ["admin", "seller"] as const;
-export type InviteRole = (typeof INVITE_ROLES)[number];
+import type { AssignableRole } from "@/stores/entities/store-member.entity";
 
 /**
  * Pending invitation to join a store. The row exists only while the invite
@@ -37,7 +35,7 @@ export class StoreInvite {
   declare email: string;
 
   @Column({ type: "text" })
-  declare role: InviteRole;
+  declare role: AssignableRole;
 
   @Column({ name: "token_hash", type: "text", unique: true })
   declare tokenHash: string;
