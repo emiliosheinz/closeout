@@ -179,7 +179,17 @@ jobs:
           context: .
           file: apps/${{ matrix.app }}/Dockerfile
           target: prod
+          load: true
+          tags: closeout-${{ matrix.app }}-check
           cache-from: type=gha,scope=image-${{ matrix.app }}
+
+      # The API loads only the enums entry, so it must resolve inside the
+      # production image and stay free of zod.
+      - name: Resolve the contracts enums in the API image
+        if: ${{ matrix.app == 'api' }}
+        run: |
+          file=$(docker run --rm closeout-api-check node -p "require.resolve('@closeout/contracts/enums')")
+          docker run --rm closeout-api-check sh -c "! grep -q zod '$file'"
 
   e2e:
     name: End-to-end tests
