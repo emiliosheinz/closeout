@@ -6,6 +6,8 @@ import {
   listingRequestSchema,
   loginRequestSchema,
   MAX_PRICE_CENTS,
+  meSchema,
+  pendingInviteSchema,
   publicListingDetailSchema,
   publicListingPageSchema,
   sellerRequestSchema,
@@ -135,6 +137,57 @@ describe("other response schemas", () => {
     expect(sellerSchema.parse({ ...seller, avatarKey: "k" })).toEqual(seller);
   });
 
+  it("accepts a team member without a contact number", () => {
+    expect(
+      teamMemberSchema.safeParse({
+        userId: "u",
+        name: "Ana",
+        email: "ana@x.com",
+        role: "seller",
+        sellerId: "s",
+        displayName: "Ana",
+        whatsappNumber: null,
+        avatarUrl: null,
+        listingCount: 0,
+      }).success,
+    ).toBe(true);
+  });
+
+  it("strips unknown keys inside nested objects", () => {
+    const me = {
+      user: { id: "u", name: "Ana", email: "ana@x.com" },
+      memberships: [],
+    };
+    expect(meSchema.parse({ ...me, user: { ...me.user, foo: "bar" } })).toEqual(
+      me,
+    );
+  });
+
+  it.each([
+    [
+      "an updated-at",
+      (value: string) =>
+        adminListingDetailSchema.safeParse({
+          ...adminDetail,
+          updatedAt: value,
+        }),
+    ],
+    [
+      "an invite expiry",
+      (value: string) =>
+        pendingInviteSchema.safeParse({
+          id: "i",
+          email: "a@b.com",
+          role: "seller",
+          expiresAt: value,
+        }),
+    ],
+  ])("checks %s is an ISO date string", (_, parse) => {
+    expect(parse("yesterday").success).toBe(false);
+    expect(parse("2026-01-01").success).toBe(false);
+    expect(parse(new Date().toISOString()).success).toBe(true);
+  });
+
   it("parses a team member and drops unknown keys", () => {
     const member = {
       userId: "u",
@@ -193,6 +246,18 @@ describe("request messages", () => {
     ).toBe(
       'Use um valor como 1.200,00, ou deixe vazio para "Preço a combinar".',
     );
+  });
+
+  it.each(["categoryId", "condition"])("requires %s", (field) => {
+    const { [field as "categoryId"]: _omitted, ...rest } = listing;
+    expect(listingRequestSchema.safeParse(rest).success).toBe(false);
+  });
+
+  it("rejects inviting an owner", () => {
+    expect(
+      inviteRequestSchema.safeParse({ email: "a@b.com", role: "owner" })
+        .success,
+    ).toBe(false);
   });
 
   it("accepts an empty price", () => {
