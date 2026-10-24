@@ -6,5 +6,4 @@ export const INVALID_EMAIL = "Informe um e-mail válido.";
 export const emailSchema = z
   .string()
   .trim()
-  .max(254, INVALID_EMAIL)
   .regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, INVALID_EMAIL);

@@ -238,6 +238,10 @@ describe("request messages", () => {
     expect(messageFor(check("@b.com"))).toBe("Informe um e-mail válido.");
     expect(messageFor(check("a@@b.com"))).toBe("Informe um e-mail válido.");
     expect(check("  a@b.com ").success).toBe(true);
+    expect(check("  a@b.co ").success).toBe(true);
+    for (const invalid of ["a@b.", "a@.com", "a b@c.com", "a@b@c.com"]) {
+      expect(messageFor(check(invalid))).toBe("Informe um e-mail válido.");
+    }
   });
 
   it("asks for the store name", () => {
