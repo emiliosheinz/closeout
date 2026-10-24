@@ -19,6 +19,11 @@
       "types": "./dist/enums.d.ts",
       "import": "./dist/enums.mjs",
       "require": "./dist/enums.js"
+    },
+    "./schemas": {
+      "types": "./dist/schemas.d.ts",
+      "import": "./dist/schemas.mjs",
+      "require": "./dist/schemas.js"
     }
   },
   "devDependencies": {
@@ -27,5 +32,8 @@
     "tsup": "9.0.0",
     "typescript": "catalog:",
     "vitest": "5.0.5"
+  },
+  "dependencies": {
+    "zod": "4.6.7"
   }
 }

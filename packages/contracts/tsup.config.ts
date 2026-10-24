@@ -5,5 +5,5 @@ export default defineConfig({
   clean: true,
   format: ["cjs", "esm"],
   treeshake: "recommended",
-  entry: ["src/enums.ts"],
+  entry: { enums: "src/enums.ts", schemas: "src/schemas/index.ts" },
 });
