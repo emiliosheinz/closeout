@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { PublicImage } from "@/lib/catalog/types";
-import { cn } from "@/lib/utils";
+import { cn } from "@/shared/lib/utils";
 
 /**
  * Swipeable photo strip (native scroll snapping) with thumbnails that jump

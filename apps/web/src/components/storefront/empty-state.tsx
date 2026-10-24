@@ -1,6 +1,6 @@
 import { MessageCircle, PackageOpen } from "lucide-react";
 import Link from "next/link";
-import { storePath } from "@/lib/site";
+import { storePath } from "@/shared/lib/site";
 
 export function EmptyState({
   storeSlug,

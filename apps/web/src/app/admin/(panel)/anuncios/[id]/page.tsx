@@ -8,7 +8,7 @@ import { isManager, requireMember } from "@/lib/admin/current-store";
 import { listingFormOptions } from "@/lib/admin/form-data";
 import { adminGet, isUuid } from "@/lib/admin/server-api";
 import type { AdminListingDetail } from "@/lib/admin/types";
-import { itemPath } from "@/lib/site";
+import { itemPath } from "@/shared/lib/site";
 
 export const metadata: Metadata = { title: "Editar anúncio" };
 

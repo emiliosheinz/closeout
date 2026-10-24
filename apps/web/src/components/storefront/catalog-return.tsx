@@ -3,7 +3,7 @@
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { storePath } from "@/lib/site";
+import { storePath } from "@/shared/lib/site";
 
 const KEY = "closeout:last-catalog-view";
 

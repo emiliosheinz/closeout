@@ -1,10 +1,10 @@
+import type { Condition } from "@/shared/config/enums";
 import {
   AVAILABILITY_FILTER_LABELS,
   CONDITION_LABELS,
   formatStickerPrice,
-} from "../format";
-import { storePath } from "../site";
-import type { Condition } from "./types";
+} from "@/shared/lib/format";
+import { storePath } from "@/shared/lib/site";
 
 /*
  * Catalog state lives in the URL so a filtered view can be shared and the

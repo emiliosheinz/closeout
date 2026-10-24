@@ -1,9 +1,11 @@
 import type {
+  AssignableRole,
   Availability,
   Condition,
-  ListingAttribute,
   Publication,
-} from "../catalog/types";
+  Role,
+} from "@/shared/config/enums";
+import type { ListingAttribute } from "../catalog/types";
 
 export interface StoreSettings {
   id: string;
@@ -14,11 +16,6 @@ export interface StoreSettings {
   locale: string;
   currency: string;
 }
-
-export type Role = "owner" | "admin" | "seller";
-
-/** Roles an invite or a role change can grant; owner comes only from the CLI. */
-export type AssignableRole = Exclude<Role, "owner">;
 
 export interface Me {
   user: { id: string; name: string; email: string };

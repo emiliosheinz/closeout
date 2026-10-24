@@ -3,21 +3,22 @@
 import { Mail, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { ApiError, api } from "@/lib/admin/client-api";
+import type { IssuedInvite, PendingInvite } from "@/lib/admin/types";
+import type { AssignableRole } from "@/shared/config/enums";
+import {
+  formatDate,
+  ROLE_DESCRIPTIONS,
+  ROLE_LABELS,
+} from "@/shared/lib/format";
+import { Button } from "@/shared/ui/button";
 import {
   Dialog,
   DialogClose,
   DialogContent,
   DialogDescription,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { ApiError, api } from "@/lib/admin/client-api";
-import type {
-  AssignableRole,
-  IssuedInvite,
-  PendingInvite,
-} from "@/lib/admin/types";
-import { formatDate, ROLE_DESCRIPTIONS, ROLE_LABELS } from "@/lib/format";
+} from "@/shared/ui/dialog";
 import { ConfirmDialog } from "../confirm-dialog";
 import { Field, inputClass } from "../field";
 import { InviteLinkDialog, type ShownInvite } from "./invite-link-dialog";

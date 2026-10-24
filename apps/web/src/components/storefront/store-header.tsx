@@ -1,9 +1,9 @@
 import { MessageCircle } from "lucide-react";
 import Link from "next/link";
 import type { StoreInfo } from "@/lib/catalog/types";
-import { pluralize } from "@/lib/format";
-import { storePath } from "@/lib/site";
-import { sellerContactUrl } from "@/lib/whatsapp";
+import { pluralize } from "@/shared/lib/format";
+import { storePath } from "@/shared/lib/site";
+import { sellerContactUrl } from "@/shared/lib/whatsapp";
 
 /**
  * Full introduction on the plain catalog; a one-line header once the visitor

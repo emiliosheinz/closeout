@@ -8,13 +8,13 @@ import {
   catalogEntries,
   SORT_PARAM,
 } from "@/lib/catalog/params";
-import { CONDITIONS } from "@/lib/catalog/types";
+import { CONDITIONS } from "@/shared/config/enums";
 import {
   AVAILABILITY_FILTER_LABELS,
   CONDITION_LABELS,
   SORT_LABELS,
-} from "@/lib/format";
-import { storePath } from "@/lib/site";
+} from "@/shared/lib/format";
+import { storePath } from "@/shared/lib/site";
 
 const AVAILABILITY_OPTIONS: AvailabilityFilter[] = [
   "listed",

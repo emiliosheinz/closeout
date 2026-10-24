@@ -2,14 +2,14 @@
 
 import { MessageCircle } from "lucide-react";
 import { useState } from "react";
+import { cn } from "@/shared/lib/utils";
 import {
   Dialog,
   DialogClose,
   DialogContent,
   DialogDescription,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { cn } from "@/lib/utils";
+} from "@/shared/ui/dialog";
 import { ContactButton } from "./contact-button";
 
 export interface SellerContact {

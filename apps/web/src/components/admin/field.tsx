@@ -1,4 +1,4 @@
-import { cn } from "@/lib/utils";
+import { cn } from "@/shared/lib/utils";
 
 export const inputClass =
   "h-11 w-full rounded-md border border-line-strong bg-surface px-3 text-base text-ink placeholder:text-muted aria-[invalid=true]:border-stamp";

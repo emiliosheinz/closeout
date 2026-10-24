@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
+import type { Role } from "@/shared/config/enums";
 import { getMe } from "./server-api";
-import type { Me, Role, StoreSettings } from "./types";
+import type { Me, StoreSettings } from "./types";
 
 export interface Member {
   me: Me;

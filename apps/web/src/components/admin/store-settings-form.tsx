@@ -3,10 +3,10 @@
 import { Check, Copy } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { ApiError, api } from "@/lib/admin/client-api";
 import type { StoreSettings } from "@/lib/admin/types";
-import { cn } from "@/lib/utils";
+import { cn } from "@/shared/lib/utils";
+import { Button } from "@/shared/ui/button";
 import { Field, inputClass } from "./field";
 
 export function StoreSettingsForm({

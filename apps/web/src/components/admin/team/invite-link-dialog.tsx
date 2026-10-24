@@ -2,14 +2,14 @@
 
 import { Check, Copy } from "lucide-react";
 import { useRef, useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/shared/ui/button";
 import {
   Dialog,
   DialogClose,
   DialogContent,
   DialogDescription,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from "@/shared/ui/dialog";
 
 export interface ShownInvite {
   email: string;

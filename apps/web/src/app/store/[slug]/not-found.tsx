@@ -2,7 +2,7 @@
 
 import { useParams } from "next/navigation";
 import { NotFoundMessage } from "@/components/storefront/not-found-message";
-import { storePath } from "@/lib/site";
+import { storePath } from "@/shared/lib/site";
 
 // Not-found pages receive no params; the store comes from the URL.
 export default function StoreNotFound() {

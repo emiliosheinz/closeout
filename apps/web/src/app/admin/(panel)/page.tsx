@@ -14,7 +14,7 @@ import type {
   DashboardCounts,
   Seller,
 } from "@/lib/admin/types";
-import { cn } from "@/lib/utils";
+import { cn } from "@/shared/lib/utils";
 
 export const metadata: Metadata = { title: "Anúncios" };
 

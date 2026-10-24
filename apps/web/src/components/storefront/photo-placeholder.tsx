@@ -1,5 +1,5 @@
 import { Package } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/shared/lib/utils";
 
 /** Stands in for a listing without photos so no media area is ever empty. */
 export function PhotoPlaceholder({ className }: { className?: string }) {

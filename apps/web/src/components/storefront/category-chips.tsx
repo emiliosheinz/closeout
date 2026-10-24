@@ -5,7 +5,7 @@ import {
   withFilters,
 } from "@/lib/catalog/params";
 import type { StoreInfo } from "@/lib/catalog/types";
-import { cn } from "@/lib/utils";
+import { cn } from "@/shared/lib/utils";
 
 /** Horizontal category strip; each chip is a plain link. */
 export function CategoryChips({

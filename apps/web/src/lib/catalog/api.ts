@@ -1,4 +1,4 @@
-import { requireEnv } from "../env";
+import { requireEnv } from "@/shared/config/env";
 import { type CatalogFilters, hasActiveFilters, toApiQuery } from "./params";
 import type { ListingDetail, ListingPage, StoreInfo } from "./types";
 

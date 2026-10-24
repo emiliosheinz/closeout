@@ -10,14 +10,14 @@ import {
   AVAILABILITIES,
   type Availability,
   type Publication,
-} from "@/lib/catalog/types";
+} from "@/shared/config/enums";
 import {
   AVAILABILITY_LABELS,
   formatPrice,
   joinNames,
   PUBLICATION_LABELS,
-} from "@/lib/format";
-import { itemPath } from "@/lib/site";
+} from "@/shared/lib/format";
+import { itemPath } from "@/shared/lib/site";
 import { ConfirmDialog } from "./confirm-dialog";
 
 const PUBLICATIONS: Publication[] = ["draft", "published", "archived"];

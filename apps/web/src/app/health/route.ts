@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { unusableEnv } from "@/lib/env";
+import { unusableEnv } from "@/shared/config/env";
 
 export const dynamic = "force-dynamic";
 

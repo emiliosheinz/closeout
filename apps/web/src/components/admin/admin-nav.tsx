@@ -3,8 +3,8 @@
 import { ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { storePath } from "@/lib/site";
-import { cn } from "@/lib/utils";
+import { storePath } from "@/shared/lib/site";
+import { cn } from "@/shared/lib/utils";
 
 const LINKS: { href: string; label: string; managersOnly?: boolean }[] = [
   { href: "/admin", label: "Anúncios" },

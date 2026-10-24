@@ -2,18 +2,19 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { ApiError, api } from "@/lib/admin/client-api";
+import type { TeamMember } from "@/lib/admin/types";
+import type { AssignableRole } from "@/shared/config/enums";
+import { ROLE_DESCRIPTIONS, ROLE_LABELS } from "@/shared/lib/format";
+import { cn } from "@/shared/lib/utils";
+import { Button } from "@/shared/ui/button";
 import {
   Dialog,
   DialogClose,
   DialogContent,
   DialogDescription,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { ApiError, api } from "@/lib/admin/client-api";
-import type { AssignableRole, TeamMember } from "@/lib/admin/types";
-import { ROLE_DESCRIPTIONS, ROLE_LABELS } from "@/lib/format";
-import { cn } from "@/lib/utils";
+} from "@/shared/ui/dialog";
 import { ConfirmDialog } from "../confirm-dialog";
 import { Field, inputClass } from "../field";
 import { RoleToggle } from "./role-toggle";

@@ -4,7 +4,7 @@ import { InviteForm } from "@/components/admin/invite-form";
 import { InviteSignOut } from "@/components/admin/invite-sign-out";
 import { lookupInvite } from "@/lib/admin/invites";
 import { getMe } from "@/lib/admin/server-api";
-import { ROLE_DESCRIPTIONS, ROLE_LABELS } from "@/lib/format";
+import { ROLE_DESCRIPTIONS, ROLE_LABELS } from "@/shared/lib/format";
 
 export const metadata: Metadata = {
   title: "Convite",

@@ -19,9 +19,9 @@ import {
   hasActiveFilters,
   parseCatalogParams,
 } from "@/lib/catalog/params";
-import { pluralize } from "@/lib/format";
-import { storePath } from "@/lib/site";
-import { sellerContactUrl } from "@/lib/whatsapp";
+import { pluralize } from "@/shared/lib/format";
+import { storePath } from "@/shared/lib/site";
+import { sellerContactUrl } from "@/shared/lib/whatsapp";
 
 interface PageProps {
   params: Promise<{ slug: string }>;

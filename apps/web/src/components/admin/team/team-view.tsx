@@ -1,5 +1,5 @@
 import type { PendingInvite, TeamMember } from "@/lib/admin/types";
-import { pluralize } from "@/lib/format";
+import { pluralize } from "@/shared/lib/format";
 import { InviteButton, PendingInvites } from "./invites";
 import { MemberRow } from "./member-row";
 

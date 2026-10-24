@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { requireEnv } from "../env";
+import { requireEnv } from "@/shared/config/env";
 import { isSameOrigin } from "./origin";
 
 /*

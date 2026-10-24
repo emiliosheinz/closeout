@@ -1,8 +1,8 @@
 import Link from "next/link";
 import type { ListingSummary } from "@/lib/catalog/types";
-import { CONDITION_LABELS } from "@/lib/format";
-import { itemPath } from "@/lib/site";
-import { cn } from "@/lib/utils";
+import { CONDITION_LABELS } from "@/shared/lib/format";
+import { itemPath } from "@/shared/lib/site";
+import { cn } from "@/shared/lib/utils";
 import { PhotoPlaceholder } from "./photo-placeholder";
 import { PriceSticker } from "./price-sticker";
 import { StatusStamp } from "./status-stamp";

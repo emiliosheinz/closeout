@@ -1,5 +1,5 @@
 import { MessageCircle } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/shared/lib/utils";
 
 /** The primary conversion action: opens WhatsApp with a prefilled message. */
 export function ContactButton({

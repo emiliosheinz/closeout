@@ -1,6 +1,6 @@
-import type { Availability } from "@/lib/catalog/types";
-import { AVAILABILITY_LABELS } from "@/lib/format";
-import { cn } from "@/lib/utils";
+import type { Availability } from "@/shared/config/enums";
+import { AVAILABILITY_LABELS } from "@/shared/lib/format";
+import { cn } from "@/shared/lib/utils";
 
 /** Rubber-stamp mark for items that are no longer simply available. */
 export function StatusStamp({

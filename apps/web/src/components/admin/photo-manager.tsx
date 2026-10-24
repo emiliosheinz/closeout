@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { ApiError, api } from "@/lib/admin/client-api";
 import { uploadPhotos } from "@/lib/admin/listings";
 import type { AdminImage } from "@/lib/admin/types";
-import { cn } from "@/lib/utils";
+import { cn } from "@/shared/lib/utils";
 
 const MAX_PHOTOS = 20;
 

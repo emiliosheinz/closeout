@@ -1,7 +1,7 @@
 import "./globals.css";
 import type { Metadata, Viewport } from "next";
 import { Bricolage_Grotesque, Permanent_Marker } from "next/font/google";
-import { publicBaseUrl } from "@/lib/site";
+import { publicBaseUrl } from "@/shared/lib/site";
 
 const bricolage = Bricolage_Grotesque({
   subsets: ["latin"],

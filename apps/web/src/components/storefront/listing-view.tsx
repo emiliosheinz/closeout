@@ -10,9 +10,9 @@ import {
   CONDITION_LABELS,
   formatPrice,
   joinNames,
-} from "@/lib/format";
-import { absoluteUrl, itemPath } from "@/lib/site";
-import { listingContactUrl } from "@/lib/whatsapp";
+} from "@/shared/lib/format";
+import { absoluteUrl, itemPath } from "@/shared/lib/site";
+import { listingContactUrl } from "@/shared/lib/whatsapp";
 import { ContactAction, type SellerContact } from "./contact-action";
 import { Gallery } from "./gallery";
 import { ListingCard } from "./listing-card";

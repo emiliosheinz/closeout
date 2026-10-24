@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect } from "react";
-import { storePath } from "@/lib/site";
+import { storePath } from "@/shared/lib/site";
 
 export default function CatalogError({
   error,

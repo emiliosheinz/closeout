@@ -1,5 +1,5 @@
-import { formatPrice, formatStickerPrice } from "@/lib/format";
-import { cn } from "@/lib/utils";
+import { formatPrice, formatStickerPrice } from "@/shared/lib/format";
+import { cn } from "@/shared/lib/utils";
 
 interface PriceStickerProps {
   priceCents: number | null;

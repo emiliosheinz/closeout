@@ -3,8 +3,8 @@ import { notFound } from "next/navigation";
 import { BackToCatalog } from "@/components/storefront/catalog-return";
 import { ListingView } from "@/components/storefront/listing-view";
 import { getListing, getStore } from "@/lib/catalog/api";
-import { formatPrice } from "@/lib/format";
-import { itemPath } from "@/lib/site";
+import { formatPrice } from "@/shared/lib/format";
+import { itemPath } from "@/shared/lib/site";
 
 interface PageProps {
   params: Promise<{ slug: string; item: string }>;

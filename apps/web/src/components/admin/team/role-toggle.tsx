@@ -1,8 +1,8 @@
 "use client";
 
-import type { AssignableRole } from "@/lib/admin/types";
-import { ROLE_LABELS } from "@/lib/format";
-import { cn } from "@/lib/utils";
+import type { AssignableRole } from "@/shared/config/enums";
+import { ROLE_LABELS } from "@/shared/lib/format";
+import { cn } from "@/shared/lib/utils";
 
 const ROLES: AssignableRole[] = ["seller", "admin"];
 

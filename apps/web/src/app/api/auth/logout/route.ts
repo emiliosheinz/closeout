@@ -5,7 +5,7 @@ import {
   clearSessionCookie,
   SESSION_COOKIE_NAME,
 } from "@/lib/admin/session-cookie";
-import { requireEnv } from "@/lib/env";
+import { requireEnv } from "@/shared/config/env";
 
 /**
  * Revokes the session on the API, drops the cookie and sends the browser to

@@ -2,7 +2,7 @@
 
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import type * as React from "react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/shared/lib/utils";
 
 const Dialog = DialogPrimitive.Root;
 const DialogTitle = DialogPrimitive.Title;

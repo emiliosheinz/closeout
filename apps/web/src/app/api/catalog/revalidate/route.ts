@@ -4,7 +4,7 @@ import { isSameOrigin } from "@/lib/admin/origin";
 import { adminGet } from "@/lib/admin/server-api";
 import type { Me } from "@/lib/admin/types";
 import { CATALOG_CACHE_TAG } from "@/lib/catalog/api";
-import { requireEnv } from "@/lib/env";
+import { requireEnv } from "@/shared/config/env";
 
 /**
  * Expires the cached storefront data so an admin's change shows on the next

@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { cache } from "react";
-import { requireEnv } from "../env";
+import { requireEnv } from "@/shared/config/env";
 import { CLIENT_IP_HEADER, INTERNAL_SECRET_HEADER } from "../internal-headers";
 import { clientIpFrom } from "./origin";
 import { SESSION_COOKIE_NAME } from "./session-cookie";

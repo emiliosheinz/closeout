@@ -1,15 +1,4 @@
-export type Condition = "new" | "like_new" | "good" | "fair" | "for_parts";
-export type Availability = "available" | "reserved" | "sold";
-export type Publication = "draft" | "published" | "archived";
-
-export const CONDITIONS: Condition[] = [
-  "new",
-  "like_new",
-  "good",
-  "fair",
-  "for_parts",
-];
-export const AVAILABILITIES: Availability[] = ["available", "reserved", "sold"];
+import type { Availability, Condition } from "@/shared/config/enums";
 
 export interface PublicImage {
   sm: string;

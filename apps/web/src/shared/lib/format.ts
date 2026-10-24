@@ -1,5 +1,10 @@
-import type { AssignableRole, Role } from "./admin/types";
-import type { Availability, Condition, Publication } from "./catalog/types";
+import type {
+  AssignableRole,
+  Availability,
+  Condition,
+  Publication,
+  Role,
+} from "@/shared/config/enums";
 
 /*
  * Every user-facing label and number format lives here, so adding a locale

@@ -1,4 +1,4 @@
-import { requireEnv } from "./env";
+import { requireEnv } from "@/shared/config/env";
 
 /** Absolute origin visitors use, e.g. `https://desapego.example`. */
 export function publicBaseUrl(): string {

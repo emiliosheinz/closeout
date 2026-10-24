@@ -7,7 +7,7 @@ import {
   SheetDescription,
   SheetTitle,
   SheetTrigger,
-} from "@/components/ui/sheet";
+} from "@/shared/ui/sheet";
 
 /** Compact entry point to the filter form on small screens. */
 export function FiltersSheet({

@@ -3,26 +3,26 @@
 import { ImagePlus, Plus, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { Button } from "@/components/ui/button";
 import { ApiError, api } from "@/lib/admin/client-api";
 import { createListingWithPhotos } from "@/lib/admin/listings";
-import { centsToInput, parsePriceToCents } from "@/lib/admin/money";
 import type { AdminListingDetail, Category, Seller } from "@/lib/admin/types";
+import type { ListingAttribute } from "@/lib/catalog/types";
 import {
   AVAILABILITIES,
   type Availability,
   CONDITIONS,
   type Condition,
-  type ListingAttribute,
   type Publication,
-} from "@/lib/catalog/types";
+} from "@/shared/config/enums";
 import {
   AVAILABILITY_LABELS,
   CONDITION_LABELS,
   joinNames,
   PUBLICATION_LABELS,
-} from "@/lib/format";
-import { cn } from "@/lib/utils";
+} from "@/shared/lib/format";
+import { centsToInput, parsePriceToCents } from "@/shared/lib/money";
+import { cn } from "@/shared/lib/utils";
+import { Button } from "@/shared/ui/button";
 import { Field, inputClass } from "./field";
 
 interface ListingFormProps {
