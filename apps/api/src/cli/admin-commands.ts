@@ -1,10 +1,10 @@
+import type { StoreRole } from "@closeout/contracts/enums";
 import type { DataSource, EntityManager } from "typeorm";
 import { User } from "@/auth/entities/user.entity";
 import { hashPassword, MIN_PASSWORD_LENGTH } from "@/auth/services/passwords";
 import type { SessionsService } from "@/auth/services/sessions.service";
 import { normalizeWhatsAppNumber } from "@/sellers/whatsapp-number";
 import { Store } from "@/stores/entities/store.entity";
-import type { StoreRole } from "@/stores/entities/store-member.entity";
 import {
   isLongEnoughPassword,
   parseEmail,

@@ -1,4 +1,4 @@
-import type { AssignableRole } from "@/shared/config/enums";
+import type { AssignableRole } from "@closeout/contracts/enums";
 
 export interface PendingInvite {
   id: string;

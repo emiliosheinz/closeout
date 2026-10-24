@@ -1,3 +1,4 @@
+import { CONDITIONS, type Condition } from "@closeout/contracts/enums";
 import { Transform, Type } from "class-transformer";
 import {
   IsIn,
@@ -8,7 +9,6 @@ import {
   Min,
   ValidateIf,
 } from "class-validator";
-import { CONDITIONS, type Condition } from "../listing-types";
 import { MAX_PRICE_CENTS } from "./listing.dto";
 
 const isDefined = (_: unknown, value: unknown) => value !== undefined;

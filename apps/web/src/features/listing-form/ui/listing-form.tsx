@@ -1,5 +1,12 @@
 "use client";
 
+import {
+  AVAILABILITIES,
+  type Availability,
+  CONDITIONS,
+  type Condition,
+  type Publication,
+} from "@closeout/contracts/enums";
 import { ImagePlus, Plus, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -10,13 +17,6 @@ import type {
   Seller,
 } from "@/entities/listing";
 import { ApiError, api } from "@/shared/api";
-import {
-  AVAILABILITIES,
-  type Availability,
-  CONDITIONS,
-  type Condition,
-  type Publication,
-} from "@/shared/config/enums";
 import {
   AVAILABILITY_LABELS,
   CONDITION_LABELS,

@@ -1,12 +1,12 @@
 "use client";
 
+import type { AssignableRole } from "@closeout/contracts/enums";
 import { Mail, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { IssuedInvite, PendingInvite } from "@/entities/invite";
 import { RoleToggle } from "@/entities/member";
 import { ApiError, api } from "@/shared/api";
-import type { AssignableRole } from "@/shared/config/enums";
 import {
   formatDate,
   ROLE_DESCRIPTIONS,

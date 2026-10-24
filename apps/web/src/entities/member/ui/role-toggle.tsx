@@ -1,6 +1,6 @@
 "use client";
 
-import type { AssignableRole } from "@/shared/config/enums";
+import type { AssignableRole } from "@closeout/contracts/enums";
 import { ROLE_LABELS } from "@/shared/lib/format";
 import { cn } from "@/shared/lib/utils";
 

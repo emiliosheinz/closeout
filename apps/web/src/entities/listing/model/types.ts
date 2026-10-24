@@ -2,7 +2,7 @@ import type {
   Availability,
   Condition,
   Publication,
-} from "@/shared/config/enums";
+} from "@closeout/contracts/enums";
 
 export interface PublicImage {
   sm: string;

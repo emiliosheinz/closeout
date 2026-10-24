@@ -1,4 +1,4 @@
-import type { Role } from "@/shared/config/enums";
+import type { StoreRole } from "@closeout/contracts/enums";
 
 export interface StoreSettings {
   id: string;
@@ -12,13 +12,13 @@ export interface StoreSettings {
 
 export interface Me {
   user: { id: string; name: string; email: string };
-  memberships: { role: Role; sellerId: string; store: StoreSettings }[];
+  memberships: { role: StoreRole; sellerId: string; store: StoreSettings }[];
 }
 
 export interface Member {
   me: Me;
   store: StoreSettings;
-  role: Role;
+  role: StoreRole;
   /** The caller's own contact profile in the store. */
   sellerId: string;
 }

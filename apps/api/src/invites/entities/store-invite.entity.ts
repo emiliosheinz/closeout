@@ -1,3 +1,4 @@
+import type { AssignableRole } from "@closeout/contracts/enums";
 import {
   Check,
   Column,
@@ -10,7 +11,6 @@ import {
   UpdateDateColumn,
 } from "typeorm";
 import { Store } from "@/stores/entities/store.entity";
-import type { AssignableRole } from "@/stores/entities/store-member.entity";
 
 /**
  * Pending invitation to join a store. The row exists only while the invite

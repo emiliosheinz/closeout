@@ -1,5 +1,5 @@
+import type { AssignableRole } from "@closeout/contracts/enums";
 import { apiUrl, internalAuthHeaders } from "@/shared/api/index.server";
-import type { AssignableRole } from "@/shared/config/enums";
 
 export interface InviteDetails {
   storeName: string;

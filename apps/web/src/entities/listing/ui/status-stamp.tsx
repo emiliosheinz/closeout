@@ -1,4 +1,4 @@
-import type { Availability } from "@/shared/config/enums";
+import type { Availability } from "@closeout/contracts/enums";
 import { AVAILABILITY_LABELS } from "@/shared/lib/format";
 import { cn } from "@/shared/lib/utils";
 

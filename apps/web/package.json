@@ -18,6 +18,7 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@closeout/contracts": "workspace:*",
     "@radix-ui/react-dialog": "^1.1.16",
     "@radix-ui/react-slot": "1.2.4",
     "class-variance-authority": "0.7.1",

@@ -1,3 +1,8 @@
+import type {
+  Availability,
+  Condition,
+  Publication,
+} from "@closeout/contracts/enums";
 import {
   BadRequestException,
   ConflictException,
@@ -33,12 +38,7 @@ import {
   PUBLISH_REQUIRES_PHOTO,
   sellersForNewListing,
 } from "../listing-rules";
-import type {
-  Availability,
-  Condition,
-  ListingAttribute,
-  Publication,
-} from "../listing-types";
+import type { ListingAttribute } from "../listing-types";
 import {
   listingSellers,
   type PublicListingDetail,

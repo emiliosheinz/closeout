@@ -1,3 +1,4 @@
+import type { AssignableRole, StoreRole } from "@closeout/contracts/enums";
 import {
   ConflictException,
   Injectable,
@@ -8,10 +9,6 @@ import { InjectDataSource } from "@nestjs/typeorm";
 import type { DataSource } from "typeorm";
 import { MediaService } from "@/media/media.service";
 import { mediaUrls } from "@/media/media-urls";
-import type {
-  AssignableRole,
-  StoreRole,
-} from "../entities/store-member.entity";
 import { forbidden, type MembershipContext } from "../membership";
 
 export interface TeamMember {

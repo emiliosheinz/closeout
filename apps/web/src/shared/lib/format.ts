@@ -3,8 +3,8 @@ import type {
   Availability,
   Condition,
   Publication,
-  Role,
-} from "@/shared/config/enums";
+  StoreRole,
+} from "@closeout/contracts/enums";
 
 /*
  * Every user-facing label and number format lives here, so adding a locale
@@ -92,7 +92,7 @@ export function pluralize(count: number, one: string, many: string): string {
   return `${count.toLocaleString(DEFAULT_LOCALE)} ${count === 1 ? one : many}`;
 }
 
-export const ROLE_LABELS: Record<Role, string> = {
+export const ROLE_LABELS: Record<StoreRole, string> = {
   owner: "Dono(a)",
   admin: "Admin",
   seller: "Vendedor(a)",

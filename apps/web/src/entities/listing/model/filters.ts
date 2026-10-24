@@ -1,4 +1,4 @@
-import type { Condition } from "@/shared/config/enums";
+import type { Condition } from "@closeout/contracts/enums";
 
 export type AvailabilityFilter =
   | "listed"

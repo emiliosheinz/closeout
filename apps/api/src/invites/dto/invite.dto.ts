@@ -1,3 +1,7 @@
+import {
+  ASSIGNABLE_ROLES,
+  type AssignableRole,
+} from "@closeout/contracts/enums";
 import { Transform } from "class-transformer";
 import {
   IsIn,
@@ -8,10 +12,6 @@ import {
 } from "class-validator";
 import { MIN_PASSWORD_LENGTH } from "@/auth/services/passwords";
 import { IsOptionalWhatsAppNumber } from "@/sellers/dto/seller.dto";
-import {
-  ASSIGNABLE_ROLES,
-  type AssignableRole,
-} from "@/stores/entities/store-member.entity";
 import { parseEmail, parseName } from "@/stores/member-input";
 
 const EMAIL_MESSAGE = "Informe um e-mail válido.";

@@ -1,3 +1,4 @@
+import type { AssignableRole } from "@closeout/contracts/enums";
 import {
   ConflictException,
   HttpException,
@@ -18,7 +19,6 @@ import {
   SessionsService,
 } from "@/auth/services/sessions.service";
 import { SlidingWindowCounter } from "@/security/sliding-window";
-import type { AssignableRole } from "@/stores/entities/store-member.entity";
 import {
   type ProvisionedMember,
   provisionMember,

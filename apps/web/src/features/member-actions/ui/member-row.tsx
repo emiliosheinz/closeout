@@ -1,11 +1,11 @@
 "use client";
 
+import type { AssignableRole } from "@closeout/contracts/enums";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { TeamMember } from "@/entities/member";
 import { RoleToggle } from "@/entities/member";
 import { ApiError, api } from "@/shared/api";
-import type { AssignableRole } from "@/shared/config/enums";
 import { ROLE_DESCRIPTIONS, ROLE_LABELS } from "@/shared/lib/format";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";

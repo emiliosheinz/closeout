@@ -1,10 +1,10 @@
+import { CONDITIONS } from "@closeout/contracts/enums";
 import Link from "next/link";
 import type {
   AvailabilityFilter,
   CatalogFilters,
   CatalogSort,
 } from "@/entities/listing";
-import { CONDITIONS } from "@/shared/config/enums";
 import {
   AVAILABILITY_FILTER_LABELS,
   CONDITION_LABELS,
