@@ -1,22 +1,22 @@
-/** @jest-environment node */
-
+/** @vitest-environment node */
+import type { MockInstance } from "vitest";
 import { DEFAULT_FILTERS } from "../../model/filters";
 import { getListing, getListings, getStore, getStoreSlugs } from "../catalog";
 
 const page = { items: [], total: 0, page: 1, pageSize: 24 };
 
 describe("catalog fetch caching", () => {
-  let fetchMock: jest.SpyInstance;
+  let fetchMock: MockInstance;
   beforeEach(() => {
     process.env.API_BASE_URL = "http://api:3000";
-    fetchMock = jest
+    fetchMock = vi
       .spyOn(global, "fetch")
       .mockImplementation(async () => Response.json(page));
   });
   afterEach(() => fetchMock.mockRestore());
 
-  const initOf = (call: number) => fetchMock.mock.calls[call][1];
-  const urlOf = (call: number) => fetchMock.mock.calls[call][0];
+  const initOf = (call: number) => fetchMock.mock.calls[call]?.[1];
+  const urlOf = (call: number) => fetchMock.mock.calls[call]?.[0];
 
   it("asks for the store the caller names", async () => {
     await getStore("nosso-desapego");

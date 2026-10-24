@@ -1,15 +1,16 @@
 import { render, screen } from "@testing-library/react";
+import type { Mock } from "vitest";
 import { requireMember } from "@/entities/session/index.server";
 import { adminGet } from "@/shared/api/index.server";
 import { TeamPage } from "../admin-team-page";
 
-jest.mock("next/navigation", () => ({
-  useRouter: () => ({ push: jest.fn(), refresh: jest.fn() }),
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
 }));
-jest.mock("@/shared/api/index.server", () => ({ adminGet: jest.fn() }));
-jest.mock("@/entities/session/index.server", () => ({
-  ...jest.requireActual("@/entities/session/index.server"),
-  requireMember: jest.fn(),
+vi.mock("@/shared/api/index.server", () => ({ adminGet: vi.fn() }));
+vi.mock("@/entities/session/index.server", async () => ({
+  ...(await vi.importActual("@/entities/session/index.server")),
+  requireMember: vi.fn(),
 }));
 
 const seller = (id: string, displayName: string) => ({
@@ -21,7 +22,7 @@ const seller = (id: string, displayName: string) => ({
 });
 
 const asMember = (role: "owner" | "seller") =>
-  (requireMember as jest.Mock).mockResolvedValue({
+  (requireMember as Mock).mockResolvedValue({
     me: { user: { id: "u-caio", name: "Caio", email: "caio@loja.test" } },
     store: { id: "store-1" },
     role,
@@ -29,11 +30,13 @@ const asMember = (role: "owner" | "seller") =>
   });
 
 describe("team page", () => {
-  beforeEach(() => jest.mocked(adminGet).mockReset());
+  beforeEach(() => {
+    vi.mocked(adminGet).mockReset();
+  });
 
   it("gives a seller only their own row, from the sellers list", async () => {
     asMember("seller");
-    jest.mocked(adminGet).mockResolvedValue({
+    vi.mocked(adminGet).mockResolvedValue({
       items: [seller("s-ana", "Ana"), seller("s-caio", "Caio Vendedor")],
     });
     render(await TeamPage());
@@ -50,16 +53,14 @@ describe("team page", () => {
 
   it("shows a seller no row when their profile is not in the list", async () => {
     asMember("seller");
-    jest
-      .mocked(adminGet)
-      .mockResolvedValue({ items: [seller("s-ana", "Ana")] });
+    vi.mocked(adminGet).mockResolvedValue({ items: [seller("s-ana", "Ana")] });
     render(await TeamPage());
     expect(screen.queryAllByRole("listitem")).toEqual([]);
   });
 
   it("gives a manager every member and the invites", async () => {
     asMember("owner");
-    jest.mocked(adminGet).mockImplementation(async (path: string) =>
+    vi.mocked(adminGet).mockImplementation(async (path: string) =>
       path.endsWith("/members")
         ? {
             items: [

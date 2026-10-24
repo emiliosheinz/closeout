@@ -1,8 +1,9 @@
-/** @jest-environment node */
+/** @vitest-environment node */
+import type { MockInstance } from "vitest";
 import { StoreLayout } from "@/_app/ui/store-layout";
 
 describe("store layout", () => {
-  let fetchMock: jest.SpyInstance;
+  let fetchMock: MockInstance;
   beforeEach(() => {
     process.env.API_BASE_URL = "http://api:3000";
   });
@@ -12,7 +13,7 @@ describe("store layout", () => {
     StoreLayout({ children: "catalog", params: Promise.resolve({ slug }) });
 
   it("answers 404 before streaming when the store does not exist", async () => {
-    fetchMock = jest
+    fetchMock = vi
       .spyOn(global, "fetch")
       .mockResolvedValue(new Response(null, { status: 404 }));
     await expect(render("sumiu")).rejects.toMatchObject({
@@ -21,7 +22,7 @@ describe("store layout", () => {
   });
 
   it("renders the store that the path names", async () => {
-    fetchMock = jest
+    fetchMock = vi
       .spyOn(global, "fetch")
       .mockResolvedValue(Response.json({ name: "Loja" }));
     await expect(render("nosso-desapego")).resolves.toBe("catalog");

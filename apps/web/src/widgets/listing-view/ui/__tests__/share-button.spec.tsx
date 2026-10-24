@@ -3,7 +3,7 @@ import { ShareButton } from "../share-button";
 
 describe("ShareButton", () => {
   it("copies the link and confirms when there is no share sheet", async () => {
-    const writeText = jest.fn().mockResolvedValue(undefined);
+    const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, "share", {
       value: undefined,
       configurable: true,
@@ -35,7 +35,7 @@ describe("ShareButton", () => {
   });
 
   it("uses the native share sheet when available", async () => {
-    const share = jest.fn().mockResolvedValue(undefined);
+    const share = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, "share", {
       value: share,
       configurable: true,

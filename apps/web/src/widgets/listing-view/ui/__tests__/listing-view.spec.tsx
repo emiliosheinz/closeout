@@ -43,7 +43,7 @@ describe("ListingView", () => {
   });
 
   it("shares the item URL of its store", async () => {
-    const writeText = jest.fn().mockResolvedValue(undefined);
+    const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, "share", {
       value: undefined,
       configurable: true,

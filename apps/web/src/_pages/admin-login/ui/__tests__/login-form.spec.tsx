@@ -3,7 +3,7 @@ import { LoginForm } from "../login-form";
 
 describe("LoginForm", () => {
   it("keeps its Origin even when the page arrived with a no-referrer policy", async () => {
-    const fetchMock = jest.fn().mockResolvedValue({
+    const fetchMock = vi.fn().mockResolvedValue({
       ok: false,
       json: async () => ({ message: "E-mail ou senha inválidos." }),
     });

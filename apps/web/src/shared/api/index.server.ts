@@ -1,3 +1,5 @@
+import "server-only";
+
 import { cookies } from "next/headers";
 import { requireEnv } from "@/shared/config/env";
 import {

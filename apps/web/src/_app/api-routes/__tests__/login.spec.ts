@@ -1,13 +1,13 @@
-/** @jest-environment node */
+/** @vitest-environment node */
 import { NextRequest } from "next/server";
 import { POST } from "@/_app/api-routes/login";
 
 beforeEach(() => {
-  jest.spyOn(console, "warn").mockImplementation(() => undefined);
+  vi.spyOn(console, "warn").mockImplementation(() => undefined);
 });
 
 afterEach(() => {
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 function login(body: string, headers: Record<string, string> = {}) {
@@ -56,7 +56,7 @@ describe("login route body cap", () => {
   it("forwards a small multi-byte body sent without content-length", async () => {
     process.env.API_BASE_URL = "http://api:3001";
     process.env.INTERNAL_API_SECRET = "secret";
-    const fetchMock = jest.spyOn(global, "fetch").mockResolvedValue(
+    const fetchMock = vi.spyOn(global, "fetch").mockResolvedValue(
       Response.json({
         sessionToken: "tok",
         expiresAt: "2030-01-01T00:00:00.000Z",
@@ -90,7 +90,7 @@ describe("login route client IP", () => {
   it("keys the client by X-Real-IP, never by X-Forwarded-For", async () => {
     process.env.API_BASE_URL = "http://api:3001";
     process.env.INTERNAL_API_SECRET = "secret";
-    const fetchMock = jest
+    const fetchMock = vi
       .spyOn(global, "fetch")
       .mockResolvedValue(
         Response.json(

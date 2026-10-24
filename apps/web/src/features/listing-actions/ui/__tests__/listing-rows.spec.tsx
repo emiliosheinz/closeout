@@ -2,8 +2,8 @@ import { render, screen } from "@testing-library/react";
 import type { AdminListingSummary } from "@/entities/listing";
 import { ListingRows } from "../listing-rows";
 
-jest.mock("next/navigation", () => ({
-  useRouter: () => ({ push: jest.fn(), refresh: jest.fn() }),
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
 }));
 
 const row = (

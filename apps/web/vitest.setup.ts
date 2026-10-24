@@ -1,4 +1,5 @@
-import "@testing-library/jest-dom";
+/// <reference types="vitest/globals" />
+import "@testing-library/jest-dom/vitest";
 
 if (typeof window !== "undefined") {
   if (!Element.prototype.hasPointerCapture) {

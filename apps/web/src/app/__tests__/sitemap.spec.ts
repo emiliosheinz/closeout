@@ -3,9 +3,9 @@ import { join } from "node:path";
 import { getListings, getStoreSlugs } from "@/entities/listing/index.server";
 import sitemap from "../sitemap";
 
-jest.mock("@/entities/listing/index.server", () => ({
-  getListings: jest.fn(),
-  getStoreSlugs: jest.fn(),
+vi.mock("@/entities/listing/index.server", () => ({
+  getListings: vi.fn(),
+  getStoreSlugs: vi.fn(),
 }));
 
 const listings = (prefix: string, from: number, to: number) =>
@@ -15,10 +15,8 @@ const listings = (prefix: string, from: number, to: number) =>
 
 beforeEach(() => {
   process.env.PUBLIC_BASE_URL = "https://closeout.example";
-  jest
-    .mocked(getStoreSlugs)
-    .mockResolvedValue(["nosso-desapego", "loja-da-bia"]);
-  jest.mocked(getListings).mockImplementation((async (
+  vi.mocked(getStoreSlugs).mockResolvedValue(["nosso-desapego", "loja-da-bia"]);
+  vi.mocked(getListings).mockImplementation((async (
     slug: string,
     filters: { page: number },
   ) => {
@@ -49,7 +47,7 @@ describe("sitemap", () => {
 
   it("requests sold listings too, 100 per page, until the total is covered", async () => {
     await sitemap();
-    const calls = jest.mocked(getListings).mock.calls;
+    const calls = vi.mocked(getListings).mock.calls;
     expect(calls.map(([slug, f]) => [slug, f.page])).toEqual([
       ["nosso-desapego", 1],
       ["nosso-desapego", 2],

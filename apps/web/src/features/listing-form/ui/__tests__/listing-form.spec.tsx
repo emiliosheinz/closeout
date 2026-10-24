@@ -1,18 +1,19 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import type { MockedFunction } from "vitest";
 import type { AdminListingDetail } from "@/entities/listing";
 import { api } from "@/shared/api";
 import { ListingForm } from "../listing-form";
 
-jest.mock("next/navigation", () => ({
-  useRouter: () => ({ push: jest.fn(), refresh: jest.fn() }),
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
 }));
 
-jest.mock("@/shared/api", () => ({
-  ...jest.requireActual("@/shared/api"),
-  api: jest.fn(),
+vi.mock("@/shared/api", async () => ({
+  ...(await vi.importActual("@/shared/api")),
+  api: vi.fn(),
 }));
 
-const apiMock = api as jest.MockedFunction<typeof api>;
+const apiMock = api as MockedFunction<typeof api>;
 
 const seller = (id: string, displayName: string) => ({
   id,

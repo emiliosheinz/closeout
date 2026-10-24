@@ -5,20 +5,21 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
+import type { MockedFunction } from "vitest";
 import type { TeamMember } from "@/entities/member";
 import { ApiError, api } from "@/shared/api";
 import { TeamView } from "../team-view";
 
-jest.mock("next/navigation", () => ({
-  useRouter: () => ({ push: jest.fn(), refresh: jest.fn() }),
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
 }));
 
-jest.mock("@/shared/api", () => ({
-  ...jest.requireActual("@/shared/api"),
-  api: jest.fn(),
+vi.mock("@/shared/api", async () => ({
+  ...(await vi.importActual("@/shared/api")),
+  api: vi.fn(),
 }));
 
-const apiMock = api as jest.MockedFunction<typeof api>;
+const apiMock = api as MockedFunction<typeof api>;
 
 const member = (
   userId: string,
@@ -57,7 +58,9 @@ const openMenu = (label: string) => {
 };
 
 describe("TeamView for a manager", () => {
-  beforeEach(() => apiMock.mockReset());
+  beforeEach(() => {
+    apiMock.mockReset();
+  });
 
   const renderManager = () =>
     render(

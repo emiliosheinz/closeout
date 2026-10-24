@@ -1,5 +1,6 @@
-/** @jest-environment node */
+/** @vitest-environment node */
 import { NextRequest } from "next/server";
+import type { MockInstance } from "vitest";
 import { POST } from "@/_app/api-routes/invite";
 
 function accept(body: unknown, headers: Record<string, string> = {}) {
@@ -19,18 +20,18 @@ const input = {
   whatsappNumber: "+55 11 98888-7777",
 };
 
-let fetchMock: jest.SpyInstance;
+let fetchMock: MockInstance;
 
 beforeEach(() => {
   process.env.PUBLIC_BASE_URL = "http://web:3000";
   process.env.API_BASE_URL = "http://api:3001";
   process.env.INTERNAL_API_SECRET = "secret";
-  fetchMock = jest.spyOn(global, "fetch");
-  jest.spyOn(console, "warn").mockImplementation(() => undefined);
+  fetchMock = vi.spyOn(global, "fetch");
+  vi.spyOn(console, "warn").mockImplementation(() => undefined);
 });
 
 afterEach(() => {
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 describe("invite accept route", () => {

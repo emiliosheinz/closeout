@@ -1,10 +1,10 @@
 /**
- * @jest-environment node
+ * @vitest-environment node
  */
 import { ApiError, api } from "../index";
 
 function respondWith(status: number, body: unknown) {
-  global.fetch = jest.fn().mockResolvedValue(
+  global.fetch = vi.fn().mockResolvedValue(
     new Response(JSON.stringify(body), {
       status,
       headers: { "Content-Type": "application/json" },
@@ -49,10 +49,10 @@ describe("api error messages", () => {
 describe("storefront cache expiry", () => {
   const ok = () => Response.json({ id: "x" });
   const calledUrls = () =>
-    jest.mocked(global.fetch).mock.calls.map(([url]) => url);
+    vi.mocked(global.fetch).mock.calls.map(([url]) => url);
 
   it("expires the catalog cache after a successful write", async () => {
-    global.fetch = jest.fn().mockImplementation(async () => ok());
+    global.fetch = vi.fn().mockImplementation(async () => ok());
     await expect(api("PATCH", "/listings/x", {})).resolves.toEqual({
       id: "x",
     });
@@ -63,7 +63,7 @@ describe("storefront cache expiry", () => {
   });
 
   it("leaves the cache alone on reads and failed writes", async () => {
-    global.fetch = jest
+    global.fetch = vi
       .fn()
       .mockResolvedValueOnce(ok())
       .mockResolvedValueOnce(
@@ -78,7 +78,7 @@ describe("storefront cache expiry", () => {
   });
 
   it("still resolves the write when the expiry call fails", async () => {
-    global.fetch = jest
+    global.fetch = vi
       .fn()
       .mockResolvedValueOnce(new Response(null, { status: 204 }))
       .mockRejectedValueOnce(new TypeError("network down"));

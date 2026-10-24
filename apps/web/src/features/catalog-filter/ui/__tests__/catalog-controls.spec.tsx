@@ -11,6 +11,7 @@ const categories = [
 ];
 
 describe("catalog controls", () => {
+  // Accessible-name whitespace between label and count depends on CSS (flex-item blockification); jsdom loads no CSS, so allow either.
   it("links category chips within the store, keeping the search", () => {
     render(
       <CategoryChips
@@ -23,7 +24,7 @@ describe("catalog controls", () => {
       "href",
       "/store/nosso-desapego?q=mesa",
     );
-    expect(screen.getByRole("link", { name: "Cozinha 1" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: /^Cozinha\s*1$/ })).toHaveAttribute(
       "href",
       "/store/nosso-desapego?q=mesa&categoria=cozinha",
     );
@@ -41,7 +42,7 @@ describe("catalog controls", () => {
       "href",
       "/store/loja-da-bia",
     );
-    expect(screen.getByRole("link", { name: "Móveis 2" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: /^Móveis\s*2$/ })).toHaveAttribute(
       "href",
       "/store/loja-da-bia?categoria=moveis",
     );

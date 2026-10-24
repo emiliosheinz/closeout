@@ -1,11 +1,11 @@
-/** @jest-environment node */
+/** @vitest-environment node */
 import { revalidateTag } from "next/cache";
 import { NextRequest } from "next/server";
 import { POST } from "@/_app/api-routes/revalidate";
 import { adminGet } from "@/shared/api/index.server";
 
-jest.mock("next/cache", () => ({ revalidateTag: jest.fn() }));
-jest.mock("@/shared/api/index.server", () => ({ adminGet: jest.fn() }));
+vi.mock("next/cache", () => ({ revalidateTag: vi.fn() }));
+vi.mock("@/shared/api/index.server", () => ({ adminGet: vi.fn() }));
 
 function expire(origin = "http://web:3000") {
   return POST(
@@ -19,24 +19,24 @@ function expire(origin = "http://web:3000") {
 describe("catalog revalidate route", () => {
   beforeEach(() => {
     process.env.PUBLIC_BASE_URL = "http://web:3000";
-    jest.mocked(revalidateTag).mockClear();
+    vi.mocked(revalidateTag).mockClear();
   });
 
   it("expires the catalog cache for a signed-in admin", async () => {
-    jest.mocked(adminGet).mockResolvedValue({ id: "me" });
+    vi.mocked(adminGet).mockResolvedValue({ id: "me" });
     const res = await expire();
     expect(res.status).toBe(204);
     expect(revalidateTag).toHaveBeenCalledWith("catalog", { expire: 0 });
   });
 
   it("refuses visitors without a session", async () => {
-    jest.mocked(adminGet).mockResolvedValue(null);
+    vi.mocked(adminGet).mockResolvedValue(null);
     expect((await expire()).status).toBe(401);
     expect(revalidateTag).not.toHaveBeenCalled();
   });
 
   it("refuses cross-origin calls before checking the session", async () => {
-    jest.mocked(adminGet).mockClear();
+    vi.mocked(adminGet).mockClear();
     expect((await expire("https://evil.example")).status).toBe(403);
     expect(adminGet).not.toHaveBeenCalled();
     expect(revalidateTag).not.toHaveBeenCalled();

@@ -1,4 +1,4 @@
-/** @jest-environment node */
+/** @vitest-environment node */
 import { GET } from "@/_app/api-routes/health";
 
 const VALID = {

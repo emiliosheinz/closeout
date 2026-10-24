@@ -1,7 +1,8 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import type { Mock } from "vitest";
 import { InvitePage } from "../invite-page";
 
-jest.mock("next/headers", () => ({
+vi.mock("next/headers", () => ({
   headers: async () => new Headers({ "x-real-ip": "179.129.216.37" }),
   cookies: async () => ({ get: () => mockCookie }),
 }));
@@ -27,7 +28,7 @@ beforeEach(() => {
   process.env.API_BASE_URL = "http://api:3001";
   process.env.INTERNAL_API_SECRET = "secret";
   mockCookie = undefined;
-  global.fetch = jest.fn(async (url: string | URL | Request) =>
+  global.fetch = vi.fn(async (url: string | URL | Request) =>
     String(url).endsWith("/me") ? meResponse : lookupResponse,
   ) as unknown as typeof fetch;
 });
@@ -50,7 +51,7 @@ describe("invite page", () => {
   it("looks the token up through the API with the internal secret and visitor IP", async () => {
     lookupResponse = valid();
     await renderPage();
-    const [url, init] = (global.fetch as jest.Mock).mock.calls[0];
+    const [url, init] = (global.fetch as Mock).mock.calls[0] ?? [];
     expect(url).toBe("http://api:3001/auth/invites/lookup");
     expect(init.cache).toBe("no-store");
     expect(JSON.parse(init.body)).toEqual({ token: "tok-123" });
@@ -99,9 +100,7 @@ describe("invite page", () => {
       ),
     ).toBeInTheDocument();
     // A failing sign-out keeps the page (jsdom cannot reload it).
-    (global.fetch as jest.Mock)
-      .mockReset()
-      .mockResolvedValue(respond(null, 500));
+    (global.fetch as Mock).mockReset().mockResolvedValue(respond(null, 500));
     fireEvent.click(screen.getByRole("button", { name: "Sair" }));
     expect(
       await screen.findByText("Não foi possível sair agora. Tente de novo."),
@@ -139,7 +138,7 @@ describe("invite page", () => {
   it("checks the name and password before creating the account", async () => {
     lookupResponse = valid();
     await renderPage();
-    (global.fetch as jest.Mock).mockClear();
+    (global.fetch as Mock).mockClear();
     fireEvent.change(screen.getByLabelText("Seu nome"), {
       target: { value: "  " },
     });
@@ -161,7 +160,7 @@ describe("invite page", () => {
     await renderPage();
     const whatsapp =
       "Informe o WhatsApp com o código do país, por exemplo +55 11 99999-8888.";
-    (global.fetch as jest.Mock).mockResolvedValue(
+    (global.fetch as Mock).mockResolvedValue(
       respond({ message: [whatsapp] }, 400),
     );
     fireEvent.change(screen.getByLabelText("Seu nome"), {
@@ -196,7 +195,7 @@ describe("invite page", () => {
   it("shows the API's message when the invited email already has an account", async () => {
     lookupResponse = valid();
     await renderPage();
-    (global.fetch as jest.Mock).mockResolvedValue(
+    (global.fetch as Mock).mockResolvedValue(
       respond({ message: "Este e-mail já tem uma conta." }, 409),
     );
     fireEvent.change(screen.getByLabelText("Seu nome"), {

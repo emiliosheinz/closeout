@@ -1,15 +1,16 @@
 import { render, screen } from "@testing-library/react";
+import type { Mock } from "vitest";
 import { PanelLayout } from "@/_app/admin-panel/panel-layout";
 import { requireMember } from "@/entities/session/index.server";
 
-jest.mock("next/navigation", () => ({ usePathname: () => "/admin" }));
-jest.mock("@/entities/session/index.server", () => ({
-  ...jest.requireActual("@/entities/session/index.server"),
-  requireMember: jest.fn(),
+vi.mock("next/navigation", () => ({ usePathname: () => "/admin" }));
+vi.mock("@/entities/session/index.server", async () => ({
+  ...(await vi.importActual("@/entities/session/index.server")),
+  requireMember: vi.fn(),
 }));
 
 const renderAs = async (role: "owner" | "admin" | "seller") => {
-  (requireMember as jest.Mock).mockResolvedValue({
+  (requireMember as Mock).mockResolvedValue({
     store: { name: "Brechó da Bia", slug: "brecho" },
     role,
   });

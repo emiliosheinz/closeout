@@ -1,4 +1,4 @@
-/** @jest-environment node */
+/** @vitest-environment node */
 import { NextRequest } from "next/server";
 import { proxy } from "../proxy";
 

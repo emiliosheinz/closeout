@@ -1,7 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import { AdminNav } from "@/_app/admin-panel/admin-nav";
 
-jest.mock("next/navigation", () => ({ usePathname: () => "/admin" }));
+vi.mock("next/navigation", () => ({ usePathname: () => "/admin" }));
 
 const linkNames = () =>
   within(screen.getByRole("navigation", { name: "Administração" }))
