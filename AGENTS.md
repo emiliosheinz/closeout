@@ -1,7 +1,7 @@
 # Project overview
 
 closeout is a personal storefront for selling pre-owned items through WhatsApp. It is
-a Docker-first pnpm/Turborepo monorepo with two apps and a shared config package. The
+a Docker-first pnpm/Turborepo monorepo with two apps and two shared packages (config, contracts). The
 API (NestJS + TypeORM + PostgreSQL) owns all persistence, authentication, store
 membership and roles, invites, the catalog and image storage. The web app (Next.js App
 Router + React + Tailwind) renders every store's storefront at `/store/<slug>`, a
@@ -52,12 +52,15 @@ apps/web/src/
   entities/    listing, member, invite, session: types, API reads, display pieces; index.server.ts holds server-only code
   shared/      api (http client, server fetcher), ui (shadcn primitives, dialogs), lib (format, money, site, whatsapp), config
 apps/web/e2e-tests/   Playwright journeys
+packages/contracts/   enums entry (no imports; used by api and web) and zod schemas entry (web, api tests)
 ```
 
 # Conventions
 
 - Biome is the formatter and linter; run `check:fix` before committing.
-- Only `apps/api` touches the database. The web app never imports from the API.
+- Only `apps/api` touches the database. The web app never imports from the API. Shared
+  enums and wire schemas live in `packages/contracts`; the API imports only its `enums`
+  entry, and the schemas only in tests.
 - Entities use `declare field: T`. Migrations are generated from the entity diff and
   reviewed; extensions are the only hand-written SQL.
 - Every admin route lives under `/stores/:storeId/*` behind `SessionGuard` and
