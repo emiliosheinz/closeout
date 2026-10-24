@@ -26,7 +26,11 @@ export function Field({
       {children}
       {hint && !error && <p className="text-xs text-muted">{hint}</p>}
       {error && (
-        <p className="text-xs font-medium text-stamp" role="alert">
+        <p
+          id={`${htmlFor}-error`}
+          className="text-xs font-medium text-stamp"
+          role="alert"
+        >
           {error}
         </p>
       )}
