@@ -228,12 +228,10 @@ or in `CLOSEOUT_PASSWORD`. Never run `seed:demo` in production.
 
 Edit `.railway/railway.ts` in a pull request; the plan shows in the run summary and
 merging applies it. The guard fails the run on any change to the database, the
-bucket or the volume, and on anything it does not recognise. The workflow never
-passes `--confirm-destructive`, so it cannot delete anything.
+bucket or the volume, and on anything it does not recognise. Everything else
+applies with `--confirm-destructive`, so removing a variable or a service from the
+file deletes it in Railway on merge: read the plan before merging.
 
-- To remove a variable, delete it in Railway (or apply locally with
-  `--confirm-destructive` after reading the plan), then remove it from the file. A
-  push that only removes it from the file fails, and its deploys are skipped.
 - Never cancel a Deploy infrastructure run. A cancelled or failed run skips that
   commit's deploys for good; re-running does not revive them and `railway redeploy`
   redeploys the last active commit. Push a new commit instead. The same applies to a
