@@ -9,6 +9,7 @@ import { clientIpFrom } from "@/shared/lib/origin";
 
 export { adminGet } from "./server/admin-get";
 export { apiUrl } from "./server/api-url";
+export { Hydrated, loadRead } from "./server/load-read";
 export { INTERNAL_SECRET_HEADER };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

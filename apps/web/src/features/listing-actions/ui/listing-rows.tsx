@@ -27,6 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/shared/ui/select";
+import { notifyFailure } from "@/shared/ui/sonner";
 
 const selectTriggerClass =
   "h-11 border-line bg-surface px-2 text-sm font-medium text-ink shadow-none";
@@ -276,7 +277,9 @@ export function ListingRows({
                   document.getElementById("listings-heading")?.focus()
                 }
                 onConfirm={async () => {
-                  await api("DELETE", `${base}/${listing.id}`);
+                  await api("DELETE", `${base}/${listing.id}`).catch(
+                    notifyFailure,
+                  );
                   setMessage({
                     text: `"${listing.title}" foi excluído.`,
                     error: false,

@@ -19,6 +19,7 @@ import {
   DialogTitle,
 } from "@/shared/ui/dialog";
 import { Field, inputClass } from "@/shared/ui/field";
+import { notifyFailure } from "@/shared/ui/sonner";
 
 /** Shows a stored digits-only number the way people type it back. */
 function displayNumber(number: string | null): string {
@@ -129,7 +130,10 @@ export function MemberRow({
           pendingLabel="Removendo..."
           onSuccess={() => document.getElementById("team-members")?.focus()}
           onConfirm={async () => {
-            await api("DELETE", `/stores/${storeId}/members/${member.userId}`);
+            await api(
+              "DELETE",
+              `/stores/${storeId}/members/${member.userId}`,
+            ).catch(notifyFailure);
             router.refresh();
           }}
           trigger={(remove) => (

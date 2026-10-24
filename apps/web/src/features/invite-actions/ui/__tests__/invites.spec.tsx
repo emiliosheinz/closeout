@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { PendingInvite } from "@/entities/invite";
-import { api } from "@/shared/api";
+import { ApiError, api } from "@/shared/api";
+import { renderWithFeedback } from "@/test/feedback-harness";
 import { PendingInvites } from "../invites";
 
 vi.mock("next/navigation", () => ({
@@ -124,5 +125,24 @@ describe("Invite row actions menu", () => {
         screen.getByRole("heading", { name: "Convites pendentes" }),
       ).toHaveFocus(),
     );
+  });
+
+  it("toasts the error and keeps the dialog open when the revocation fails", async () => {
+    vi.mocked(api).mockRejectedValue(new ApiError(500, "Falhou no servidor."));
+    renderWithFeedback(<PendingInvites storeId="store" invites={[invite]} />);
+    await openMenu(
+      screen.getByRole("button", {
+        name: "Ações para o convite de bia@example.com",
+      }),
+    );
+    fireEvent.click(screen.getByRole("menuitem", { name: "Revogar" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Revogar convite" }),
+    );
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Falhou no servidor.",
+    );
+    expect(screen.getByRole("alertdialog")).toBeInTheDocument();
   });
 });

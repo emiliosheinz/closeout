@@ -1,4 +1,4 @@
-import { dashboardHref, findStatusFilter } from "../status-filter";
+import { dashboardHref, findStatusFilter, tabCounts } from "../status-filter";
 import type { AdminListingSummary } from "../types";
 
 const listing = (
@@ -60,5 +60,22 @@ describe("dashboard status filters", () => {
       "/admin?status=vendidos&q=mesa",
     );
     expect(dashboardHref(null, "")).toBe("/admin");
+  });
+});
+
+describe("tab counts", () => {
+  it("counts the listings each tab shows", () => {
+    expect(tabCounts(all)).toEqual({
+      published: 3,
+      available: 1,
+      reserved: 1,
+      sold: 1,
+      draft: 2,
+      archived: 1,
+    });
+  });
+
+  it("is all zeros without listings", () => {
+    expect(Object.values(tabCounts([]))).toEqual([0, 0, 0, 0, 0, 0]);
   });
 });

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { SESSION_EXPIRED_ERROR } from "@/entities/session";
 import { getMe } from "@/entities/session/index.server";
 import { LoginForm } from "./login-form";
 
@@ -21,6 +22,14 @@ export async function LoginPage({
         Área de quem está vendendo. Para comprar não precisa de conta: abra o
         link da loja que recebeu.
       </p>
+      {erro === SESSION_EXPIRED_ERROR && (
+        <p
+          role="status"
+          className="mt-4 rounded-md bg-stamp/10 px-3 py-2 text-sm text-stamp"
+        >
+          Sua sessão expirou. Entre de novo.
+        </p>
+      )}
       {erro === "sem-acesso" && (
         <p
           role="alert"

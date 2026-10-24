@@ -3,6 +3,7 @@
 import { ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { isManager, useMember } from "@/entities/session";
 import { storePath } from "@/shared/lib/site";
 import { cn } from "@/shared/lib/utils";
 
@@ -12,24 +13,16 @@ const LINKS: { href: string; label: string; managersOnly?: boolean }[] = [
   { href: "/admin/loja", label: "Loja", managersOnly: true },
 ];
 
-export function AdminNav({
-  storeName,
-  storeSlug,
-  managesStore,
-}: {
-  storeName: string;
-  storeSlug: string;
-  /** Owners and admins see the store settings; sellers do not. */
-  managesStore: boolean;
-}) {
+export function AdminNav() {
+  const { store, role } = useMember();
   const pathname = usePathname();
-  const links = LINKS.filter((link) => !link.managersOnly || managesStore);
+  const links = LINKS.filter((link) => !link.managersOnly || isManager(role));
 
   return (
     <header className="border-b border-line bg-surface">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3 sm:px-6">
         <Link href="/admin" className="text-base font-extrabold">
-          {storeName}
+          {store.name}
         </Link>
         <nav
           aria-label="Administração"
@@ -60,7 +53,7 @@ export function AdminNav({
         </nav>
         <div className="ml-auto flex items-center gap-1">
           <a
-            href={storePath(storeSlug)}
+            href={storePath(store.slug)}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex h-11 items-center gap-1.5 rounded-full px-3 text-sm font-semibold text-ink-soft hover:bg-ink/5"

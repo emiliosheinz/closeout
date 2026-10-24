@@ -1,7 +1,7 @@
 import { ApiError } from "./api-error";
 import type { Schema } from "./schema";
 
-const GENERIC_ERROR = "Não foi possível salvar. Tente de novo.";
+export const GENERIC_ERROR = "Não foi possível salvar. Tente de novo.";
 const INVALID_FIELDS =
   "Alguns campos estão inválidos. Confira e tente de novo.";
 const NETWORK_FAILURE = "Sem conexão. Verifique a internet e tente de novo.";

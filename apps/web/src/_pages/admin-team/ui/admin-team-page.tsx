@@ -1,16 +1,18 @@
-import {
-  pendingInviteSchema,
-  sellerSchema,
-  teamMemberSchema,
-} from "@closeout/contracts/schemas";
 import type { Metadata } from "next";
-import type { PendingInvite } from "@/entities/invite";
-import type { TeamMember } from "@/entities/member";
-import { isManager, type Member } from "@/entities/session";
+import { notFound, redirect } from "next/navigation";
+import { inviteReads, type PendingInvite } from "@/entities/invite";
+import { listingReads } from "@/entities/listing";
+import { memberReads, type TeamMember } from "@/entities/member";
+import {
+  isManager,
+  type Member,
+  SESSION_EXPIRED_HREF,
+} from "@/entities/session";
 import { requireMember } from "@/entities/session/index.server";
-import { listOf } from "@/shared/api";
-import { adminGet } from "@/shared/api/index.server";
+import { Hydrated, loadRead } from "@/shared/api/index.server";
 import { TeamView } from "./team-view";
+
+const sessionEnded = (): never => redirect(SESSION_EXPIRED_HREF);
 
 export const metadata: Metadata = { title: "Equipe" };
 
@@ -24,16 +26,15 @@ async function loadTeam({ me, store, role, sellerId }: Member): Promise<{
 }> {
   if (isManager(role)) {
     const [team, pending] = await Promise.all([
-      adminGet(`/stores/${store.id}/members`, listOf(teamMemberSchema)),
-      adminGet(`/stores/${store.id}/invites`, listOf(pendingInviteSchema)),
+      loadRead(memberReads.list(store.id), sessionEnded),
+      loadRead(inviteReads.pending(store.id), sessionEnded),
     ]);
-    return { members: team?.items ?? [], invites: pending?.items ?? [] };
+    if (!team || !pending) notFound();
+    return { members: team.items, invites: pending.items };
   }
-  const sellers = await adminGet(
-    `/stores/${store.id}/sellers`,
-    listOf(sellerSchema),
-  );
-  const own = sellers?.items.find((seller) => seller.id === sellerId);
+  const sellers = await loadRead(listingReads.sellers(store.id), sessionEnded);
+  if (!sellers) notFound();
+  const own = sellers.items.find((seller) => seller.id === sellerId);
   if (!own) return { members: [], invites: null };
   return {
     members: [
@@ -60,7 +61,7 @@ export async function TeamPage() {
   const { members, invites } = await loadTeam(member);
 
   return (
-    <>
+    <Hydrated>
       <h1 className="text-3xl font-extrabold">Equipe</h1>
       <p className="mt-1 max-w-[60ch] text-ink-soft">
         {manager
@@ -75,6 +76,6 @@ export async function TeamPage() {
           invites={invites}
         />
       </div>
-    </>
+    </Hydrated>
   );
 }

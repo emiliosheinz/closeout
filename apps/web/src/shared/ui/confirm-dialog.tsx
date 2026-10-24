@@ -22,8 +22,9 @@ function returnTarget(active: Element | null): Element | null {
 
 /**
  * Explicit confirmation for destructive actions. The dialog stays open when
- * the action fails; after it succeeds, `onSuccess` places focus where the
- * user continues (the trigger may be gone by then).
+ * the action rejects; reporting the failure is the action's job (a mutation's
+ * error toast). After it succeeds, `onSuccess` places focus where the user
+ * continues (the trigger may be gone by then).
  */
 export function ConfirmDialog({
   trigger,
@@ -44,24 +45,18 @@ export function ConfirmDialog({
 }) {
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const succeeded = useRef(false);
   const [opener, setOpener] = useState<Element | null>(null);
 
   async function confirm(event: React.MouseEvent) {
     event.preventDefault();
     setPending(true);
-    setError(null);
-    const failure = await onConfirm().then(
-      () => null,
-      (err: unknown) =>
-        err instanceof Error ? err.message : "Algo deu errado.",
+    const failed = await onConfirm().then(
+      () => false,
+      () => true,
     );
     setPending(false);
-    if (failure) {
-      setError(failure);
-      return;
-    }
+    if (failed) return;
     succeeded.current = true;
     setOpen(false);
   }
@@ -88,11 +83,6 @@ export function ConfirmDialog({
           <AlertDialogDescription className="text-ink-soft">
             {description}
           </AlertDialogDescription>
-          {error && (
-            <p role="alert" className="text-sm font-medium text-stamp">
-              {error}
-            </p>
-          )}
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction

@@ -1,19 +1,18 @@
 import { render, screen } from "@testing-library/react";
-import type { Mock } from "vitest";
 import { PanelLayout } from "@/_app/admin-panel/panel-layout";
-import { requireMember } from "@/entities/session/index.server";
+import { stubAdminApi } from "@/test/admin-api";
+import { meResponse, STORE } from "@/test/fixtures";
 
-vi.mock("next/navigation", () => ({ usePathname: () => "/admin" }));
-vi.mock("@/entities/session/index.server", async () => ({
-  ...(await vi.importActual("@/entities/session/index.server")),
-  requireMember: vi.fn(),
+vi.mock("next/navigation", async () => ({
+  ...(await vi.importActual("next/navigation")),
+  usePathname: () => "/admin",
+}));
+vi.mock("next/headers", () => ({
+  cookies: async () => ({ get: () => ({ value: "token" }) }),
 }));
 
 const renderAs = async (role: "owner" | "admin" | "seller") => {
-  (requireMember as Mock).mockResolvedValue({
-    store: { name: "Brechó da Bia", slug: "brecho" },
-    role,
-  });
+  stubAdminApi({ "/me": meResponse(role) });
   render(await PanelLayout({ children: <p>conteúdo</p> }));
 };
 
@@ -30,5 +29,23 @@ describe("panel layout", () => {
     await renderAs("seller");
     expect(screen.queryByRole("link", { name: "Loja" })).toBeNull();
     expect(screen.getByRole("link", { name: "Equipe" })).toBeInTheDocument();
+  });
+
+  it("names the store in the nav and renders the page and the toaster", async () => {
+    await renderAs("owner");
+    expect(screen.getByRole("link", { name: STORE.name })).toBeInTheDocument();
+    expect(screen.getByText("conteúdo")).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: /Notificações/ }),
+    ).toBeInTheDocument();
+  });
+
+  it("sends a visitor without a session to login", async () => {
+    stubAdminApi({ "/me": 401 });
+    await expect(
+      PanelLayout({ children: <p>conteúdo</p> }),
+    ).rejects.toMatchObject({
+      digest: expect.stringContaining("/admin/entrar"),
+    });
   });
 });

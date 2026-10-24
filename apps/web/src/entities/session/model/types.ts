@@ -1,7 +1,7 @@
 import type { StoreRole } from "@closeout/contracts/enums";
 import type { Me, StoreSettings } from "@closeout/contracts/schemas";
 
-export type { Me, StoreSettings };
+export type { Me };
 
 export interface Member {
   me: Me;

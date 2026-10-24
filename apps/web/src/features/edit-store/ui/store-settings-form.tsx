@@ -3,7 +3,7 @@
 import { Check, Copy } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import type { StoreSettings } from "@/entities/session";
+import type { StoreSettings } from "@/entities/store";
 import { ApiError, api } from "@/shared/api";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";

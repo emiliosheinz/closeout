@@ -64,3 +64,40 @@ test("an admin edits the store identity and the storefront shows it", async ({
     "Tudo precisa sair até sexta",
   );
 });
+
+test("an expired session sends the member to login with an explanation", async ({
+  page,
+}) => {
+  await page.clock.install();
+  await signIn(page);
+  await page.context().clearCookies();
+
+  // The session query is stale after a minute; coming back to the tab refetches it.
+  await page.clock.fastForward(61_000);
+  await page.evaluate(() =>
+    window.dispatchEvent(new Event("visibilitychange")),
+  );
+
+  await expect(page).toHaveURL(/\/admin\/entrar\?erro=sessao-expirada$/);
+  await expect(
+    page.getByText("Sua sessão expirou. Entre de novo."),
+  ).toBeVisible();
+});
+
+test("only the admin panel has a toast container", async ({ page }) => {
+  const toaster = page.getByRole("region", { name: /Notificações/ });
+
+  await page.goto(STORE);
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  await expect(toaster).toHaveCount(0);
+
+  await page.goto("/invite/not-a-real-token");
+  await expect(toaster).toHaveCount(0);
+
+  await page.goto("/admin/entrar");
+  await expect(page.getByRole("button", { name: "Entrar" })).toBeVisible();
+  await expect(toaster).toHaveCount(0);
+
+  await signIn(page);
+  await expect(toaster).toHaveCount(1);
+});

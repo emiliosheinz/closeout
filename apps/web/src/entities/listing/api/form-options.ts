@@ -1,12 +1,11 @@
-import { categorySchema, sellerSchema } from "@closeout/contracts/schemas";
-import { listOf } from "@/shared/api";
-import { adminGet } from "@/shared/api/index.server";
+import { loadRead } from "@/shared/api/index.server";
+import { listingReads } from "./reads";
 
-/** Options every listing form needs. */
+/** Options every listing form needs, loaded into the request's query cache. */
 export async function listingFormOptions(storeId: string) {
   const [categories, sellers] = await Promise.all([
-    adminGet(`/stores/${storeId}/categories`, listOf(categorySchema)),
-    adminGet(`/stores/${storeId}/sellers`, listOf(sellerSchema)),
+    loadRead(listingReads.categories(storeId)),
+    loadRead(listingReads.sellers(storeId)),
   ]);
   return { categories: categories?.items ?? [], sellers: sellers?.items ?? [] };
 }

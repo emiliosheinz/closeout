@@ -1,5 +1,11 @@
 export { ApiError } from "./http/api-error";
-export { api, apiGet, apiParsed, type WriteResult } from "./http/client";
+export {
+  api,
+  apiGet,
+  apiParsed,
+  GENERIC_ERROR,
+  type WriteResult,
+} from "./http/client";
 export {
   dropInvalid,
   itemsEnvelope,
@@ -13,3 +19,4 @@ export {
   makeQueryClient,
   shouldRetry,
 } from "./query/query-client";
+export { type Read, readQuery } from "./query/read";

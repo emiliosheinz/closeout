@@ -24,6 +24,7 @@ import {
   DialogTitle,
 } from "@/shared/ui/dialog";
 import { Field, inputClass } from "@/shared/ui/field";
+import { notifyFailure } from "@/shared/ui/sonner";
 import { InviteLinkDialog, type ShownInvite } from "./invite-link-dialog";
 
 function toShown(issued: IssuedInvite): ShownInvite {
@@ -218,7 +219,7 @@ function InviteRow({
           pendingLabel="Revogando..."
           onSuccess={() => document.getElementById("team-invites")?.focus()}
           onConfirm={async () => {
-            await api("DELETE", base);
+            await api("DELETE", base).catch(notifyFailure);
             router.refresh();
           }}
           trigger={(revoke) => (

@@ -1,7 +1,8 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { MockedFunction } from "vitest";
 import type { AdminListingSummary } from "@/entities/listing";
-import { api } from "@/shared/api";
+import { ApiError, api } from "@/shared/api";
+import { renderWithFeedback } from "@/test/feedback-harness";
 import { ListingRows } from "../listing-rows";
 
 vi.mock("next/navigation", () => ({
@@ -206,5 +207,27 @@ describe("ListingRows", () => {
     await waitFor(() =>
       expect(screen.getByRole("heading", { name: "Anúncios" })).toHaveFocus(),
     );
+  });
+
+  it("toasts the error and keeps the dialog open when the deletion fails", async () => {
+    apiMock.mockReset();
+    apiMock.mockRejectedValue(new ApiError(500, "Falhou no servidor."));
+    renderWithFeedback(
+      <ListingRows
+        storeId="store"
+        storeSlug="loja"
+        listings={[row("a", [])]}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Excluir Item a" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Excluir anúncio" }),
+    );
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Falhou no servidor.",
+    );
+    expect(screen.getByRole("alertdialog")).toBeInTheDocument();
   });
 });

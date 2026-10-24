@@ -55,7 +55,7 @@ describe("ConfirmDialog", () => {
     );
   });
 
-  it("stays open and shows the error when the action fails", async () => {
+  it("stays open and ready to retry when the action fails", async () => {
     const { onSuccess } = setup(async () => {
       throw new Error("Falhou no servidor.");
     });
@@ -64,13 +64,13 @@ describe("ConfirmDialog", () => {
       await screen.findByRole("button", { name: copy.confirmLabel }),
     );
 
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Falhou no servidor.",
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: copy.confirmLabel }),
+      ).toBeEnabled(),
     );
     expect(screen.getByRole("alertdialog")).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: copy.confirmLabel }),
-    ).toBeEnabled();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     expect(onSuccess).not.toHaveBeenCalled();
   });
 
@@ -99,7 +99,7 @@ describe("ConfirmDialog", () => {
     await waitFor(() => expect(opener).toHaveFocus());
   });
 
-  it("clears the error as soon as the action is retried", async () => {
+  it("runs the action again when retried after a failure", async () => {
     let attempt = 0;
     let finish: () => void = () => undefined;
     setup(() => {
@@ -113,27 +113,18 @@ describe("ConfirmDialog", () => {
     fireEvent.click(
       await screen.findByRole("button", { name: copy.confirmLabel }),
     );
-    expect(await screen.findByRole("alert")).toHaveTextContent("Falhou.");
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: copy.confirmLabel }),
+      ).toBeEnabled(),
+    );
 
     fireEvent.click(screen.getByRole("button", { name: copy.confirmLabel }));
 
     await screen.findByRole("button", { name: copy.pendingLabel });
-    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     finish();
     await waitFor(() =>
       expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument(),
-    );
-  });
-
-  it("falls back to a generic message when the failure carries none", async () => {
-    setup(() => Promise.reject("boom"));
-    fireEvent.click(screen.getByRole("button", { name: "Abrir" }));
-    fireEvent.click(
-      await screen.findByRole("button", { name: copy.confirmLabel }),
-    );
-
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Algo deu errado.",
     );
   });
 });

@@ -2,6 +2,7 @@ import { meSchema } from "@closeout/contracts/schemas";
 import { redirect } from "next/navigation";
 import { cache } from "react";
 import { adminGet } from "@/shared/api/index.server";
+import { toMember } from "../model/to-member";
 import type { Me, Member } from "../model/types";
 
 /** The signed-in admin; deduplicated across layout and page in one request. */
@@ -14,12 +15,7 @@ export const getMe = cache((): Promise<Me | null> => adminGet("/me", meSchema));
 export async function requireMember(): Promise<Member> {
   const me = await getMe();
   if (!me) redirect("/admin/entrar");
-  const [membership] = me.memberships;
-  if (!membership) redirect("/admin/entrar?erro=sem-acesso");
-  return {
-    me,
-    store: membership.store,
-    role: membership.role,
-    sellerId: membership.sellerId,
-  };
+  const member = toMember(me);
+  if (!member) redirect("/admin/entrar?erro=sem-acesso");
+  return member;
 }

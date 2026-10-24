@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { TeamMember } from "@/entities/member";
-import { api } from "@/shared/api";
+import { ApiError, api } from "@/shared/api";
+import { renderWithFeedback } from "@/test/feedback-harness";
 import { MemberRow } from "../member-row";
 
 vi.mock("next/navigation", () => ({
@@ -149,5 +150,29 @@ describe("MemberRow actions menu", () => {
     await waitFor(() =>
       expect(screen.getByRole("heading", { name: "Pessoas" })).toHaveFocus(),
     );
+  });
+
+  it("toasts the error and keeps the dialog open when the removal fails", async () => {
+    vi.mocked(api).mockRejectedValue(new ApiError(500, "Falhou no servidor."));
+    renderWithFeedback(
+      <ul>
+        <MemberRow
+          storeId="store"
+          member={member}
+          isSelf={false}
+          canManageTeam
+        />
+      </ul>,
+    );
+    await openMenu(screen.getByRole("button", { name: "Ações para Ana" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Remover" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Remover da equipe" }),
+    );
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Falhou no servidor.",
+    );
+    expect(screen.getByRole("alertdialog")).toBeInTheDocument();
   });
 });
