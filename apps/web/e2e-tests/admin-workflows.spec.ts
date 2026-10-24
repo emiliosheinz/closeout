@@ -1,5 +1,12 @@
 import { expect, test } from "@playwright/test";
-import { findInAdmin, hydrated, samplePhoto, signIn } from "./helpers";
+import {
+  ADMIN_EMAIL,
+  findInAdmin,
+  hydrated,
+  STORE,
+  samplePhoto,
+  signIn,
+} from "./helpers";
 
 const TITLE = `Estante de teste ${Date.now()}`;
 const NEW_NUMBER = "5521977771234";
@@ -93,6 +100,7 @@ test.describe
           .getAttribute("href")) ?? "",
         page.url(),
       ).pathname;
+      expect(publicPath).toMatch(/^\/store\/loja-e2e\/items\//);
     });
 
     test("the admin table search shows only matching titles", async ({
@@ -112,26 +120,25 @@ test.describe
       await signIn(page);
       await page
         .getByRole("navigation", { name: "Administração" })
-        .getByRole("link", { name: "Vendedores", exact: true })
+        .getByRole("link", { name: "Equipe", exact: true })
         .click();
-      await expect(page).toHaveURL(/\/admin\/vendedores$/);
+      await expect(page).toHaveURL(/\/admin\/equipe$/);
       await hydrated(page);
-      const number = page.getByLabel("WhatsApp").first();
+      const card = page.getByRole("listitem").filter({ hasText: ADMIN_EMAIL });
+      const number = card.getByLabel("WhatsApp");
+      const save = card.getByRole("button", { name: "Salvar contato" });
+      const status = card.getByRole("status");
 
       await number.fill("11 9999-0000");
-      await page
-        .getByRole("button", { name: "Salvar contato" })
-        .first()
-        .click();
-      await expect(page.getByText(/código do país/).first()).toBeVisible();
+      await save.click();
+      await expect(status).toContainText(
+        "Informe o WhatsApp com o código do país",
+      );
       await expect(number).toHaveValue("11 9999-0000");
 
       await number.fill("+55 21 97777-1234");
-      await page
-        .getByRole("button", { name: "Salvar contato" })
-        .first()
-        .click();
-      await expect(page.getByText("Contato salvo.").first()).toBeVisible();
+      await save.click();
+      await expect(status).toHaveText("Contato salvo.");
 
       await page.goto(publicPath);
       const href = await page
@@ -141,14 +148,11 @@ test.describe
       expect(new URL(href ?? "").pathname).toBe(`/${NEW_NUMBER}`);
 
       // Restore the fixture number the other journeys expect.
-      await page.goto("/admin/vendedores");
+      await page.goto("/admin/equipe");
       await hydrated(page);
-      await page.getByLabel("WhatsApp").first().fill("+55 11 98888-7777");
-      await page
-        .getByRole("button", { name: "Salvar contato" })
-        .first()
-        .click();
-      await expect(page.getByText("Contato salvo.").first()).toBeVisible();
+      await number.fill("+55 11 98888-7777");
+      await save.click();
+      await expect(status).toHaveText("Contato salvo.");
     });
 
     test("duplicating opens a draft copy", async ({ page }) => {
@@ -199,11 +203,18 @@ test.describe
       await page.getByRole("button", { name: "Salvar loja" }).click();
       await expect(page.getByText("Loja atualizada.")).toBeVisible();
 
-      await page.goto("/");
+      await page.goto(STORE);
       await expect(page).toHaveTitle("Bazar da Mudança");
       await expect(page.locator("header").first()).toContainText(
         "Bazar da Mudança",
       );
+
+      // Restore the fixture name the other journeys expect.
+      await page.goto("/admin/loja");
+      await hydrated(page);
+      await page.getByLabel("Nome da loja").fill("Loja E2E");
+      await page.getByRole("button", { name: "Salvar loja" }).click();
+      await expect(page.getByText("Loja atualizada.")).toBeVisible();
     });
   });
 

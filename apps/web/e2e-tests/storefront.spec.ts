@@ -1,17 +1,17 @@
 import { expect, test } from "@playwright/test";
-import { findInAdmin, signIn } from "./helpers";
+import { findInAdmin, STORE, signIn } from "./helpers";
 
 test("the catalog shows a data-derived count and filters through the URL", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto(STORE);
   await expect(page.getByTestId("store-counts")).toContainText(
     /\d+ itens disponíveis/,
   );
   await page.getByRole("link", { name: /^Móveis/ }).click();
   await expect(page).toHaveURL(/categoria=moveis/);
   const count = await page.getByTestId("results-count").textContent();
-  await page.goto("/?categoria=moveis&ordem=menor-preco");
+  await page.goto(`${STORE}?categoria=moveis&ordem=menor-preco`);
   await expect(page.getByTestId("results-count")).toHaveText(count ?? "");
   await expect(page.getByRole("link", { name: /^Móveis/ })).toHaveAttribute(
     "aria-current",
@@ -22,24 +22,24 @@ test("the catalog shows a data-derived count and filters through the URL", async
 test("an unmatched search offers a way back to every item", async ({
   page,
 }) => {
-  await page.goto("/?q=helicoptero-de-brinquedo");
+  await page.goto(`${STORE}?q=helicoptero-de-brinquedo`);
   await expect(page.getByText("Nada por aqui com esses filtros")).toBeVisible();
   await page.getByRole("link", { name: "Ver todos os itens" }).click();
-  await expect(page).toHaveURL(/\/$/);
+  await expect(page).toHaveURL(/\/store\/loja-e2e$/);
 });
 
 test("a page number past the end returns to the first page", async ({
   page,
 }) => {
-  await page.goto("/?categoria=moveis&pagina=999");
-  await expect(page).toHaveURL(/\/\?categoria=moveis$/);
+  await page.goto(`${STORE}?categoria=moveis&pagina=999`);
+  await expect(page).toHaveURL(/\/store\/loja-e2e\?categoria=moveis$/);
   await expect(page.getByTestId("results-count")).toBeVisible();
 });
 
 test("search, category and sort combine and show in the controls", async ({
   page,
 }) => {
-  await page.goto("/?q=mesa&categoria=moveis&ordem=menor-preco");
+  await page.goto(`${STORE}?q=mesa&categoria=moveis&ordem=menor-preco`);
   await expect(
     page.getByRole("searchbox", { name: "Buscar itens" }),
   ).toHaveValue("mesa");
@@ -67,7 +67,7 @@ test("broken catalog URLs fall back to defaults instead of failing", async ({
   page,
 }) => {
   const response = await page.goto(
-    "/?pagina=abc&ordem=xyz&min=-3&estado=quebrado",
+    `${STORE}?pagina=abc&ordem=xyz&min=-3&estado=quebrado`,
   );
   expect(response?.status()).toBe(200);
   await expect(page.getByTestId("results-count")).toBeVisible();
@@ -97,20 +97,26 @@ test("drafts stay private: no page, no sitemap entry", async ({ page }) => {
 
   const sitemap = await (await page.request.get("/sitemap.xml")).text();
   expect(sitemap).not.toContain("cadeira-de-escritorio");
-  expect(sitemap).toContain("/itens/");
+  expect(sitemap).toContain(`${STORE}/items/`);
 
-  const missing = await page.request.get("/itens/cadeira-de-escritorio-aaaaaa");
+  const missing = await page.request.get(
+    `${STORE}/items/cadeira-de-escritorio-aaaaaa`,
+  );
   expect(missing.status()).toBe(404);
 });
 
-test("robots keeps the admin out of search engines", async ({ page }) => {
+test("robots keeps the admin, the API and invite links out of search engines", async ({
+  page,
+}) => {
   const robots = await (await page.request.get("/robots.txt")).text();
   expect(robots).toContain("Disallow: /admin");
+  expect(robots).toContain("Disallow: /api/");
+  expect(robots).toContain("Disallow: /invite/");
   expect(robots).toContain("Sitemap: http://web:3001/sitemap.xml");
 });
 
 test("pages carry the security headers", async ({ page }) => {
-  const response = await page.request.get("/");
+  const response = await page.request.get(STORE);
   const headers = response.headers();
   expect(headers["x-content-type-options"]).toBe("nosniff");
   expect(headers["x-frame-options"]).toBe("DENY");

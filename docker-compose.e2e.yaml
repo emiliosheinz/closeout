@@ -16,8 +16,6 @@ x-postgres-env: &postgres-env
 x-app-env: &app-env
   PUBLIC_BASE_URL: http://web:3001
   INTERNAL_API_SECRET: e2e-fixed-internal-secret-0123456789abcdef
-  STORE_SLUG: loja-e2e
-  STORE_NAME: Loja E2E
 
 services:
   postgres:
@@ -91,8 +89,9 @@ services:
       CLOSEOUT_PASSWORD: e2e-admin-password
     command: >
       sh -c "pnpm --silent build &&
-             node dist/cli/main.js admin:create --email admin@e2e.test --name 'Ana Teste' --whatsapp '+55 11 98888-7777' &&
-             node dist/cli/main.js seed:demo --whatsapp '+55 11 97777-6666'"
+             node dist/cli/main.js admin:create --store loja-e2e --store-name 'Loja E2E' --email admin@e2e.test --name 'Ana Teste' --whatsapp '+55 11 98888-7777' &&
+             node dist/cli/main.js seed:demo --store loja-e2e --whatsapp '+55 11 97777-6666' &&
+             node dist/cli/main.js admin:create --store outra-loja --store-name 'Outra Loja' --email dono@outra-loja.test --name 'Otávio Outra' --whatsapp '+55 31 96666-5555'"
     depends_on:
       api:
         condition: service_healthy
