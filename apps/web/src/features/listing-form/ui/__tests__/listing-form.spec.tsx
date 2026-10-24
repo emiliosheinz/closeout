@@ -4,8 +4,10 @@ import type { AdminListingDetail } from "@/entities/listing";
 import { api } from "@/shared/api";
 import { ListingForm } from "../listing-form";
 
+const { push } = vi.hoisted(() => ({ push: vi.fn() }));
+
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
+  useRouter: () => ({ push, refresh: vi.fn() }),
 }));
 
 vi.mock("@/shared/api", async () => ({
@@ -61,6 +63,7 @@ const renderNew = (canAssignSellers = true) =>
 
 beforeEach(() => {
   apiMock.mockReset();
+  push.mockReset();
 });
 
 describe("ListingForm", () => {
@@ -152,6 +155,122 @@ describe("ListingForm", () => {
 
     await waitFor(() => expect(apiMock).toHaveBeenCalled());
     expect(apiMock.mock.calls[0]?.[2]).toMatchObject({ sellerIds: ["bia"] });
+  });
+
+  describe("save outcomes", () => {
+    const renderEdit = (publication: AdminListingDetail["publication"]) =>
+      render(
+        <ListingForm
+          storeId="store"
+          categories={categories}
+          sellers={sellers}
+          ownSellerId="bia"
+          canAssignSellers
+          listing={{ ...listing, publication }}
+        />,
+      );
+
+    it("publishes a draft being edited and lands on its page with the published notice", async () => {
+      apiMock.mockResolvedValue({});
+      renderEdit("draft");
+      fireEvent.click(
+        screen.getByRole("button", { name: "Salvar e publicar" }),
+      );
+
+      await waitFor(() =>
+        expect(push).toHaveBeenCalledWith(
+          "/admin/anuncios/listing-1?salvo=publicado",
+        ),
+      );
+      expect(apiMock.mock.calls[0]?.[2]).toMatchObject({
+        publication: "published",
+      });
+    });
+
+    it("keeps an archived listing archived on a plain save", async () => {
+      apiMock.mockResolvedValue({});
+      renderEdit("archived");
+      fireEvent.click(
+        screen.getByRole("button", { name: "Salvar alterações" }),
+      );
+
+      await waitFor(() =>
+        expect(push).toHaveBeenCalledWith("/admin/anuncios/listing-1?salvo=1"),
+      );
+      expect(apiMock.mock.calls[0]?.[2]).toMatchObject({
+        publication: "archived",
+      });
+    });
+
+    it("keeps a draft a draft on a plain save", async () => {
+      apiMock.mockResolvedValue({});
+      renderEdit("draft");
+      fireEvent.click(
+        screen.getByRole("button", { name: "Salvar alterações" }),
+      );
+
+      await waitFor(() =>
+        expect(push).toHaveBeenCalledWith("/admin/anuncios/listing-1?salvo=1"),
+      );
+      expect(apiMock.mock.calls[0]?.[2]).toMatchObject({
+        publication: "draft",
+      });
+    });
+
+    it("saves a new listing as a draft and opens it with the plain saved notice", async () => {
+      apiMock.mockResolvedValue({ id: "new-listing" });
+      renderNew();
+      fireEvent.change(screen.getByLabelText("Nome do item"), {
+        target: { value: "Mesa" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Salvar rascunho" }));
+
+      await waitFor(() =>
+        expect(push).toHaveBeenCalledWith(
+          "/admin/anuncios/new-listing?salvo=1",
+        ),
+      );
+      expect(apiMock).toHaveBeenCalledTimes(1);
+    });
+
+    it("publishes a new listing after its photos and opens it with the published notice", async () => {
+      apiMock.mockResolvedValue({ id: "new-listing", items: [] });
+      const createObjectURL = vi.fn(() => "blob:preview");
+      const original = {
+        create: URL.createObjectURL,
+        revoke: URL.revokeObjectURL,
+      };
+      URL.createObjectURL = createObjectURL;
+      URL.revokeObjectURL = vi.fn();
+      try {
+        renderNew();
+        fireEvent.change(screen.getByLabelText("Fotos"), {
+          target: {
+            files: [new File(["x"], "mesa.jpg", { type: "image/jpeg" })],
+          },
+        });
+        fireEvent.change(screen.getByLabelText("Nome do item"), {
+          target: { value: "Mesa" },
+        });
+        fireEvent.click(
+          screen.getByRole("button", { name: "Salvar e publicar" }),
+        );
+
+        await waitFor(() =>
+          expect(push).toHaveBeenCalledWith(
+            "/admin/anuncios/new-listing?salvo=publicado",
+          ),
+        );
+        expect(apiMock).toHaveBeenLastCalledWith(
+          "PATCH",
+          "/stores/store/listings/new-listing/status",
+          { publication: "published" },
+        );
+      } finally {
+        URL.createObjectURL = original.create;
+        URL.revokeObjectURL = original.revoke;
+      }
+    });
   });
 
   describe("photo previews", () => {
