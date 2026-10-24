@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { requireEnv } from "@/shared/config/env";
-import { isSameOrigin } from "./origin";
+import { isSameOrigin } from "@/shared/lib/origin";
 
 /*
  * Shared by the route handlers that own the session cookie (login, logout,

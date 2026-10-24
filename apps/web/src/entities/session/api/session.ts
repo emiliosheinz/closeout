@@ -1,20 +1,10 @@
 import { redirect } from "next/navigation";
-import type { Role } from "@/shared/config/enums";
-import { getMe } from "./server-api";
-import type { Me, StoreSettings } from "./types";
+import { cache } from "react";
+import { adminGet } from "@/shared/api/index.server";
+import type { Me, Member } from "../model/types";
 
-export interface Member {
-  me: Me;
-  store: StoreSettings;
-  role: Role;
-  /** The caller's own contact profile in the store. */
-  sellerId: string;
-}
-
-/** Owners and admins manage the store and its team; sellers only their own listings. */
-export function isManager(role: Role): boolean {
-  return role === "owner" || role === "admin";
-}
+/** The signed-in admin; deduplicated across layout and page in one request. */
+export const getMe = cache((): Promise<Me | null> => adminGet<Me>("/me"));
 
 /**
  * The signed-in user as a member of their store. Redirects to the login

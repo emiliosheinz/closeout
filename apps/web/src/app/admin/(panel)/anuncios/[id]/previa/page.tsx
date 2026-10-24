@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ListingView } from "@/components/storefront/listing-view";
-import { requireMember } from "@/lib/admin/current-store";
-import { adminGet, isUuid } from "@/lib/admin/server-api";
-import type { ListingDetail } from "@/lib/catalog/types";
+import type { ListingDetail } from "@/entities/listing";
+import { requireMember } from "@/entities/session/index.server";
+import { adminGet, isUuid } from "@/shared/api/index.server";
 
 export const metadata: Metadata = { title: "Pré-visualização" };
 

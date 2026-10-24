@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { readJsonObject, refuseCrossOrigin } from "@/lib/admin/auth-route";
-import { apiUrl, internalAuthHeaders } from "@/lib/admin/server-api";
-import { setSessionCookie } from "@/lib/admin/session-cookie";
+import { apiUrl, internalAuthHeaders } from "@/shared/api/index.server";
+import { setSessionCookie } from "@/shared/lib/session-cookie";
 
 const MAX_BODY_BYTES = 4096;
 

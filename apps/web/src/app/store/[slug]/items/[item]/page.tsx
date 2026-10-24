@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { BackToCatalog } from "@/components/storefront/catalog-return";
 import { ListingView } from "@/components/storefront/listing-view";
-import { getListing, getStore } from "@/lib/catalog/api";
+import { getListing, getStore } from "@/entities/listing/index.server";
 import { formatPrice } from "@/shared/lib/format";
 import { itemPath } from "@/shared/lib/site";
 

@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
-import { getListings, getStoreSlugs } from "@/lib/catalog/api";
-import { DEFAULT_FILTERS } from "@/lib/catalog/params";
+import { DEFAULT_FILTERS } from "@/entities/listing";
+import { getListings, getStoreSlugs } from "@/entities/listing/index.server";
 import { absoluteUrl, itemPath, storePath } from "@/shared/lib/site";
 
 const SITEMAP_PAGE_SIZE = 100;

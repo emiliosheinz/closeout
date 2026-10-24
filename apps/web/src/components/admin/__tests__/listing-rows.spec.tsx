@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import type { AdminListingSummary } from "@/lib/admin/types";
+import type { AdminListingSummary } from "@/entities/listing";
 import { ListingRows } from "../listing-rows";
 
 jest.mock("next/navigation", () => ({

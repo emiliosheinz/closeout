@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { PublicImage } from "@/lib/catalog/types";
+import type { PublicImage } from "@/entities/listing";
 import { cn } from "@/shared/lib/utils";
 
 /**

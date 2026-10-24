@@ -1,5 +1,5 @@
-import { adminGet } from "./server-api";
-import type { Category, Seller } from "./types";
+import { adminGet } from "@/shared/api/index.server";
+import type { Category, Seller } from "../model/types";
 
 /** Options every listing form needs. */
 export async function listingFormOptions(storeId: string) {

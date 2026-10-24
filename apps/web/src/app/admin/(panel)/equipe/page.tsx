@@ -1,12 +1,11 @@
 import type { Metadata } from "next";
 import { TeamView } from "@/components/admin/team/team-view";
-import {
-  isManager,
-  type Member,
-  requireMember,
-} from "@/lib/admin/current-store";
-import { adminGet } from "@/lib/admin/server-api";
-import type { PendingInvite, Seller, TeamMember } from "@/lib/admin/types";
+import type { PendingInvite } from "@/entities/invite";
+import type { Seller } from "@/entities/listing";
+import type { TeamMember } from "@/entities/member";
+import { isManager, type Member } from "@/entities/session";
+import { requireMember } from "@/entities/session/index.server";
+import { adminGet } from "@/shared/api/index.server";
 
 export const metadata: Metadata = { title: "Equipe" };
 

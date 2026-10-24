@@ -1,14 +1,14 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { api } from "@/lib/admin/client-api";
-import type { AdminListingDetail } from "@/lib/admin/types";
+import type { AdminListingDetail } from "@/entities/listing";
+import { api } from "@/shared/api";
 import { ListingForm } from "../listing-form";
 
 jest.mock("next/navigation", () => ({
   useRouter: () => ({ push: jest.fn(), refresh: jest.fn() }),
 }));
 
-jest.mock("@/lib/admin/client-api", () => ({
-  ...jest.requireActual("@/lib/admin/client-api"),
+jest.mock("@/shared/api", () => ({
+  ...jest.requireActual("@/shared/api"),
   api: jest.fn(),
 }));
 

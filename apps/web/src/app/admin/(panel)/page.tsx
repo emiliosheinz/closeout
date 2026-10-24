@@ -2,18 +2,18 @@ import { Plus, Search } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ListingRows } from "@/components/admin/listing-rows";
-import { requireMember } from "@/lib/admin/current-store";
-import { adminGet } from "@/lib/admin/server-api";
-import {
-  dashboardHref,
-  findStatusFilter,
-  STATUS_FILTERS,
-} from "@/lib/admin/status-filter";
 import type {
   AdminListingSummary,
   DashboardCounts,
   Seller,
-} from "@/lib/admin/types";
+} from "@/entities/listing";
+import {
+  dashboardHref,
+  findStatusFilter,
+  STATUS_FILTERS,
+} from "@/entities/listing";
+import { requireMember } from "@/entities/session/index.server";
+import { adminGet } from "@/shared/api/index.server";
 import { cn } from "@/shared/lib/utils";
 
 export const metadata: Metadata = { title: "Anúncios" };

@@ -2,8 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { ApiError, api } from "@/lib/admin/client-api";
-import type { TeamMember } from "@/lib/admin/types";
+import type { TeamMember } from "@/entities/member";
+import { ApiError, api } from "@/shared/api";
 import type { AssignableRole } from "@/shared/config/enums";
 import { ROLE_DESCRIPTIONS, ROLE_LABELS } from "@/shared/lib/format";
 import { cn } from "@/shared/lib/utils";

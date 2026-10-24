@@ -1,25 +1,65 @@
 import type {
-  AssignableRole,
   Availability,
   Condition,
   Publication,
-  Role,
 } from "@/shared/config/enums";
-import type { ListingAttribute } from "../catalog/types";
 
-export interface StoreSettings {
-  id: string;
+export interface PublicImage {
+  sm: string;
+  lg: string;
+  og: string;
+  width: number;
+  height: number;
+}
+
+export interface ListingAttribute {
+  label: string;
+  value: string;
+}
+
+export interface ListingSummary {
+  slug: string;
+  title: string;
+  priceCents: number | null;
+  condition: Condition;
+  availability: Availability;
+  category: { slug: string; name: string };
+  cover: PublicImage | null;
+}
+
+export interface ListingDetail extends ListingSummary {
+  description: string;
+  attributes: ListingAttribute[];
+  images: PublicImage[];
+  /** Alphabetical; numbers are null unless the item can be contacted. */
+  sellers: {
+    name: string;
+    avatarUrl: string | null;
+    whatsappNumber: string | null;
+  }[];
+  canContact: boolean;
+  publishedAt: string | null;
+  updatedAt: string;
+  related: ListingSummary[];
+}
+
+export interface StoreInfo {
   slug: string;
   name: string;
   headline: string;
   intro: string;
   locale: string;
   currency: string;
+  counts: { available: number; reserved: number; sold: number };
+  categories: { slug: string; name: string; count: number }[];
+  sellers: { name: string; avatarUrl: string | null; whatsappNumber: string }[];
 }
 
-export interface Me {
-  user: { id: string; name: string; email: string };
-  memberships: { role: Role; sellerId: string; store: StoreSettings }[];
+export interface ListingPage {
+  items: ListingSummary[];
+  total: number;
+  page: number;
+  pageSize: number;
 }
 
 export interface AdminImage {
@@ -73,28 +113,4 @@ export interface Category {
   id: string;
   slug: string;
   name: string;
-}
-
-export interface TeamMember {
-  userId: string;
-  name: string;
-  email: string;
-  role: Role;
-  sellerId: string;
-  displayName: string;
-  whatsappNumber: string | null;
-  avatarUrl: string | null;
-  listingCount: number;
-}
-
-export interface PendingInvite {
-  id: string;
-  email: string;
-  role: AssignableRole;
-  expiresAt: string;
-}
-
-export interface IssuedInvite {
-  invite: PendingInvite;
-  link: string;
 }

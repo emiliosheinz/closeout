@@ -1,5 +1,6 @@
 import { Search } from "lucide-react";
-import { type CatalogFilters, catalogEntries } from "@/lib/catalog/params";
+import type { CatalogFilters } from "@/entities/listing";
+import { catalogEntries } from "@/lib/catalog/params";
 import { storePath } from "@/shared/lib/site";
 
 /** GET search that keeps the other active filters. */

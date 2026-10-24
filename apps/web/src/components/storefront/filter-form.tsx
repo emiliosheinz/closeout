@@ -1,9 +1,11 @@
 import Link from "next/link";
+import type {
+  AvailabilityFilter,
+  CatalogFilters,
+  CatalogSort,
+} from "@/entities/listing";
 import {
   AVAILABILITY_PARAM,
-  type AvailabilityFilter,
-  type CatalogFilters,
-  type CatalogSort,
   CONDITION_PARAM,
   catalogEntries,
   SORT_PARAM,

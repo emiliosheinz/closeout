@@ -3,8 +3,8 @@
 import { Check, Copy } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { ApiError, api } from "@/lib/admin/client-api";
-import type { StoreSettings } from "@/lib/admin/types";
+import type { StoreSettings } from "@/entities/session";
+import { ApiError, api } from "@/shared/api";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
 import { Field, inputClass } from "./field";

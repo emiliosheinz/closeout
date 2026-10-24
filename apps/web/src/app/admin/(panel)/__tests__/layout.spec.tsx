@@ -1,10 +1,10 @@
 import { render, screen } from "@testing-library/react";
-import { requireMember } from "@/lib/admin/current-store";
+import { requireMember } from "@/entities/session/index.server";
 import PanelLayout from "../layout";
 
 jest.mock("next/navigation", () => ({ usePathname: () => "/admin" }));
-jest.mock("@/lib/admin/current-store", () => ({
-  ...jest.requireActual("@/lib/admin/current-store"),
+jest.mock("@/entities/session/index.server", () => ({
+  ...jest.requireActual("@/entities/session/index.server"),
   requireMember: jest.fn(),
 }));
 

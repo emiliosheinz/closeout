@@ -1,5 +1,6 @@
 import { AdminNav } from "@/components/admin/admin-nav";
-import { isManager, requireMember } from "@/lib/admin/current-store";
+import { isManager } from "@/entities/session";
+import { requireMember } from "@/entities/session/index.server";
 
 export default async function PanelLayout({
   children,

@@ -1,10 +1,6 @@
 import Link from "next/link";
-import {
-  type CatalogFilters,
-  catalogHref,
-  withFilters,
-} from "@/lib/catalog/params";
-import type { StoreInfo } from "@/lib/catalog/types";
+import type { CatalogFilters, StoreInfo } from "@/entities/listing";
+import { catalogHref, withFilters } from "@/lib/catalog/params";
 import { cn } from "@/shared/lib/utils";
 
 /** Horizontal category strip; each chip is a plain link. */

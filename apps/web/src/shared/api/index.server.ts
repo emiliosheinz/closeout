@@ -1,10 +1,11 @@
 import { cookies } from "next/headers";
-import { cache } from "react";
 import { requireEnv } from "@/shared/config/env";
-import { CLIENT_IP_HEADER, INTERNAL_SECRET_HEADER } from "../internal-headers";
-import { clientIpFrom } from "./origin";
-import { SESSION_COOKIE_NAME } from "./session-cookie";
-import type { Me } from "./types";
+import {
+  CLIENT_IP_HEADER,
+  INTERNAL_SECRET_HEADER,
+} from "@/shared/config/internal-headers";
+import { clientIpFrom } from "@/shared/lib/origin";
+import { SESSION_COOKIE_NAME } from "@/shared/lib/session-cookie";
 
 export { INTERNAL_SECRET_HEADER };
 
@@ -36,9 +37,6 @@ export async function adminGet<T>(path: string): Promise<T | null> {
   }
   return (await response.json()) as T;
 }
-
-/** The signed-in admin; deduplicated across layout and page in one request. */
-export const getMe = cache((): Promise<Me | null> => adminGet<Me>("/me"));
 
 /**
  * Headers the API requires on its internal auth endpoints: the shared secret

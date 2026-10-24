@@ -1,11 +1,8 @@
+import { DEFAULT_FILTERS } from "@/entities/listing";
 import {
   activeFilterChips,
-  activeFilterCount,
   catalogHref,
-  DEFAULT_FILTERS,
-  hasActiveFilters,
   parseCatalogParams,
-  toApiQuery,
   withFilters,
 } from "../params";
 
@@ -91,29 +88,6 @@ describe("catalog URL parameters", () => {
     expect(withFilters(onPage3, { category: "cozinha" }).page).toBe(1);
     expect(withFilters(onPage3, { page: 4 }).page).toBe(4);
   });
-
-  it("sends prices to the API in cents", () => {
-    const query = toApiQuery(
-      { ...DEFAULT_FILTERS, minPrice: 50, maxPrice: 1200 },
-      24,
-    );
-    expect(query.get("minPrice")).toBe("5000");
-    expect(query.get("maxPrice")).toBe("120000");
-    expect(query.get("availability")).toBe("listed");
-  });
-
-  it("counts active filters for the filter button badge", () => {
-    expect(activeFilterCount(DEFAULT_FILTERS)).toBe(0);
-    expect(
-      activeFilterCount({
-        ...DEFAULT_FILTERS,
-        category: "moveis",
-        minPrice: 10,
-        maxPrice: 20,
-        q: "x",
-      }),
-    ).toBe(2);
-  });
 });
 
 describe("catalog URL edge cases", () => {
@@ -128,16 +102,6 @@ describe("catalog URL edge cases", () => {
   it("ignores prices above R$ 1.000.000", () => {
     expect(parseCatalogParams({ min: "1000000" }).minPrice).toBe(1000000);
     expect(parseCatalogParams({ min: "1000001" }).minPrice).toBeNull();
-  });
-
-  it("counts a one-sided price range as an active filter", () => {
-    expect(activeFilterCount({ ...DEFAULT_FILTERS, minPrice: 10 })).toBe(1);
-    expect(activeFilterCount({ ...DEFAULT_FILTERS, maxPrice: 10 })).toBe(1);
-  });
-
-  it("treats a search term as an active filter", () => {
-    expect(hasActiveFilters(DEFAULT_FILTERS)).toBe(false);
-    expect(hasActiveFilters({ ...DEFAULT_FILTERS, q: "mesa" })).toBe(true);
   });
 
   it("writes condition and sort slugs into the URL", () => {

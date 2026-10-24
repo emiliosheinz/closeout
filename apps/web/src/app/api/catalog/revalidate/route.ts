@@ -1,10 +1,10 @@
 import { revalidateTag } from "next/cache";
 import { type NextRequest, NextResponse } from "next/server";
-import { isSameOrigin } from "@/lib/admin/origin";
-import { adminGet } from "@/lib/admin/server-api";
-import type { Me } from "@/lib/admin/types";
-import { CATALOG_CACHE_TAG } from "@/lib/catalog/api";
+import { CATALOG_CACHE_TAG } from "@/entities/listing/index.server";
+import type { Me } from "@/entities/session";
+import { adminGet } from "@/shared/api/index.server";
 import { requireEnv } from "@/shared/config/env";
+import { isSameOrigin } from "@/shared/lib/origin";
 
 /**
  * Expires the cached storefront data so an admin's change shows on the next

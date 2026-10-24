@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
-import type { ListingDetail } from "@/lib/catalog/types";
+import type { ListingDetail } from "@/entities/listing";
 import { ListingView } from "../listing-view";
 
 const base: ListingDetail = {

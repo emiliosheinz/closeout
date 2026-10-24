@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { ListingSummary } from "@/lib/catalog/types";
+import type { ListingSummary } from "@/entities/listing";
 import { CONDITION_LABELS } from "@/shared/lib/format";
 import { itemPath } from "@/shared/lib/site";
 import { cn } from "@/shared/lib/utils";

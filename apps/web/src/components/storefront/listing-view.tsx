@@ -1,10 +1,7 @@
 import Link from "next/link";
-import {
-  catalogHref,
-  DEFAULT_FILTERS,
-  withFilters,
-} from "@/lib/catalog/params";
-import type { ListingDetail } from "@/lib/catalog/types";
+import type { ListingDetail } from "@/entities/listing";
+import { DEFAULT_FILTERS } from "@/entities/listing";
+import { catalogHref, withFilters } from "@/lib/catalog/params";
 import {
   AVAILABILITY_LABELS,
   CONDITION_LABELS,

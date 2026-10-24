@@ -1,14 +1,14 @@
 import { render, screen } from "@testing-library/react";
-import { requireMember } from "@/lib/admin/current-store";
-import { adminGet } from "@/lib/admin/server-api";
+import { requireMember } from "@/entities/session/index.server";
+import { adminGet } from "@/shared/api/index.server";
 import TeamPage from "../page";
 
 jest.mock("next/navigation", () => ({
   useRouter: () => ({ push: jest.fn(), refresh: jest.fn() }),
 }));
-jest.mock("@/lib/admin/server-api", () => ({ adminGet: jest.fn() }));
-jest.mock("@/lib/admin/current-store", () => ({
-  ...jest.requireActual("@/lib/admin/current-store"),
+jest.mock("@/shared/api/index.server", () => ({ adminGet: jest.fn() }));
+jest.mock("@/entities/session/index.server", () => ({
+  ...jest.requireActual("@/entities/session/index.server"),
   requireMember: jest.fn(),
 }));
 

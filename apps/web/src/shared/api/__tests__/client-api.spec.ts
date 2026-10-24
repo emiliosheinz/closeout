@@ -1,7 +1,7 @@
 /**
  * @jest-environment node
  */
-import { ApiError, api } from "../client-api";
+import { ApiError, api } from "../index";
 
 function respondWith(status: number, body: unknown) {
   global.fetch = jest.fn().mockResolvedValue(

@@ -1,9 +1,9 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { getListings, getStoreSlugs } from "@/lib/catalog/api";
+import { getListings, getStoreSlugs } from "@/entities/listing/index.server";
 import sitemap from "../sitemap";
 
-jest.mock("@/lib/catalog/api", () => ({
+jest.mock("@/entities/listing/index.server", () => ({
   getListings: jest.fn(),
   getStoreSlugs: jest.fn(),
 }));

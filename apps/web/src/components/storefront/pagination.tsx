@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { type CatalogFilters, catalogHref } from "@/lib/catalog/params";
+import type { CatalogFilters } from "@/entities/listing";
+import { catalogHref } from "@/lib/catalog/params";
 
 export function Pagination({
   storeSlug,

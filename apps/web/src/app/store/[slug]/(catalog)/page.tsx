@@ -10,13 +10,19 @@ import { ListingCard } from "@/components/storefront/listing-card";
 import { Pagination } from "@/components/storefront/pagination";
 import { SearchForm } from "@/components/storefront/search-form";
 import { StoreHeader } from "@/components/storefront/store-header";
-import { getListings, getStore, PAGE_SIZE } from "@/lib/catalog/api";
 import {
-  activeFilterChips,
   activeFilterCount,
-  catalogHref,
   DEFAULT_FILTERS,
   hasActiveFilters,
+} from "@/entities/listing";
+import {
+  getListings,
+  getStore,
+  PAGE_SIZE,
+} from "@/entities/listing/index.server";
+import {
+  activeFilterChips,
+  catalogHref,
   parseCatalogParams,
 } from "@/lib/catalog/params";
 import { pluralize } from "@/shared/lib/format";

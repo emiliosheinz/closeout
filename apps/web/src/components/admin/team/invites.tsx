@@ -3,8 +3,8 @@
 import { Mail, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { ApiError, api } from "@/lib/admin/client-api";
-import type { IssuedInvite, PendingInvite } from "@/lib/admin/types";
+import type { IssuedInvite, PendingInvite } from "@/entities/invite";
+import { ApiError, api } from "@/shared/api";
 import type { AssignableRole } from "@/shared/config/enums";
 import {
   formatDate,

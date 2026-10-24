@@ -3,9 +3,9 @@
 import { ArrowLeft, ArrowRight, Star, Trash2, Upload } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ApiError, api } from "@/lib/admin/client-api";
-import { uploadPhotos } from "@/lib/admin/listings";
-import type { AdminImage } from "@/lib/admin/types";
+import type { AdminImage } from "@/entities/listing";
+import { uploadPhotos } from "@/entities/listing";
+import { ApiError, api } from "@/shared/api";
 import { cn } from "@/shared/lib/utils";
 
 const MAX_PHOTOS = 20;

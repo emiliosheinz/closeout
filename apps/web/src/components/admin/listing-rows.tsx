@@ -4,8 +4,8 @@ import { Copy, Eye, ImageOff, Pencil, PhoneOff, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { api } from "@/lib/admin/client-api";
-import type { AdminListingSummary } from "@/lib/admin/types";
+import type { AdminListingSummary } from "@/entities/listing";
+import { api } from "@/shared/api";
 import {
   AVAILABILITIES,
   type Availability,

@@ -4,10 +4,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ListingForm } from "@/components/admin/listing-form";
 import { PhotoManager } from "@/components/admin/photo-manager";
-import { isManager, requireMember } from "@/lib/admin/current-store";
-import { listingFormOptions } from "@/lib/admin/form-data";
-import { adminGet, isUuid } from "@/lib/admin/server-api";
-import type { AdminListingDetail } from "@/lib/admin/types";
+import type { AdminListingDetail } from "@/entities/listing";
+import { listingFormOptions } from "@/entities/listing/index.server";
+import { isManager } from "@/entities/session";
+import { requireMember } from "@/entities/session/index.server";
+import { adminGet, isUuid } from "@/shared/api/index.server";
 import { itemPath } from "@/shared/lib/site";
 
 export const metadata: Metadata = { title: "Editar anúncio" };

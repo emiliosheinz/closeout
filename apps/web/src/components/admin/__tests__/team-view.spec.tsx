@@ -5,16 +5,16 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
-import { ApiError, api } from "@/lib/admin/client-api";
-import type { TeamMember } from "@/lib/admin/types";
+import type { TeamMember } from "@/entities/member";
+import { ApiError, api } from "@/shared/api";
 import { TeamView } from "../team/team-view";
 
 jest.mock("next/navigation", () => ({
   useRouter: () => ({ push: jest.fn(), refresh: jest.fn() }),
 }));
 
-jest.mock("@/lib/admin/client-api", () => ({
-  ...jest.requireActual("@/lib/admin/client-api"),
+jest.mock("@/shared/api", () => ({
+  ...jest.requireActual("@/shared/api"),
   api: jest.fn(),
 }));
 

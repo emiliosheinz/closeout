@@ -1,9 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { requireEnv } from "@/shared/config/env";
 import {
   CLIENT_IP_HEADER,
   INTERNAL_SECRET_HEADER,
-} from "@/lib/internal-headers";
-import { requireEnv } from "@/shared/config/env";
+} from "@/shared/config/internal-headers";
 
 /** Headers only trusted server-to-server; a browser must never supply them. */
 const STRIPPED_HEADERS = [INTERNAL_SECRET_HEADER, CLIENT_IP_HEADER];

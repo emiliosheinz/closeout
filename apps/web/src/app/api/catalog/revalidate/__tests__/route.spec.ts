@@ -1,11 +1,11 @@
 /** @jest-environment node */
 import { revalidateTag } from "next/cache";
 import { NextRequest } from "next/server";
-import { adminGet } from "@/lib/admin/server-api";
+import { adminGet } from "@/shared/api/index.server";
 import { POST } from "../route";
 
 jest.mock("next/cache", () => ({ revalidateTag: jest.fn() }));
-jest.mock("@/lib/admin/server-api", () => ({ adminGet: jest.fn() }));
+jest.mock("@/shared/api/index.server", () => ({ adminGet: jest.fn() }));
 
 function expire(origin = "http://web:3000") {
   return POST(

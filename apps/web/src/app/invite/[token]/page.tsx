@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { InviteForm } from "@/components/admin/invite-form";
 import { InviteSignOut } from "@/components/admin/invite-sign-out";
+import { getMe } from "@/entities/session/index.server";
 import { lookupInvite } from "@/lib/admin/invites";
-import { getMe } from "@/lib/admin/server-api";
 import { ROLE_DESCRIPTIONS, ROLE_LABELS } from "@/shared/lib/format";
 
 export const metadata: Metadata = {

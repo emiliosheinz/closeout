@@ -1,6 +1,10 @@
 import { requireEnv } from "@/shared/config/env";
-import { type CatalogFilters, hasActiveFilters, toApiQuery } from "./params";
-import type { ListingDetail, ListingPage, StoreInfo } from "./types";
+import {
+  type CatalogFilters,
+  hasActiveFilters,
+  toApiQuery,
+} from "../model/filters";
+import type { ListingDetail, ListingPage, StoreInfo } from "../model/types";
 
 export const PAGE_SIZE = 24;
 

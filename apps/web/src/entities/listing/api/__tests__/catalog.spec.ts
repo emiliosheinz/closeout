@@ -1,6 +1,7 @@
 /** @jest-environment node */
-import { getListing, getListings, getStore, getStoreSlugs } from "../api";
-import { DEFAULT_FILTERS } from "../params";
+
+import { DEFAULT_FILTERS } from "../../model/filters";
+import { getListing, getListings, getStore, getStoreSlugs } from "../catalog";
 
 const page = { items: [], total: 0, page: 1, pageSize: 24 };
 

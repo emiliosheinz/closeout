@@ -1,11 +1,11 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { refuseCrossOrigin } from "@/lib/admin/auth-route";
-import { apiUrl, INTERNAL_SECRET_HEADER } from "@/lib/admin/server-api";
+import { apiUrl, INTERNAL_SECRET_HEADER } from "@/shared/api/index.server";
+import { requireEnv } from "@/shared/config/env";
 import {
   clearSessionCookie,
   SESSION_COOKIE_NAME,
-} from "@/lib/admin/session-cookie";
-import { requireEnv } from "@/shared/config/env";
+} from "@/shared/lib/session-cookie";
 
 /**
  * Revokes the session on the API, drops the cookie and sends the browser to

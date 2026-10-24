@@ -1,7 +1,4 @@
-import { isManager } from "../current-store";
-
-jest.mock("../server-api", () => ({ getMe: jest.fn() }));
-jest.mock("next/navigation", () => ({ redirect: jest.fn() }));
+import { isManager } from "../is-manager";
 
 describe("isManager", () => {
   it.each([

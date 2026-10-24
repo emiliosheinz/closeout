@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { LoginForm } from "@/components/admin/login-form";
-import { getMe } from "@/lib/admin/server-api";
+import { getMe } from "@/entities/session/index.server";
 
 export const metadata: Metadata = { title: "Entrar" };
 

@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import type { StoreInfo } from "@/lib/catalog/types";
+import type { StoreInfo } from "@/entities/listing";
 import { EmptyState } from "../empty-state";
 import { StoreHeader } from "../store-header";
 

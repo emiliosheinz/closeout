@@ -3,10 +3,14 @@
 import { ImagePlus, Plus, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { ApiError, api } from "@/lib/admin/client-api";
+import type {
+  AdminListingDetail,
+  Category,
+  ListingAttribute,
+  Seller,
+} from "@/entities/listing";
 import { createListingWithPhotos } from "@/lib/admin/listings";
-import type { AdminListingDetail, Category, Seller } from "@/lib/admin/types";
-import type { ListingAttribute } from "@/lib/catalog/types";
+import { ApiError, api } from "@/shared/api";
 import {
   AVAILABILITIES,
   type Availability,

@@ -1,6 +1,6 @@
 import { MessageCircle } from "lucide-react";
 import Link from "next/link";
-import type { StoreInfo } from "@/lib/catalog/types";
+import type { StoreInfo } from "@/entities/listing";
 import { pluralize } from "@/shared/lib/format";
 import { storePath } from "@/shared/lib/site";
 import { sellerContactUrl } from "@/shared/lib/whatsapp";
