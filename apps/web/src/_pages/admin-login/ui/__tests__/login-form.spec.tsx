@@ -49,4 +49,93 @@ describe("LoginForm", () => {
       "Não foi possível entrar agora.",
     );
   });
+
+  it("shows the email and password messages without sending a request", async () => {
+    const fetchMock = vi.fn();
+    global.fetch = fetchMock as unknown as typeof fetch;
+    render(<LoginForm />);
+    fireEvent.change(screen.getByLabelText("E-mail"), {
+      target: { value: "sem-arroba" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Entrar" }));
+
+    expect(
+      await screen.findByText("Informe um e-mail válido."),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Informe sua senha.")).toBeInTheDocument();
+    const email = screen.getByLabelText("E-mail");
+    expect(email).toHaveAttribute("aria-invalid", "true");
+    expect(email).toHaveAccessibleDescription("Informe um e-mail válido.");
+    const password = screen.getByLabelText("Senha");
+    expect(password).toHaveAttribute("aria-invalid", "true");
+    expect(password).toHaveAccessibleDescription("Informe sua senha.");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("shows the network message inline when the request cannot be sent", async () => {
+    global.fetch = vi
+      .fn()
+      .mockRejectedValue(new TypeError("offline")) as unknown as typeof fetch;
+    render(<LoginForm />);
+    fireEvent.change(screen.getByLabelText("E-mail"), {
+      target: { value: "ana@loja.test" },
+    });
+    fireEvent.change(screen.getByLabelText("Senha"), {
+      target: { value: "senha-longa-1" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Entrar" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Sem conexão. Verifique a internet e tente de novo.",
+    );
+    expect(screen.getByRole("button", { name: "Entrar" })).toBeEnabled();
+  });
+
+  it("opens the admin with a full navigation and blocks a second submit", async () => {
+    const assign = vi.fn();
+    vi.stubGlobal("location", { assign });
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+    global.fetch = fetchMock as unknown as typeof fetch;
+    render(<LoginForm />);
+    fireEvent.change(screen.getByLabelText("E-mail"), {
+      target: { value: "ana@loja.test" },
+    });
+    fireEvent.change(screen.getByLabelText("Senha"), {
+      target: { value: "senha-longa-1" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Entrar" }));
+
+    await waitFor(() => expect(assign).toHaveBeenCalledWith("/admin"));
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("button", { name: "Entrando..." })).toBeDisabled();
+    vi.unstubAllGlobals();
+  });
+
+  it("sends one request while a submit is in flight", async () => {
+    let resolve: (value: unknown) => void = () => {};
+    const fetchMock = vi.fn().mockReturnValue(
+      new Promise((r) => {
+        resolve = r;
+      }),
+    );
+    global.fetch = fetchMock as unknown as typeof fetch;
+    const { container } = render(<LoginForm />);
+    fireEvent.change(screen.getByLabelText("E-mail"), {
+      target: { value: "ana@loja.test" },
+    });
+    fireEvent.change(screen.getByLabelText("Senha"), {
+      target: { value: "senha-longa-1" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Entrar" }));
+
+    const pending = await screen.findByRole("button", { name: "Entrando..." });
+    expect(pending).toBeDisabled();
+    fireEvent.click(pending);
+    fireEvent.submit(container.querySelector("form") as HTMLFormElement);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    resolve({ ok: false, json: async () => ({}) });
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Entrar" })).toBeEnabled();
+  });
 });

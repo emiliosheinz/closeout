@@ -150,7 +150,7 @@ describe("invite page", () => {
     fireEvent.click(
       screen.getByRole("button", { name: "Criar conta e entrar" }),
     );
-    expect(screen.getByText("Informe seu nome.")).toBeInTheDocument();
+    expect(await screen.findByText("Informe seu nome.")).toBeInTheDocument();
     expect(
       screen.getByText("A senha precisa ter pelo menos 10 caracteres."),
     ).toBeInTheDocument();

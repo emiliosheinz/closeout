@@ -1,89 +1,100 @@
 "use client";
 
-import { useState } from "react";
+import {
+  acceptInviteRequestSchema,
+  MIN_PASSWORD_LENGTH,
+} from "@closeout/contracts/schemas";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
 import { Button } from "@/shared/ui/button";
 import { Field, inputClass } from "@/shared/ui/field";
 
 const NAME_MESSAGE = "Informe seu nome.";
-const PASSWORD_MESSAGE = "A senha precisa ter pelo menos 10 caracteres.";
-const MIN_PASSWORD_LENGTH = 10;
+const PASSWORD_MESSAGE = `A senha precisa ter pelo menos ${MIN_PASSWORD_LENGTH} caracteres.`;
 
-interface Errors {
-  name?: string;
-  password?: string;
-  whatsappNumber?: string;
-  form?: string;
-}
+const formSchema = acceptInviteRequestSchema.extend({
+  whatsappNumber: z.string(),
+});
+type FormValues = z.infer<typeof formSchema>;
+
+type FieldName = "name" | "password" | "whatsappNumber";
 
 /** Sorts the API's messages onto the fields they are about. */
-function errorsFrom(message: unknown): Errors {
+function sortMessages(message: unknown) {
   const messages = (Array.isArray(message) ? message : [message]).filter(
     (m): m is string => typeof m === "string",
   );
-  const errors: Errors = {};
+  const fields: Partial<Record<FieldName, string>> = {};
   const rest: string[] = [];
   for (const text of messages) {
-    if (text === NAME_MESSAGE) errors.name = text;
-    else if (text === PASSWORD_MESSAGE) errors.password = text;
-    else if (text.includes("WhatsApp")) errors.whatsappNumber = text;
+    if (text === NAME_MESSAGE) fields.name = text;
+    else if (text === PASSWORD_MESSAGE) fields.password = text;
+    else if (text.includes("WhatsApp")) fields.whatsappNumber = text;
     else rest.push(text);
   }
-  if (rest.length > 0) errors.form = rest.join(" ");
-  if (Object.keys(errors).length === 0) {
-    errors.form = "Não foi possível aceitar o convite agora.";
-  }
-  return errors;
+  return { fields, form: rest.join(" ") };
 }
 
 /** Creates the invitee's account; on success the new session opens the admin. */
 export function InviteForm({ token, email }: { token: string; email: string }) {
-  const [errors, setErrors] = useState<Errors>({});
-  const [pending, setPending] = useState(false);
+  const {
+    register,
+    handleSubmit,
+    setError,
+    formState: { errors, isSubmitting, isSubmitSuccessful },
+  } = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: { name: "", password: "", whatsappNumber: "" },
+  });
 
-  async function submit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    const name = String(form.get("name") ?? "");
-    const password = String(form.get("password") ?? "");
-    const local: Errors = {};
-    if (!name.trim()) local.name = NAME_MESSAGE;
-    if (password.length < MIN_PASSWORD_LENGTH)
-      local.password = PASSWORD_MESSAGE;
-    setErrors(local);
-    if (Object.keys(local).length > 0) return;
+  const pending = isSubmitting || isSubmitSuccessful;
 
-    setPending(true);
-    const whatsappNumber = String(form.get("whatsappNumber") ?? "");
+  async function submit(values: FormValues) {
+    let response: Response;
     try {
-      const response = await fetch("/api/auth/invite", {
+      response = await fetch("/api/auth/invite", {
         method: "POST",
         // The page sends no referrer, which would also blank the Origin the
         // handler checks; same-origin keeps both private to this site.
         referrerPolicy: "same-origin",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          token,
-          name,
-          password,
-          whatsappNumber,
-        }),
+        body: JSON.stringify({ token, ...values }),
       });
-      if (response.ok) {
-        window.location.assign("/admin");
-        return;
-      }
-      const body = (await response.json().catch(() => ({}))) as {
-        message?: unknown;
-      };
-      setErrors(errorsFrom(body.message));
     } catch {
-      setErrors({ form: "Sem conexão. Verifique a internet e tente de novo." });
+      setError("root", {
+        message: "Sem conexão. Verifique a internet e tente de novo.",
+      });
+      return;
     }
-    setPending(false);
+    if (response.ok) {
+      // A full navigation drops any cache left by a previous session.
+      window.location.assign("/admin");
+      return;
+    }
+    const body = (await response.json().catch(() => ({}))) as {
+      message?: unknown;
+    };
+    const { fields, form } = sortMessages(body.message);
+    const entries = Object.entries(fields) as [FieldName, string][];
+    for (const [name, message] of entries) setError(name, { message });
+    if (form) setError("root", { message: form });
+    else if (entries.length === 0)
+      setError("root", {
+        message: "Não foi possível aceitar o convite agora.",
+      });
+  }
+
+  function guarded(event: React.FormEvent<HTMLFormElement>) {
+    if (pending) {
+      event.preventDefault();
+      return;
+    }
+    return handleSubmit(submit)(event);
   }
 
   return (
-    <form onSubmit={submit} noValidate className="flex flex-col gap-5">
+    <form onSubmit={guarded} noValidate className="flex flex-col gap-5">
       <Field
         label="E-mail"
         htmlFor="invite-email"
@@ -102,57 +113,63 @@ export function InviteForm({ token, email }: { token: string; email: string }) {
       <Field
         label="Seu nome"
         htmlFor="invite-name"
+        error={errors.name?.message}
         hint="Aparece nos seus anúncios, para quem compra."
-        error={errors.name}
       >
         <input
           id="invite-name"
-          name="name"
           autoComplete="name"
           maxLength={60}
           aria-invalid={Boolean(errors.name)}
+          aria-describedby={errors.name ? "invite-name-error" : undefined}
           className={inputClass}
+          {...register("name")}
         />
       </Field>
       <Field
         label="Senha"
         htmlFor="invite-password"
+        error={errors.password?.message}
         hint="Pelo menos 10 caracteres."
-        error={errors.password}
       >
         <input
           id="invite-password"
-          name="password"
           type="password"
           autoComplete="new-password"
-          minLength={MIN_PASSWORD_LENGTH}
           maxLength={200}
           aria-invalid={Boolean(errors.password)}
+          aria-describedby={
+            errors.password ? "invite-password-error" : undefined
+          }
           className={inputClass}
+          {...register("password")}
         />
       </Field>
       <Field
         label="WhatsApp (opcional)"
         htmlFor="invite-whatsapp"
+        error={errors.whatsappNumber?.message}
         hint="Com + e código do país, por exemplo +55 11 99999-8888. Sem ele, seus anúncios aparecem sem botão de contato."
-        error={errors.whatsappNumber}
       >
         <input
           id="invite-whatsapp"
-          name="whatsappNumber"
           inputMode="tel"
           autoComplete="tel"
           placeholder="+55 11 99999-8888"
           aria-invalid={Boolean(errors.whatsappNumber)}
+          aria-describedby={
+            errors.whatsappNumber ? "invite-whatsapp-error" : undefined
+          }
           className={inputClass}
+          {...register("whatsappNumber")}
         />
       </Field>
-      {errors.form && (
+      {errors.root && (
         <p
           role="alert"
           className="rounded-md bg-stamp/10 px-3 py-2 text-sm text-stamp"
         >
-          {errors.form}
+          {errors.root.message}
         </p>
       )}
       <Button type="submit" size="lg" disabled={pending} className="mt-1">
