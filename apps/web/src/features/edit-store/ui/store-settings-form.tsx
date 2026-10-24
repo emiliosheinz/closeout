@@ -1,13 +1,21 @@
 "use client";
 
+import { storeRequestSchema } from "@closeout/contracts/schemas";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation } from "@tanstack/react-query";
 import { Check, Copy } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useForm } from "react-hook-form";
+import type { z } from "zod";
+import { sessionKeys } from "@/entities/session";
 import type { StoreSettings } from "@/entities/store";
-import { ApiError, api } from "@/shared/api";
+import { api } from "@/shared/api";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
 import { Field, inputClass } from "@/shared/ui/field";
+
+const formSchema = storeRequestSchema.required();
+type FormValues = z.infer<typeof formSchema>;
 
 export function StoreSettingsForm({
   store,
@@ -16,30 +24,27 @@ export function StoreSettingsForm({
   store: StoreSettings;
   storeUrl: string;
 }) {
-  const router = useRouter();
-  const [name, setName] = useState(store.name);
-  const [headline, setHeadline] = useState(store.headline);
-  const [intro, setIntro] = useState(store.intro);
-  const [status, setStatus] = useState<{ text: string; error: boolean } | null>(
-    null,
-  );
   const [copied, setCopied] = useState(false);
-
-  async function save(event: React.FormEvent) {
-    event.preventDefault();
-    setStatus(null);
-    try {
-      await api("PATCH", `/stores/${store.id}`, { name, headline, intro });
-      setStatus({ text: "Loja atualizada.", error: false });
-      router.refresh();
-    } catch (err) {
-      setStatus({
-        text:
-          err instanceof ApiError ? err.message : "Não foi possível salvar.",
-        error: true,
-      });
-    }
-  }
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      name: store.name,
+      headline: store.headline,
+      intro: store.intro,
+    },
+  });
+  const save = useMutation({
+    mutationFn: (values: FormValues) =>
+      api("PATCH", `/stores/${store.id}`, values),
+    meta: {
+      success: "Loja atualizada.",
+      invalidates: [sessionKeys.me()],
+    },
+  });
 
   async function copyLink() {
     await navigator.clipboard.writeText(storeUrl);
@@ -79,15 +84,23 @@ export function StoreSettingsForm({
         </div>
       </section>
 
-      <form onSubmit={save} className="flex flex-col gap-5">
-        <Field label="Nome da loja" htmlFor="store-name">
+      <form
+        onSubmit={handleSubmit((values) => save.mutate(values))}
+        noValidate
+        className="flex flex-col gap-5"
+      >
+        <Field
+          label="Nome da loja"
+          htmlFor="store-name"
+          error={errors.name?.message}
+        >
           <input
             id="store-name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
             maxLength={80}
-            required
+            aria-invalid={Boolean(errors.name)}
+            aria-describedby={errors.name ? "store-name-error" : undefined}
             className={inputClass}
+            {...register("name")}
           />
         </Field>
         <Field
@@ -97,10 +110,9 @@ export function StoreSettingsForm({
         >
           <input
             id="store-headline"
-            value={headline}
-            onChange={(e) => setHeadline(e.target.value)}
             maxLength={160}
             className={inputClass}
+            {...register("headline")}
           />
         </Field>
         <Field
@@ -110,26 +122,16 @@ export function StoreSettingsForm({
         >
           <textarea
             id="store-intro"
-            value={intro}
-            onChange={(e) => setIntro(e.target.value)}
             maxLength={1200}
             rows={5}
             className={cn(inputClass, "h-auto py-2 leading-relaxed")}
+            {...register("intro")}
           />
         </Field>
-        <div className="flex items-center gap-3">
-          <Button type="submit">Salvar loja</Button>
-          <span
-            role="status"
-            aria-live="polite"
-            className={
-              status?.error
-                ? "text-sm font-medium text-stamp"
-                : "text-sm text-go"
-            }
-          >
-            {status?.text}
-          </span>
+        <div>
+          <Button type="submit" disabled={save.isPending}>
+            {save.isPending ? "Salvando..." : "Salvar loja"}
+          </Button>
         </div>
       </form>
     </div>
