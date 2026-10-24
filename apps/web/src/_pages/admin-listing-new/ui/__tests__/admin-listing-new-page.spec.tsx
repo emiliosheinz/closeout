@@ -25,4 +25,26 @@ describe("new listing page", () => {
       screen.getByRole("combobox", { name: "Categoria" }),
     ).toHaveTextContent("Móveis");
   });
+
+  it.each([
+    [
+      "categories",
+      {
+        "/stores/store-1/categories": 401,
+        "/stores/store-1/sellers": { items: [] },
+      },
+    ],
+    [
+      "sellers",
+      {
+        "/stores/store-1/categories": { items: [category] },
+        "/stores/store-1/sellers": 401,
+      },
+    ],
+  ])("sends the member to login when the %s read is unauthorized", async (_name, routes) => {
+    stubAdminApi({ "/me": meResponse("owner"), ...routes });
+    await expect(NewListingPage()).rejects.toMatchObject({
+      digest: expect.stringContaining("/admin/entrar?erro=sessao-expirada"),
+    });
+  });
 });

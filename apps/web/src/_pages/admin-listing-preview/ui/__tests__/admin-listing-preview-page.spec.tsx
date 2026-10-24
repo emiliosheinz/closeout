@@ -45,6 +45,13 @@ describe("listing preview page", () => {
     });
   });
 
+  it("sends the member to login when the preview read is unauthorized", async () => {
+    stubAdminApi({ "/me": meResponse(), [path]: 401 });
+    await expect(PreviewPage(props)).rejects.toMatchObject({
+      digest: expect.stringContaining("/admin/entrar?erro=sessao-expirada"),
+    });
+  });
+
   it("rejects when the listing has the wrong shape", async () => {
     const logged = vi.spyOn(console, "error").mockImplementation(() => {});
     stubAdminApi({ "/me": meResponse(), [path]: { slug: "sofa-azul" } });

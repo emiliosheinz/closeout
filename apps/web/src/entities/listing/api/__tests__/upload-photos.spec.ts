@@ -35,7 +35,7 @@ describe("uploadPhotos", () => {
   });
 
   it("reports progress without images when the answer could not be read", async () => {
-    vi.spyOn(console, "error").mockImplementation(() => {});
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
     answerUploadsWith({ unexpected: true });
     const onBatch = vi.fn();
     await uploadPhotos("s", "l", [file], onBatch);
@@ -44,5 +44,6 @@ describe("uploadPhotos", () => {
       total: 1,
       images: undefined,
     });
+    expect(logged).toHaveBeenCalled();
   });
 });

@@ -72,8 +72,11 @@ async function send(
   }
   if (response.status === 401) {
     // ponytail: interim until every admin write is a Query mutation whose
-    // global handler redirects; then remove.
-    if (typeof window !== "undefined") window.location.assign("/admin/entrar");
+    // global handler redirects; then remove. Reads already redirect through
+    // the query cache.
+    if (method !== "GET" && typeof window !== "undefined") {
+      window.location.assign("/admin/entrar?erro=sessao-expirada");
+    }
     throw new ApiError(401, SESSION_EXPIRED);
   }
   if (!response.ok) throw await readError(response);

@@ -22,7 +22,7 @@ describe("adminGet", () => {
   it("returns the parsed body and sends the session cookie", async () => {
     const fetchMock = vi
       .spyOn(global, "fetch")
-      .mockResolvedValue(Response.json({ id: "x" }));
+      .mockResolvedValue(Response.json({ id: "x", extra: true }));
     await expect(adminGet("/me", widget)).resolves.toEqual({ id: "x" });
     expect(fetchMock.mock.calls[0]?.[0]).toBe("http://api:3000/me");
   });

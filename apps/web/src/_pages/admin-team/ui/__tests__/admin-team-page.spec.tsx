@@ -80,6 +80,35 @@ describe("team page", () => {
     ).toBeInTheDocument();
   });
 
+  it.each([
+    [
+      "members",
+      {
+        "/stores/store-1/members": 401,
+        "/stores/store-1/invites": { items: [] },
+      },
+    ],
+    [
+      "invites",
+      {
+        "/stores/store-1/members": { items: [] },
+        "/stores/store-1/invites": 401,
+      },
+    ],
+  ])("sends a manager to login when the %s read is unauthorized", async (_name, routes) => {
+    stubAdminApi({ ...asMember("owner"), ...routes });
+    await expect(TeamPage()).rejects.toMatchObject({
+      digest: expect.stringContaining("/admin/entrar?erro=sessao-expirada"),
+    });
+  });
+
+  it("sends a seller to login when the sellers read is unauthorized", async () => {
+    stubAdminApi({ ...asMember("seller"), "/stores/store-1/sellers": 401 });
+    await expect(TeamPage()).rejects.toMatchObject({
+      digest: expect.stringContaining("/admin/entrar?erro=sessao-expirada"),
+    });
+  });
+
   it("rejects when a member has the wrong shape", async () => {
     const logged = vi.spyOn(console, "error").mockImplementation(() => {});
     stubAdminApi({

@@ -36,6 +36,13 @@ describe("store settings page", () => {
     });
   });
 
+  it("sends the member to login when the store read is unauthorized", async () => {
+    stubAdminApi({ "/me": meResponse("owner"), "/stores/store-1": 401 });
+    await expect(StorePage()).rejects.toMatchObject({
+      digest: expect.stringContaining("/admin/entrar?erro=sessao-expirada"),
+    });
+  });
+
   it("rejects when the store has the wrong shape", async () => {
     const logged = vi.spyOn(console, "error").mockImplementation(() => {});
     stubAdminApi({

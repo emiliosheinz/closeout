@@ -47,6 +47,17 @@ describe("edit listing page", () => {
     });
   });
 
+  it.each([
+    ["listing", { [`/stores/store-1/listings/${LISTING_ID}`]: 401 }],
+    ["categories", { "/stores/store-1/categories": 401 }],
+    ["sellers", { "/stores/store-1/sellers": 401 }],
+  ])("sends the member to login when the %s read is unauthorized", async (_name, override) => {
+    stubAdminApi({ ...api(listingDetail()), ...override });
+    await expect(EditListingPage(props)).rejects.toMatchObject({
+      digest: expect.stringContaining("/admin/entrar?erro=sessao-expirada"),
+    });
+  });
+
   it("rejects when the listing has the wrong shape", async () => {
     const logged = vi.spyOn(console, "error").mockImplementation(() => {});
     stubAdminApi(api({ id: LISTING_ID }));

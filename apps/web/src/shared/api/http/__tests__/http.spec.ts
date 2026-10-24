@@ -112,7 +112,18 @@ describe("failures", () => {
     await expect(api("PATCH", "/x", {})).rejects.toMatchObject({
       status: 401,
     });
-    expect(assign).toHaveBeenCalledWith("/admin/entrar");
+    expect(assign).toHaveBeenCalledWith("/admin/entrar?erro=sessao-expirada");
+    vi.unstubAllGlobals();
+  });
+
+  it("leaves a 401 on a read to the caller without navigating", async () => {
+    const assign = vi.fn();
+    vi.stubGlobal("window", { location: { assign } });
+    respondWith(401, { message: "Unauthorized" });
+    await expect(apiGet("/x", widget)).rejects.toMatchObject({
+      status: 401,
+    });
+    expect(assign).not.toHaveBeenCalled();
     vi.unstubAllGlobals();
   });
 });
