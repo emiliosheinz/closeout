@@ -61,11 +61,7 @@ export async function EditListingPage({
           </a>
         </div>
         <div className="mt-8">
-          <PhotoManager
-            storeId={store.id}
-            listingId={listing.id}
-            initialImages={listing.images}
-          />
+          <PhotoManager storeId={store.id} listingId={listing.id} />
         </div>
         <div className="mt-10 border-t border-line pt-8">
           <ListingForm

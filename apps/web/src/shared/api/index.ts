@@ -13,7 +13,7 @@ export {
   type Schema,
   withId,
 } from "./http/schema";
-export type { MutationMeta } from "./query/mutation-meta";
+export { type MutationMeta, successFor } from "./query/mutation-meta";
 export {
   getQueryClient,
   makeQueryClient,

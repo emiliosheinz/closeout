@@ -28,9 +28,13 @@ export function makeAdminQueryClient(): QueryClient {
       },
     }),
     mutationCache: new MutationCache({
-      async onSuccess(_data, _variables, _result, mutation, { client }) {
+      async onSuccess(_data, variables, _result, mutation, { client }) {
         const { success, invalidates = [] } = mutation.meta ?? {};
-        if (success) notify.success(success);
+        if (success) {
+          notify.success(
+            typeof success === "function" ? success(variables) : success,
+          );
+        }
         await Promise.all(
           invalidates.map((queryKey) => client.invalidateQueries({ queryKey })),
         );

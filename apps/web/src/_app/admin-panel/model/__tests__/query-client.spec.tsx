@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
-import { ApiError, apiParsed, withId } from "@/shared/api";
+import { ApiError, apiParsed, successFor, withId } from "@/shared/api";
 import { ConfirmDialog } from "@/shared/ui/confirm-dialog";
 import oracle from "@/test/copy-oracle.json";
 import { renderWithFeedback } from "@/test/feedback-harness";
@@ -135,6 +135,23 @@ describe("mutation success", () => {
 
     expect(await screen.findByText("Alterações salvas.")).toBeInTheDocument();
     await waitFor(() => expect(onFetch).toHaveBeenCalledTimes(2));
+  });
+
+  it("builds the toast message from the mutation's variables", async () => {
+    function WithVariables() {
+      const mutation = useMutation({
+        mutationFn: async (_count: number) => undefined,
+        meta: { success: successFor((count: number) => `${count} itens.`) },
+      });
+      return (
+        <button type="button" onClick={() => mutation.mutate(3)}>
+          Executar
+        </button>
+      );
+    }
+    renderWithFeedback(<WithVariables />);
+    run();
+    expect(await screen.findByText("3 itens.")).toBeInTheDocument();
   });
 
   it("shows no toast when the mutation declares no message", async () => {

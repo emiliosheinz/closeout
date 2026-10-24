@@ -1,108 +1,111 @@
 "use client";
 
-import { adminImageSchema } from "@closeout/contracts/schemas";
-import { ArrowLeft, ArrowRight, Star, Trash2, Upload } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import type { AdminImage } from "@/entities/listing";
-import { uploadPhotos } from "@/entities/listing";
-import { ApiError, apiParsed, listOf, type WriteResult } from "@/shared/api";
-import { cn } from "@/shared/lib/utils";
+import {
+  useMutation,
+  useQueryClient,
+  useSuspenseQuery,
+} from "@tanstack/react-query";
+import { ArrowLeft, ArrowRight, Star, Trash2 } from "lucide-react";
+import {
+  listingKeys,
+  listingReads,
+  MAX_PHOTOS,
+  PhotoDropzone,
+  uploadPhotos,
+} from "@/entities/listing";
+import { api, readQuery, successFor } from "@/shared/api";
+import { notify } from "@/shared/ui/sonner";
 
-const MAX_PHOTOS = 20;
-const imageList = listOf(adminImageSchema);
-
-const changeImages = (method: "PUT" | "DELETE", path: string, body?: unknown) =>
-  apiParsed(method, path, body, imageList);
+class PartialUploadError extends Error {
+  constructor(
+    readonly sent: number,
+    readonly total: number,
+  ) {
+    super(`${sent} of ${total} photos uploaded`);
+  }
+}
 
 /**
- * Photos of an existing listing: upload more, pick the cover (first
- * position), move photos left or right, delete. Buttons instead of
- * drag-and-drop so it works with touch, mouse and keyboard alike.
+ * Photos of an existing listing: upload more (drop or pick), pick the cover
+ * (first position), move photos left or right, delete. Buttons instead of
+ * drag-and-drop reordering so it works with touch, mouse and keyboard alike.
+ * The grid always shows the server's list: every change refetches it.
  */
 export function PhotoManager({
   storeId,
   listingId,
-  initialImages,
 }: {
   storeId: string;
   listingId: string;
-  initialImages: AdminImage[];
 }) {
-  const router = useRouter();
-  const [images, setImages] = useState(initialImages);
-  useEffect(() => setImages(initialImages), [initialImages]);
-  const [status, setStatus] = useState<{ text: string; error: boolean } | null>(
-    null,
+  const queryClient = useQueryClient();
+  const { data: listing } = useSuspenseQuery(
+    readQuery(listingReads.detail(storeId, listingId)),
   );
-  const [busy, setBusy] = useState(false);
+  const images = listing.images;
   const base = `/stores/${storeId}/listings/${listingId}/images`;
+  const refreshed = [
+    listingKeys.detail(storeId, listingId),
+    listingKeys.list(storeId),
+  ];
 
-  async function act(
-    action: () => Promise<WriteResult<{ items: AdminImage[] }>>,
-    success: string,
-  ) {
-    setBusy(true);
-    setStatus(null);
-    try {
-      const result = await action();
-      if (result.parsed) setImages(result.data.items);
-      setStatus({ text: success, error: false });
-      router.refresh();
-    } catch (err) {
-      setStatus({
-        text:
-          err instanceof ApiError
-            ? err.message
-            : "Algo deu errado com as fotos.",
-        error: true,
-      });
-      router.refresh();
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function upload(files: File[]) {
-    if (files.length === 0) return;
-    await act(
-      async () => {
-        let latest = images;
-        await uploadPhotos(
-          storeId,
-          listingId,
-          files,
-          ({ done, total, images: items }) => {
-            // Keep the list in step with the server after every batch, so a
-            // later failing batch cannot leave the screen behind the server.
-            if (items) {
-              latest = items;
-              setImages(items);
-            }
-            setStatus({
-              text: `Enviando ${done} de ${total}...`,
-              error: false,
-            });
-          },
+  const upload = useMutation({
+    mutationFn: async (files: File[]) => {
+      let sent = 0;
+      try {
+        await uploadPhotos(storeId, listingId, files, ({ done }) => {
+          sent = done;
+        });
+      } catch (error) {
+        if (sent > 0) throw new PartialUploadError(sent, files.length);
+        throw error;
+      }
+    },
+    meta: {
+      success: successFor((files: File[]) =>
+        files.length === 1
+          ? "Foto adicionada."
+          : `${files.length} fotos adicionadas.`,
+      ),
+      handlesError: (error) => error instanceof PartialUploadError,
+    },
+    onError: (error) => {
+      if (error instanceof PartialUploadError) {
+        notify.error(
+          `${error.sent} de ${error.total} fotos enviadas. Tente enviar as outras de novo.`,
         );
-        return { parsed: true, data: { items: latest } };
-      },
-      files.length === 1
-        ? "Foto adicionada."
-        : `${files.length} fotos adicionadas.`,
-    );
-  }
-
-  function reorder(ids: string[], success: string) {
-    return act(() => changeImages("PUT", `${base}/order`, { ids }), success);
-  }
+      }
+    },
+    // Photos may have been stored even when the call failed.
+    onSettled: () =>
+      Promise.all(
+        refreshed.map((queryKey) =>
+          queryClient.invalidateQueries({ queryKey }),
+        ),
+      ),
+  });
+  const reorder = useMutation({
+    mutationFn: ({ ids }: { ids: string[]; cover: boolean }) =>
+      api("PUT", `${base}/order`, { ids }),
+    meta: {
+      success: successFor(({ cover }: { cover: boolean }) =>
+        cover ? "Capa atualizada." : "Ordem atualizada.",
+      ),
+      invalidates: refreshed,
+    },
+  });
+  const remove = useMutation({
+    mutationFn: (imageId: string) => api("DELETE", `${base}/${imageId}`),
+    meta: { success: "Foto removida.", invalidates: refreshed },
+  });
+  const busy = upload.isPending || reorder.isPending || remove.isPending;
 
   function move(index: number, to: number) {
     const ids = images.map((image) => image.id);
     const [moved] = ids.splice(index, 1);
     if (!moved) return;
     ids.splice(to, 0, moved);
-    return reorder(ids, to === 0 ? "Capa atualizada." : "Ordem atualizada.");
+    reorder.mutate({ ids, cover: to === 0 });
   }
 
   return (
@@ -114,44 +117,14 @@ export function PhotoManager({
             ({images.length} de {MAX_PHOTOS})
           </span>
         </h2>
-        {images.length < MAX_PHOTOS && (
-          <label
-            className={cn(
-              "inline-flex h-11 cursor-pointer items-center gap-2 rounded-full bg-ink px-5 text-sm font-semibold text-surface hover:bg-ink-soft has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-focus",
-              busy && "pointer-events-none opacity-50",
-            )}
-          >
-            <Upload className="size-4" aria-hidden="true" />
-            Adicionar fotos
-            <input
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              multiple
-              className="sr-only"
-              disabled={busy}
-              onChange={(event) => {
-                upload(
-                  Array.from(event.target.files ?? []).slice(
-                    0,
-                    MAX_PHOTOS - images.length,
-                  ),
-                );
-                event.target.value = "";
-              }}
-            />
-          </label>
-        )}
       </div>
-      <p
-        role="status"
-        aria-live="polite"
-        className={cn(
-          "mt-2 min-h-5 text-sm",
-          status?.error ? "font-medium text-stamp" : "text-go",
-        )}
-      >
-        {status?.text}
-      </p>
+      <div className="mt-3">
+        <PhotoDropzone
+          existing={images.length}
+          onFiles={upload.mutate}
+          disabled={busy}
+        />
+      </div>
       {images.length === 0 ? (
         <p className="mt-2 rounded-xl border border-dashed border-line bg-surface px-6 py-10 text-center text-ink-soft">
           Sem fotos ainda. Anúncios publicados precisam de pelo menos uma.
@@ -211,12 +184,7 @@ export function PhotoManager({
                 <button
                   type="button"
                   disabled={busy}
-                  onClick={() =>
-                    act(
-                      () => changeImages("DELETE", `${base}/${image.id}`),
-                      "Foto removida.",
-                    )
-                  }
+                  onClick={() => remove.mutate(image.id)}
                   aria-label={`Remover foto ${index + 1}`}
                   className="inline-flex size-11 items-center justify-center rounded-full text-stamp hover:bg-stamp/10"
                 >
