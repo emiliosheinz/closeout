@@ -121,6 +121,10 @@ describe("TeamView for a seller", () => {
     expect(screen.queryByRole("button", { name: "Remover" })).toBeNull();
     expect(screen.queryByLabelText("E-mail da pessoa")).toBeNull();
     expect(screen.queryByText(/Convites pendentes/)).toBeNull();
+    expect(
+      screen.getByRole("heading", { name: "Seu contato" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: /Pessoas/ })).toBeNull();
   });
 });
 

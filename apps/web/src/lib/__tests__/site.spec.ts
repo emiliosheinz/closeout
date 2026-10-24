@@ -15,6 +15,11 @@ describe("store URLs", () => {
     );
   });
 
+  it("escapes slugs so they stay inside their path segment", () => {
+    expect(storePath("a b/c")).toBe("/store/a%20b%2Fc");
+    expect(itemPath("a b", "x?y")).toBe("/store/a%20b/items/x%3Fy");
+  });
+
   it("makes store URLs absolute on the public origin", () => {
     process.env.PUBLIC_BASE_URL = "https://closeout.example/";
     expect(absoluteUrl(itemPath("loja-da-bia", "sofa-x9"))).toBe(
