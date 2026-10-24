@@ -74,8 +74,7 @@ apps/web/e2e-tests/   Playwright journeys
   (`_app` > `_pages` > `widgets` > `features` > `entities` > `shared`), slices never import
   each other within a layer, and a slice is imported through its `index.ts` (or
   `index.server.ts` for server-only code). `shared` and `_app` have no slices, so their
-  modules are imported directly; `app/` route files are not checked. Enforced by
-  `apps/web/scripts/check-fsd-imports.sh`, which `pnpm check` runs.
+  modules are imported directly; `app/` route files only re-export.
 - An API response-shape change and the web change that consumes it ship in a separate PR
   each (or the new field stays optional on the web for one release). Both services deploy
   from one commit and the API waits on its migration, so for a moment the web runs against
