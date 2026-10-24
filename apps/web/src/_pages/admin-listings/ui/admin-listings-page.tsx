@@ -51,7 +51,13 @@ export async function DashboardPage({
   return (
     <>
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <h1 className="text-3xl font-extrabold">Anúncios</h1>
+        <h1
+          id="listings-heading"
+          tabIndex={-1}
+          className="text-3xl font-extrabold outline-none"
+        >
+          Anúncios
+        </h1>
         <Link
           href="/admin/anuncios/novo"
           className="inline-flex h-11 items-center gap-2 rounded-full bg-ink px-5 text-sm font-semibold text-surface hover:bg-ink-soft"

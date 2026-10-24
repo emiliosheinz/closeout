@@ -1,16 +1,30 @@
 "use client";
 
-import { useState } from "react";
-import { Button } from "@/shared/ui/button";
+import { useRef, useState } from "react";
 import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-} from "@/shared/ui/dialog";
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogTitle,
+} from "@/shared/ui/alert-dialog";
+import { buttonVariants } from "@/shared/ui/button";
 
-/** Explicit confirmation for destructive actions. */
+/** Opened from a menu item, focus belongs back on the menu's trigger. */
+function returnTarget(active: Element | null): Element | null {
+  const menuId = active
+    ?.closest("[role=menu]")
+    ?.getAttribute("aria-labelledby");
+  return (menuId && document.getElementById(menuId)) || active;
+}
+
+/**
+ * Explicit confirmation for destructive actions. The dialog stays open when
+ * the action fails; after it succeeds, `onSuccess` places focus where the
+ * user continues (the trigger may be gone by then).
+ */
 export function ConfirmDialog({
   trigger,
   title,
@@ -18,6 +32,7 @@ export function ConfirmDialog({
   confirmLabel,
   pendingLabel,
   onConfirm,
+  onSuccess,
 }: {
   trigger: (open: () => void) => React.ReactNode;
   title: string;
@@ -25,48 +40,71 @@ export function ConfirmDialog({
   confirmLabel: string;
   pendingLabel: string;
   onConfirm: () => Promise<void>;
+  onSuccess?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const succeeded = useRef(false);
+  const [opener, setOpener] = useState<Element | null>(null);
 
-  async function confirm() {
+  async function confirm(event: React.MouseEvent) {
+    event.preventDefault();
     setPending(true);
     setError(null);
-    try {
-      await onConfirm();
-      setOpen(false);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Algo deu errado.");
-    } finally {
-      setPending(false);
+    const failure = await onConfirm().then(
+      () => null,
+      (err: unknown) =>
+        err instanceof Error ? err.message : "Algo deu errado.",
+    );
+    setPending(false);
+    if (failure) {
+      setError(failure);
+      return;
     }
+    succeeded.current = true;
+    setOpen(false);
   }
 
   return (
     <>
-      {trigger(() => setOpen(true))}
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
-          <DialogTitle className="text-lg font-bold">{title}</DialogTitle>
-          <DialogDescription className="mt-2 text-ink-soft">
+      {trigger(() => {
+        setOpener(returnTarget(document.activeElement));
+        setOpen(true);
+      })}
+      <AlertDialog open={open} onOpenChange={setOpen}>
+        <AlertDialogContent
+          onCloseAutoFocus={(event) => {
+            event.preventDefault();
+            if (!succeeded.current) {
+              if (opener instanceof HTMLElement) opener.focus();
+              return;
+            }
+            succeeded.current = false;
+            onSuccess?.();
+          }}
+        >
+          <AlertDialogTitle>{title}</AlertDialogTitle>
+          <AlertDialogDescription className="text-ink-soft">
             {description}
-          </DialogDescription>
+          </AlertDialogDescription>
           {error && (
-            <p role="alert" className="mt-3 text-sm font-medium text-stamp">
+            <p role="alert" className="text-sm font-medium text-stamp">
               {error}
             </p>
           )}
-          <div className="mt-6 flex justify-end gap-2">
-            <DialogClose asChild>
-              <Button variant="outline">Cancelar</Button>
-            </DialogClose>
-            <Button variant="destructive" onClick={confirm} disabled={pending}>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className={buttonVariants({ variant: "destructive" })}
+              onClick={confirm}
+              disabled={pending}
+            >
               {pending ? pendingLabel : confirmLabel}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

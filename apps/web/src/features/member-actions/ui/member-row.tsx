@@ -8,6 +8,7 @@ import { RoleToggle } from "@/entities/member";
 import { ApiError, api } from "@/shared/api";
 import { ROLE_DESCRIPTIONS, ROLE_LABELS } from "@/shared/lib/format";
 import { cn } from "@/shared/lib/utils";
+import { ActionsMenu, ActionsMenuItem } from "@/shared/ui/actions-menu";
 import { Button } from "@/shared/ui/button";
 import { ConfirmDialog } from "@/shared/ui/confirm-dialog";
 import {
@@ -18,7 +19,6 @@ import {
   DialogTitle,
 } from "@/shared/ui/dialog";
 import { Field, inputClass } from "@/shared/ui/field";
-import { RowMenu } from "@/shared/ui/row-menu";
 
 /** Shows a stored digits-only number the way people type it back. */
 function displayNumber(number: string | null): string {
@@ -79,8 +79,10 @@ export function MemberRow({
   const canManage = canManageTeam && !isSelf && member.role !== "owner";
   const router = useRouter();
   const [editing, setEditing] = useState(false);
-  const edit = { label: "Editar", onSelect: () => setEditing(true) };
   const menuLabel = `Ações para ${member.displayName}`;
+  const editItem = (
+    <ActionsMenuItem onSelect={() => setEditing(true)}>Editar</ActionsMenuItem>
+  );
 
   return (
     <li className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 px-4 py-3 sm:grid-cols-[minmax(0,1.4fr)_minmax(0,0.8fr)_minmax(0,1.2fr)_auto] sm:px-5">
@@ -125,22 +127,25 @@ export function MemberRow({
           description="A conta é apagada e a pessoa perde o acesso na hora. Nos anúncios divididos com outra pessoa, fica quem continua na equipe."
           confirmLabel="Remover da equipe"
           pendingLabel="Removendo..."
+          onSuccess={() => document.getElementById("team-members")?.focus()}
           onConfirm={async () => {
             await api("DELETE", `/stores/${storeId}/members/${member.userId}`);
             router.refresh();
           }}
           trigger={(remove) => (
-            <RowMenu
-              label={menuLabel}
-              items={[
-                edit,
-                { label: "Remover", onSelect: remove, destructive: true },
-              ]}
-            />
+            <ActionsMenu label={menuLabel}>
+              {editItem}
+              <ActionsMenuItem
+                onSelect={remove}
+                className="text-stamp focus:bg-stamp/10 focus:text-stamp"
+              >
+                Remover
+              </ActionsMenuItem>
+            </ActionsMenu>
           )}
         />
       ) : (
-        <RowMenu label={menuLabel} items={[edit]} />
+        <ActionsMenu label={menuLabel}>{editItem}</ActionsMenu>
       )}
       {editing && (
         <MemberDialog

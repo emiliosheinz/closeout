@@ -26,11 +26,15 @@ export function TeamView({
       <section aria-labelledby="team-members">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
           {canManage ? (
-            <h2 id="team-members" className="text-sm font-semibold text-muted">
+            <h2
+              id="team-members"
+              tabIndex={-1}
+              className="text-sm font-semibold text-muted outline-none"
+            >
               {pluralize(members.length, "pessoa", "pessoas")}
             </h2>
           ) : (
-            <h2 id="team-members" className="sr-only">
+            <h2 id="team-members" tabIndex={-1} className="sr-only">
               Seu contato
             </h2>
           )}
@@ -52,7 +56,8 @@ export function TeamView({
         <section aria-labelledby="team-invites">
           <h2
             id="team-invites"
-            className="mb-3 text-sm font-semibold text-muted"
+            tabIndex={-1}
+            className="mb-3 text-sm font-semibold text-muted outline-none"
           >
             Convites pendentes{" "}
             {invites.length > 0 && (

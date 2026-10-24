@@ -53,8 +53,10 @@ const rowOf = (name: string) => {
 };
 
 const openMenu = (label: string) => {
-  fireEvent.click(screen.getByRole("button", { name: label }));
-  return screen.getByRole("menu", { name: label });
+  const trigger = screen.getByRole("button", { name: label });
+  trigger.focus();
+  fireEvent.keyDown(trigger, { key: "ArrowDown" });
+  return screen.findByRole("menu", { name: label });
 };
 
 describe("TeamView for a manager", () => {
@@ -112,9 +114,9 @@ describe("TeamView for a manager", () => {
     expect(within(rowOf("Caio")).getByText("Sem WhatsApp")).toBeInTheDocument();
   });
 
-  it("offers removal only for other non-owner members", () => {
+  it("offers removal only for other non-owner members", async () => {
     renderManager();
-    const forCaio = openMenu("Ações para Caio");
+    const forCaio = await openMenu("Ações para Caio");
     expect(
       within(forCaio).getByRole("menuitem", { name: "Editar" }),
     ).toBeInTheDocument();
@@ -123,7 +125,7 @@ describe("TeamView for a manager", () => {
     ).toBeInTheDocument();
 
     for (const name of ["Ana", "Bia"]) {
-      const menu = openMenu(`Ações para ${name}`);
+      const menu = await openMenu(`Ações para ${name}`);
       expect(within(menu).getAllByRole("menuitem")).toHaveLength(1);
       expect(
         within(menu).getByRole("menuitem", { name: "Editar" }),
@@ -135,11 +137,11 @@ describe("TeamView for a manager", () => {
     apiMock.mockResolvedValue(undefined);
     renderManager();
     fireEvent.click(
-      within(openMenu("Ações para Caio")).getByRole("menuitem", {
+      within(await openMenu("Ações para Caio")).getByRole("menuitem", {
         name: "Remover",
       }),
     );
-    const dialog = screen.getByRole("dialog", {
+    const dialog = await screen.findByRole("alertdialog", {
       name: "Remover Caio da equipe?",
     });
     fireEvent.click(
@@ -151,16 +153,19 @@ describe("TeamView for a manager", () => {
         "/stores/store/members/caio",
       ),
     );
+    await waitFor(() =>
+      expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument(),
+    );
   });
 
-  it("edits with a role toggle only for manageable members", () => {
+  it("edits with a role toggle only for manageable members", async () => {
     renderManager();
     fireEvent.click(
-      within(openMenu("Ações para Caio")).getByRole("menuitem", {
+      within(await openMenu("Ações para Caio")).getByRole("menuitem", {
         name: "Editar",
       }),
     );
-    const dialog = screen.getByRole("dialog", { name: /Caio/ });
+    const dialog = await screen.findByRole("dialog", { name: /Caio/ });
     const role = within(dialog).getByRole("radiogroup", {
       name: "Papel de Caio",
     });
@@ -174,11 +179,13 @@ describe("TeamView for a manager", () => {
 
     for (const name of ["Ana", "Bia"]) {
       fireEvent.click(
-        within(openMenu(`Ações para ${name}`)).getByRole("menuitem", {
+        within(await openMenu(`Ações para ${name}`)).getByRole("menuitem", {
           name: "Editar",
         }),
       );
-      const own = screen.getByRole("dialog", { name: new RegExp(name) });
+      const own = await screen.findByRole("dialog", {
+        name: new RegExp(name),
+      });
       expect(within(own).queryByRole("radiogroup")).toBeNull();
       fireEvent.click(within(own).getByRole("button", { name: "Cancelar" }));
     }
@@ -188,11 +195,11 @@ describe("TeamView for a manager", () => {
     apiMock.mockResolvedValue(undefined);
     renderManager();
     fireEvent.click(
-      within(openMenu("Ações para Caio")).getByRole("menuitem", {
+      within(await openMenu("Ações para Caio")).getByRole("menuitem", {
         name: "Editar",
       }),
     );
-    const dialog = screen.getByRole("dialog", { name: /Caio/ });
+    const dialog = await screen.findByRole("dialog", { name: /Caio/ });
     fireEvent.change(within(dialog).getByLabelText("WhatsApp"), {
       target: { value: "+55 21 97777-1234" },
     });
@@ -224,11 +231,11 @@ describe("TeamView for a manager", () => {
     );
     renderManager();
     fireEvent.click(
-      within(openMenu("Ações para Caio")).getByRole("menuitem", {
+      within(await openMenu("Ações para Caio")).getByRole("menuitem", {
         name: "Editar",
       }),
     );
-    const dialog = screen.getByRole("dialog", { name: /Caio/ });
+    const dialog = await screen.findByRole("dialog", { name: /Caio/ });
     fireEvent.click(
       within(dialog).getByRole("button", { name: "Salvar alterações" }),
     );
@@ -277,15 +284,15 @@ describe("TeamView for a manager", () => {
     });
   });
 
-  it("offers a new link or revocation for a pending invite", () => {
+  it("offers a new link or revocation for a pending invite", async () => {
     renderManager();
-    const menu = openMenu("Ações para o convite de duda@loja.test");
+    const menu = await openMenu("Ações para o convite de duda@loja.test");
     expect(
       within(menu).getByRole("menuitem", { name: "Gerar novo link" }),
     ).toBeInTheDocument();
     fireEvent.click(within(menu).getByRole("menuitem", { name: "Revogar" }));
     expect(
-      within(screen.getByRole("dialog")).getByRole("button", {
+      within(await screen.findByRole("alertdialog")).getByRole("button", {
         name: "Revogar convite",
       }),
     ).toBeInTheDocument();
@@ -300,7 +307,7 @@ describe("TeamView for a manager", () => {
 });
 
 describe("TeamView for a seller", () => {
-  it("shows only their own row, with edit as the single action", () => {
+  it("shows only their own row, with edit as the single action", async () => {
     render(
       <TeamView
         storeId="store"
@@ -319,10 +326,10 @@ describe("TeamView for a seller", () => {
       screen.queryByRole("button", { name: "Convidar pessoas" }),
     ).toBeNull();
     expect(screen.queryByText(/Convites pendentes/)).toBeNull();
-    const menu = openMenu("Ações para Caio");
+    const menu = await openMenu("Ações para Caio");
     expect(within(menu).getAllByRole("menuitem")).toHaveLength(1);
     fireEvent.click(within(menu).getByRole("menuitem", { name: "Editar" }));
-    const dialog = screen.getByRole("dialog", { name: /Caio/ });
+    const dialog = await screen.findByRole("dialog", { name: /Caio/ });
     expect(within(dialog).getByLabelText("Nome na loja")).toHaveValue("Caio");
     expect(within(dialog).getByLabelText("WhatsApp")).toHaveValue(
       "+5511988887777",

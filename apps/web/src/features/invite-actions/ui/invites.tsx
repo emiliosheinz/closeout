@@ -12,6 +12,7 @@ import {
   ROLE_DESCRIPTIONS,
   ROLE_LABELS,
 } from "@/shared/lib/format";
+import { ActionsMenu, ActionsMenuItem } from "@/shared/ui/actions-menu";
 import { Button } from "@/shared/ui/button";
 import { ConfirmDialog } from "@/shared/ui/confirm-dialog";
 import {
@@ -22,7 +23,6 @@ import {
   DialogTitle,
 } from "@/shared/ui/dialog";
 import { Field, inputClass } from "@/shared/ui/field";
-import { RowMenu } from "@/shared/ui/row-menu";
 import { InviteLinkDialog, type ShownInvite } from "./invite-link-dialog";
 
 function toShown(issued: IssuedInvite): ShownInvite {
@@ -206,18 +206,23 @@ function InviteRow({
           description="O link para de funcionar na hora. Dá para convidar de novo quando quiser."
           confirmLabel="Revogar convite"
           pendingLabel="Revogando..."
+          onSuccess={() => document.getElementById("team-invites")?.focus()}
           onConfirm={async () => {
             await api("DELETE", base);
             router.refresh();
           }}
           trigger={(revoke) => (
-            <RowMenu
-              label={`Ações para o convite de ${invite.email}`}
-              items={[
-                { label: "Gerar novo link", onSelect: regenerate },
-                { label: "Revogar", onSelect: revoke, destructive: true },
-              ]}
-            />
+            <ActionsMenu label={`Ações para o convite de ${invite.email}`}>
+              <ActionsMenuItem onSelect={regenerate}>
+                Gerar novo link
+              </ActionsMenuItem>
+              <ActionsMenuItem
+                onSelect={revoke}
+                className="text-stamp focus:bg-stamp/10 focus:text-stamp"
+              >
+                Revogar
+              </ActionsMenuItem>
+            </ActionsMenu>
           )}
         />
       </div>

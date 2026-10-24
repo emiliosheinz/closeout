@@ -247,6 +247,9 @@ export function ListingRows({
                 description="O anúncio e as fotos são apagados de vez, e o link compartilhado deixa de funcionar. Para só tirar da loja, mude a publicação para Arquivado."
                 confirmLabel="Excluir anúncio"
                 pendingLabel="Excluindo..."
+                onSuccess={() =>
+                  document.getElementById("listings-heading")?.focus()
+                }
                 onConfirm={async () => {
                   await api("DELETE", `${base}/${listing.id}`);
                   setMessage({
