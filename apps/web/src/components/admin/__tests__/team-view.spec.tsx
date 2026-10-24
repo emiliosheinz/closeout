@@ -123,3 +123,47 @@ describe("TeamView for a seller", () => {
     expect(screen.queryByText(/Convites pendentes/)).toBeNull();
   });
 });
+
+describe("member card contact profile", () => {
+  const renderOne = (overrides: Partial<TeamMember>) =>
+    render(
+      <TeamView
+        storeId="store"
+        viewerId="caio"
+        members={[{ ...member("caio", "Caio", "seller"), ...overrides }]}
+        invites={null}
+      />,
+    );
+
+  it("shows the photo when there is one", () => {
+    const { container } = renderOne({
+      avatarUrl: "https://cdn.test/caio.webp",
+    });
+    expect(container.querySelector("img")).toHaveAttribute(
+      "src",
+      "https://cdn.test/caio.webp",
+    );
+  });
+
+  it("shows a camera placeholder instead of a photo when there is none", () => {
+    const { container } = renderOne({ avatarUrl: null });
+    expect(container.querySelector("img")).toBeNull();
+    expect(container.querySelector("svg")).not.toBeNull();
+  });
+
+  it("shows the WhatsApp number of a reachable member and no warning", () => {
+    renderOne({ whatsappNumber: "5511988887777" });
+    expect(screen.getByLabelText("WhatsApp")).toHaveValue("+5511988887777");
+    expect(screen.queryByText(/^Sem WhatsApp/)).toBeNull();
+  });
+
+  it("warns that a member without WhatsApp has no contact button", () => {
+    renderOne({ whatsappNumber: null });
+    expect(screen.getByLabelText("WhatsApp")).toHaveValue("");
+    expect(
+      screen.getByText(
+        "Sem WhatsApp: os anúncios só desta pessoa aparecem sem botão de contato.",
+      ),
+    ).toBeInTheDocument();
+  });
+});

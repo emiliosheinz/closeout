@@ -47,32 +47,42 @@ describe("catalog controls", () => {
     );
   });
 
-  it("submits search and filters to the store's catalog", () => {
+  it.each([
+    ["nosso-desapego", "/store/nosso-desapego"],
+    ["loja-da-bia", "/store/loja-da-bia"],
+  ])("submits search and filters of %s to its own catalog", (slug, path) => {
     const filters = parseCatalogParams({});
-    render(<SearchForm storeSlug="nosso-desapego" filters={filters} />);
-    render(<FilterForm storeSlug="loja-da-bia" filters={filters} />);
-    const [search, filter] = Array.from(document.querySelectorAll("form"));
-    expect(search).toHaveAttribute("action", "/store/nosso-desapego");
-    expect(filter).toHaveAttribute("action", "/store/loja-da-bia");
+    const { container } = render(
+      <>
+        <SearchForm storeSlug={slug} filters={filters} />
+        <FilterForm storeSlug={slug} filters={filters} />
+      </>,
+    );
+    const [search, filter] = Array.from(container.querySelectorAll("form"));
+    expect(search).toHaveAttribute("action", path);
+    expect(filter).toHaveAttribute("action", path);
     expect(screen.getByRole("link", { name: "Limpar tudo" })).toHaveAttribute(
       "href",
-      "/store/loja-da-bia",
+      path,
     );
   });
 
-  it("removes active filters without leaving the store", () => {
+  it.each([
+    ["nosso-desapego", "/store/nosso-desapego"],
+    ["loja-da-bia", "/store/loja-da-bia"],
+  ])("removes active filters of %s without leaving it", (slug, path) => {
     const filters = parseCatalogParams({ q: "mesa", categoria: "moveis" });
     render(
       <ActiveFilters
-        storeSlug="loja-da-bia"
-        chips={activeFilterChips("loja-da-bia", filters, () => "Móveis")}
+        storeSlug={slug}
+        chips={activeFilterChips(slug, filters, () => "Móveis")}
       />,
     );
     expect(
       screen.getByRole("link", { name: "Remover filtro Móveis" }),
-    ).toHaveAttribute("href", "/store/loja-da-bia?q=mesa");
+    ).toHaveAttribute("href", `${path}?q=mesa`);
     expect(
       screen.getByRole("link", { name: "Limpar filtros" }),
-    ).toHaveAttribute("href", "/store/loja-da-bia");
+    ).toHaveAttribute("href", path);
   });
 });

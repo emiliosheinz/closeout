@@ -192,4 +192,24 @@ describe("invite page", () => {
       }),
     );
   });
+
+  it("shows the API's message when the invited email already has an account", async () => {
+    lookupResponse = valid();
+    await renderPage();
+    (global.fetch as jest.Mock).mockResolvedValue(
+      respond({ message: "Este e-mail já tem uma conta." }, 409),
+    );
+    fireEvent.change(screen.getByLabelText("Seu nome"), {
+      target: { value: "Duda" },
+    });
+    fireEvent.change(screen.getByLabelText("Senha"), {
+      target: { value: "senha-longa-1" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Criar conta e entrar" }),
+    );
+    expect(
+      await screen.findByText("Este e-mail já tem uma conta."),
+    ).toBeInTheDocument();
+  });
 });
