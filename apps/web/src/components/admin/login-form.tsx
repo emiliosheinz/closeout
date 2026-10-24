@@ -16,6 +16,9 @@ export function LoginForm() {
     try {
       const response = await fetch("/api/auth/login", {
         method: "POST",
+        // Keeps the Origin the handler checks even if the document arrived
+        // with a no-referrer policy (the invite page sets one).
+        referrerPolicy: "same-origin",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: form.get("email"),

@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { isSameOrigin } from "@/lib/admin/origin";
+import { refuseCrossOrigin } from "@/lib/admin/auth-route";
 import { apiUrl, INTERNAL_SECRET_HEADER } from "@/lib/admin/server-api";
 import {
   clearSessionCookie,
@@ -12,14 +12,8 @@ import { requireEnv } from "@/lib/env";
  * the login page. A plain form POST, so signing out works before scripts load.
  */
 export async function POST(request: NextRequest) {
-  if (
-    !isSameOrigin(request.headers.get("origin"), requireEnv("PUBLIC_BASE_URL"))
-  ) {
-    return NextResponse.json(
-      { message: "Origem não permitida." },
-      { status: 403 },
-    );
-  }
+  const refused = refuseCrossOrigin(request);
+  if (refused) return refused;
   const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;
   if (token) {
     const response = await fetch(apiUrl("/auth/logout"), {
