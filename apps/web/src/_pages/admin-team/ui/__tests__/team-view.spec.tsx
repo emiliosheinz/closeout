@@ -1,27 +1,50 @@
-import {
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-  within,
-} from "@testing-library/react";
-import type { MockedFunction } from "vitest";
-import type { TeamMember } from "@/entities/member";
-import { ApiError, api, apiParsed } from "@/shared/api";
+import { dehydrate, QueryClient } from "@tanstack/react-query";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { inviteKeys, type PendingInvite } from "@/entities/invite";
+import { memberKeys, type TeamMember } from "@/entities/member";
+import { renderWithFeedback } from "@/test/feedback-harness";
 import { TeamView } from "../team-view";
 
-vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
-}));
+let members: TeamMember[] = [];
+let invites: PendingInvite[] = [];
+let fetchMock: ReturnType<typeof vi.fn>;
 
-vi.mock("@/shared/api", async () => ({
-  ...(await vi.importActual("@/shared/api")),
-  api: vi.fn(),
-  apiParsed: vi.fn(),
-}));
+/** A tiny API: lists reflect what the writes did, like the real server. */
+function stubApi(
+  overrides: (method: string, path: string) => Response | undefined = () =>
+    undefined,
+) {
+  fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+    const method = init?.method ?? "GET";
+    const path = String(url).replace("/api/v1", "");
+    const custom = overrides(method, path);
+    if (custom) return custom;
+    if (method === "GET" && path === "/stores/store/members")
+      return Response.json({ items: members });
+    if (method === "GET" && path === "/stores/store/invites")
+      return Response.json({ items: invites });
+    const removed = path.match(/^\/stores\/store\/members\/(.+)$/);
+    if (method === "DELETE" && removed)
+      members = members.filter((m) => m.userId !== removed[1]);
+    const revoked = path.match(/^\/stores\/store\/invites\/(.+)$/);
+    if (method === "DELETE" && revoked)
+      invites = invites.filter((i) => i.id !== revoked[1]);
+    return new Response(null, { status: 204 });
+  });
+  vi.stubGlobal("fetch", fetchMock);
+}
 
-const apiMock = api as MockedFunction<typeof api>;
-const parsedMock = apiParsed as MockedFunction<typeof apiParsed>;
+const apiCalls = () =>
+  fetchMock.mock.calls
+    .filter(([url]) => String(url).startsWith("/api/v1"))
+    .map(([url, init]) => ({
+      url: String(url).replace("/api/v1", ""),
+      method: (init as RequestInit | undefined)?.method ?? "GET",
+      body: (init as RequestInit | undefined)?.body,
+    }))
+    .filter((call) => call.method !== "GET");
+
+afterEach(() => vi.unstubAllGlobals());
 
 const member = (
   userId: string,
@@ -63,26 +86,27 @@ const openMenu = (label: string) => {
 
 describe("TeamView for a manager", () => {
   beforeEach(() => {
-    apiMock.mockReset();
-    parsedMock.mockReset();
+    members = [...team];
+    invites = [
+      {
+        id: "inv-1",
+        email: "duda@loja.test",
+        role: "seller",
+        expiresAt: "2026-10-30T15:00:00.000Z",
+      },
+    ];
+    stubApi();
   });
 
-  const renderManager = () =>
-    render(
-      <TeamView
-        storeId="store"
-        viewerId="bia"
-        members={team}
-        invites={[
-          {
-            id: "inv-1",
-            email: "duda@loja.test",
-            role: "seller",
-            expiresAt: "2026-10-30T15:00:00.000Z",
-          },
-        ]}
-      />,
+  const renderManager = () => {
+    const seeded = new QueryClient();
+    seeded.setQueryData(memberKeys.list("store"), { items: members });
+    seeded.setQueryData(inviteKeys.pending("store"), { items: invites });
+    return renderWithFeedback(
+      <TeamView storeId="store" viewerId="bia" ownRows={null} />,
+      dehydrate(seeded),
     );
+  };
 
   it("lists every member before the pending invites", () => {
     renderManager();
@@ -136,9 +160,9 @@ describe("TeamView for a manager", () => {
     }
   });
 
-  it("removes a member after confirming", async () => {
-    apiMock.mockResolvedValue(undefined);
+  it("removes a member after confirming and drops the heading count by one", async () => {
     renderManager();
+    expect(screen.getByRole("region", { name: "3 pessoas" })).toBeVisible();
     fireEvent.click(
       within(await openMenu("Ações para Caio")).getByRole("menuitem", {
         name: "Remover",
@@ -150,15 +174,35 @@ describe("TeamView for a manager", () => {
     fireEvent.click(
       within(dialog).getByRole("button", { name: "Remover da equipe" }),
     );
-    await waitFor(() =>
-      expect(apiMock).toHaveBeenCalledWith(
-        "DELETE",
-        "/stores/store/members/caio",
-      ),
+    expect(await screen.findByText("Caio saiu da equipe.")).toBeVisible();
+    expect(apiCalls()).toEqual([
+      { url: "/stores/store/members/caio", method: "DELETE", body: undefined },
+    ]);
+    expect(
+      await screen.findByRole("region", { name: "2 pessoas" }),
+    ).toBeVisible();
+    expect(screen.queryByText("caio@loja.test")).not.toBeInTheDocument();
+  });
+
+  it("revokes the last invite and leaves the heading without a number", async () => {
+    renderManager();
+    expect(
+      screen.getByRole("heading", { name: "Convites pendentes (1)" }),
+    ).toBeVisible();
+    fireEvent.click(
+      within(
+        await openMenu("Ações para o convite de duda@loja.test"),
+      ).getByRole("menuitem", { name: "Revogar" }),
     );
-    await waitFor(() =>
-      expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument(),
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Revogar convite" }),
     );
+
+    expect(await screen.findByText("Convite revogado.")).toBeVisible();
+    expect(
+      await screen.findByRole("heading", { name: "Convites pendentes" }),
+    ).toBeVisible();
+    expect(screen.getByText(/Nenhum convite pendente/)).toBeVisible();
   });
 
   it("edits with a role toggle only for manageable members", async () => {
@@ -195,7 +239,6 @@ describe("TeamView for a manager", () => {
   });
 
   it("saves the profile and the new role through the API", async () => {
-    apiMock.mockResolvedValue(undefined);
     renderManager();
     fireEvent.click(
       within(await openMenu("Ações para Caio")).getByRole("menuitem", {
@@ -211,26 +254,27 @@ describe("TeamView for a manager", () => {
       within(dialog).getByRole("button", { name: "Salvar alterações" }),
     );
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-    expect(apiMock).toHaveBeenCalledWith(
-      "PATCH",
-      "/stores/store/sellers/seller-caio",
-      {
-        displayName: "Caio",
-        whatsappNumber: "+55 21 97777-1234",
-      },
-    );
-    expect(apiMock).toHaveBeenCalledWith(
-      "PATCH",
-      "/stores/store/members/caio",
-      {
-        role: "admin",
-      },
-    );
+    expect(apiCalls().map(({ url, method }) => [method, url])).toEqual([
+      ["PATCH", "/stores/store/sellers/seller-caio"],
+      ["PATCH", "/stores/store/members/caio"],
+    ]);
+    expect(JSON.parse(apiCalls()[0]?.body as string)).toEqual({
+      displayName: "Caio",
+      whatsappNumber: "+55 21 97777-1234",
+    });
+    expect(JSON.parse(apiCalls()[1]?.body as string)).toEqual({
+      role: "admin",
+    });
   });
 
   it("shows the API message and keeps the dialog open when saving fails", async () => {
-    apiMock.mockRejectedValue(
-      new ApiError(400, "Informe o WhatsApp com o código do país"),
+    stubApi((method) =>
+      method === "PATCH"
+        ? Response.json(
+            { message: "Informe o WhatsApp com o código do país" },
+            { status: 400 },
+          )
+        : undefined,
     );
     renderManager();
     fireEvent.click(
@@ -268,13 +312,19 @@ describe("TeamView for a manager", () => {
   });
 
   it("shows the invite link after creating an invite", async () => {
-    parsedMock.mockResolvedValue({
-      parsed: true,
-      data: {
-        invite: { id: "inv-2", email: "eva@loja.test", role: "seller" },
-        link: "https://closeout.test/invite/xyz",
-      },
-    });
+    stubApi((method) =>
+      method === "POST"
+        ? Response.json({
+            invite: {
+              id: "inv-2",
+              email: "eva@loja.test",
+              role: "seller",
+              expiresAt: "2026-10-30T15:00:00.000Z",
+            },
+            link: "https://closeout.test/invite/xyz",
+          })
+        : undefined,
+    );
     renderManager();
     fireEvent.click(screen.getByRole("button", { name: "Convidar pessoas" }));
     fireEvent.change(screen.getByLabelText("E-mail da pessoa"), {
@@ -284,12 +334,10 @@ describe("TeamView for a manager", () => {
     expect(
       await screen.findByRole("dialog", { name: "Convite para eva@loja.test" }),
     ).toBeInTheDocument();
-    expect(parsedMock).toHaveBeenCalledWith(
-      "POST",
-      "/stores/store/invites",
-      { email: "eva@loja.test", role: "seller" },
-      expect.anything(),
-    );
+    expect(JSON.parse(apiCalls()[0]?.body as string)).toEqual({
+      email: "eva@loja.test",
+      role: "seller",
+    });
   });
 
   it("offers a new link or revocation for a pending invite", async () => {
@@ -307,21 +355,20 @@ describe("TeamView for a manager", () => {
   });
 
   it("says so when no invite is pending", () => {
-    render(
-      <TeamView storeId="store" viewerId="bia" members={team} invites={[]} />,
-    );
+    invites = [];
+    renderManager();
     expect(screen.getByText(/Nenhum convite pendente/)).toBeInTheDocument();
   });
 });
 
 describe("TeamView for a seller", () => {
   it("shows only their own row, with edit as the single action", async () => {
-    render(
+    stubApi();
+    renderWithFeedback(
       <TeamView
         storeId="store"
         viewerId="caio"
-        members={[member("caio", "Caio", "seller")]}
-        invites={null}
+        ownRows={[member("caio", "Caio", "seller")]}
       />,
     );
     expect(screen.getAllByRole("listitem")).toHaveLength(1);
@@ -347,15 +394,16 @@ describe("TeamView for a seller", () => {
 });
 
 describe("member avatar", () => {
-  const renderOne = (overrides: Partial<TeamMember>) =>
-    render(
+  const renderOne = (overrides: Partial<TeamMember>) => {
+    stubApi();
+    return renderWithFeedback(
       <TeamView
         storeId="store"
         viewerId="caio"
-        members={[{ ...member("caio", "Caio", "seller"), ...overrides }]}
-        invites={null}
+        ownRows={[{ ...member("caio", "Caio", "seller"), ...overrides }]}
       />,
     );
+  };
 
   it("shows the photo when there is one", () => {
     const { container } = renderOne({

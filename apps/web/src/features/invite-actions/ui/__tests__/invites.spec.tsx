@@ -1,17 +1,23 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import type { PendingInvite } from "@/entities/invite";
-import { ApiError, api } from "@/shared/api";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react";
+import { inviteKeys, type PendingInvite } from "@/entities/invite";
 import { renderWithFeedback } from "@/test/feedback-harness";
-import { PendingInvites } from "../invites";
+import { InviteButton, PendingInvites } from "../invites";
 
-vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
-}));
+let fetchMock: ReturnType<typeof vi.fn>;
+beforeEach(() => {
+  fetchMock = vi.fn(async () => new Response(null, { status: 204 }));
+  vi.stubGlobal("fetch", fetchMock);
+});
+afterEach(() => vi.unstubAllGlobals());
 
-vi.mock("@/shared/api", async () => ({
-  ...(await vi.importActual("@/shared/api")),
-  api: vi.fn(),
-}));
+const apiCalls = () =>
+  fetchMock.mock.calls
+    .filter(([url]) => String(url).startsWith("/api/v1"))
+    .map(([url, init]) => ({
+      url: String(url).replace("/api/v1", ""),
+      method: (init as RequestInit).method,
+      body: (init as RequestInit).body,
+    }));
 
 const invite: PendingInvite = {
   id: "i1",
@@ -20,11 +26,19 @@ const invite: PendingInvite = {
   expiresAt: "2026-11-01T12:00:00.000Z",
 };
 
+const issued = {
+  invite,
+  link: "https://closeout.test/convite/abc",
+};
+
 function renderInvites() {
-  render(<PendingInvites storeId="store" invites={[invite]} />);
-  return screen.getByRole("button", {
+  const view = renderWithFeedback(
+    <PendingInvites storeId="store" invites={[invite]} />,
+  );
+  const trigger = screen.getByRole("button", {
     name: "Ações para o convite de bia@example.com",
   });
+  return Object.assign(trigger, { client: view.client });
 }
 
 const firstItem = () => screen.getAllByRole("menuitem")[0] as HTMLElement;
@@ -101,8 +115,7 @@ describe("Invite row actions menu", () => {
   });
 
   it("moves focus to the invites heading after a revocation", async () => {
-    vi.mocked(api).mockResolvedValue(undefined);
-    render(
+    renderWithFeedback(
       <>
         <h2 id="team-invites" tabIndex={-1}>
           Convites pendentes
@@ -128,7 +141,12 @@ describe("Invite row actions menu", () => {
   });
 
   it("toasts the error and keeps the dialog open when the revocation fails", async () => {
-    vi.mocked(api).mockRejectedValue(new ApiError(500, "Falhou no servidor."));
+    fetchMock.mockResolvedValue(
+      Response.json(
+        { message: "Não foi possível revogar agora." },
+        { status: 500 },
+      ),
+    );
     renderWithFeedback(<PendingInvites storeId="store" invites={[invite]} />);
     await openMenu(
       screen.getByRole("button", {
@@ -141,8 +159,197 @@ describe("Invite row actions menu", () => {
     );
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Falhou no servidor.",
+      "Não foi possível revogar agora.",
     );
+    expect(screen.getAllByRole("alert")).toHaveLength(1);
     expect(screen.getByRole("alertdialog")).toBeInTheDocument();
+  });
+
+  it("sends the DELETE, toasts once and refreshes the pending invites after a confirmed revocation", async () => {
+    const trigger = renderInvites();
+    trigger.client.setQueryData(inviteKeys.pending("store"), { items: [] });
+    await openMenu(trigger);
+    fireEvent.click(screen.getByRole("menuitem", { name: "Revogar" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Revogar convite" }),
+    );
+
+    expect(await screen.findByText("Convite revogado.")).toBeVisible();
+    expect(screen.getAllByText("Convite revogado.")).toHaveLength(1);
+    expect(apiCalls()).toEqual([
+      { url: "/stores/store/invites/i1", method: "DELETE", body: undefined },
+    ]);
+    await waitFor(() =>
+      expect(
+        trigger.client.getQueryState(inviteKeys.pending("store"))
+          ?.isInvalidated,
+      ).toBe(true),
+    );
+  });
+
+  it("POSTs regenerate and opens the link dialog without a toast", async () => {
+    fetchMock.mockResolvedValue(Response.json(issued));
+    const trigger = renderInvites();
+    trigger.client.setQueryData(inviteKeys.pending("store"), { items: [] });
+    await openMenu(trigger);
+
+    fireEvent.click(screen.getByRole("menuitem", { name: "Gerar novo link" }));
+
+    expect(
+      await screen.findByRole("dialog", {
+        name: "Convite para bia@example.com",
+      }),
+    ).toBeVisible();
+    expect(screen.getByLabelText("Link do convite")).toHaveValue(
+      "https://closeout.test/convite/abc",
+    );
+    expect(apiCalls()).toEqual([
+      {
+        url: "/stores/store/invites/i1/regenerate",
+        method: "POST",
+        body: undefined,
+      },
+    ]);
+    expect(document.querySelector("[data-sonner-toast]")).toBeNull();
+    await waitFor(() =>
+      expect(
+        trigger.client.getQueryState(inviteKeys.pending("store"))
+          ?.isInvalidated,
+      ).toBe(true),
+    );
+  });
+
+  it("shows no dialog and no error toast, and refreshes the list, when regenerate returns an unreadable body", async () => {
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    fetchMock.mockResolvedValue(Response.json({}));
+    const trigger = renderInvites();
+    trigger.client.setQueryData(inviteKeys.pending("store"), { items: [] });
+    await openMenu(trigger);
+
+    fireEvent.click(screen.getByRole("menuitem", { name: "Gerar novo link" }));
+
+    await waitFor(() =>
+      expect(
+        trigger.client.getQueryState(inviteKeys.pending("store"))
+          ?.isInvalidated,
+      ).toBe(true),
+    );
+    expect(logged).toHaveBeenCalled();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+});
+
+describe("InviteButton", () => {
+  async function openDialog() {
+    const view = renderWithFeedback(<InviteButton storeId="store" />);
+    fireEvent.click(screen.getByRole("button", { name: "Convidar pessoas" }));
+    await screen.findByRole("dialog", { name: "Convidar pessoas" });
+    return view;
+  }
+  const email = () => screen.getByLabelText("E-mail da pessoa");
+
+  it("enforces the email rule and sends nothing", async () => {
+    await openDialog();
+
+    fireEvent.change(email(), { target: { value: "bia@example" } });
+    fireEvent.click(screen.getByRole("button", { name: "Criar convite" }));
+
+    expect(await screen.findByText("Informe um e-mail válido.")).toBeVisible();
+    expect(email()).toHaveAttribute("aria-invalid", "true");
+    expect(email()).toHaveAccessibleDescription("Informe um e-mail válido.");
+    expect(apiCalls()).toHaveLength(0);
+  });
+
+  it('shows "Criando convite..." and blocks a second submit while pending', async () => {
+    let finish: (response: Response) => void = () => {};
+    fetchMock.mockImplementation(
+      () => new Promise<Response>((resolve) => (finish = resolve)),
+    );
+    await openDialog();
+    fireEvent.change(email(), { target: { value: "bia@example.com" } });
+
+    fireEvent.click(screen.getByRole("button", { name: "Criar convite" }));
+
+    const pending = await screen.findByRole("button", {
+      name: "Criando convite...",
+    });
+    expect(pending).toBeDisabled();
+    fireEvent.click(pending);
+    expect(apiCalls()).toHaveLength(1);
+    await act(async () => finish(Response.json(issued)));
+  });
+
+  it("issues the invite, opens the link dialog with no toast and refreshes the pending invites", async () => {
+    fetchMock.mockResolvedValue(Response.json(issued));
+    const { client } = await openDialog();
+    client.setQueryData(inviteKeys.pending("store"), { items: [] });
+
+    fireEvent.change(email(), { target: { value: " bia@example.com " } });
+    fireEvent.click(screen.getByRole("radio", { name: /admin/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Criar convite" }));
+
+    expect(
+      await screen.findByRole("dialog", {
+        name: "Convite para bia@example.com",
+      }),
+    ).toBeVisible();
+    expect(apiCalls()).toHaveLength(1);
+    expect(apiCalls()[0]).toMatchObject({
+      url: "/stores/store/invites",
+      method: "POST",
+    });
+    expect(JSON.parse(apiCalls()[0]?.body as string)).toEqual({
+      email: "bia@example.com",
+      role: "admin",
+    });
+    expect(document.querySelector("[data-sonner-toast]")).toBeNull();
+    await waitFor(() =>
+      expect(
+        client.getQueryState(inviteKeys.pending("store"))?.isInvalidated,
+      ).toBe(true),
+    );
+  });
+
+  it("shows the API's email message under the field and no toast", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json(
+        { message: "Essa pessoa já tem uma conta." },
+        { status: 409 },
+      ),
+    );
+    await openDialog();
+    fireEvent.change(email(), { target: { value: "bia@example.com" } });
+
+    fireEvent.click(screen.getByRole("button", { name: "Criar convite" }));
+
+    await waitFor(() =>
+      expect(email()).toHaveAccessibleDescription(
+        "Essa pessoa já tem uma conta.",
+      ),
+    );
+    expect(screen.getAllByRole("alert")).toHaveLength(1);
+    expect(document.querySelector("[data-sonner-toast]")).toBeNull();
+  });
+
+  it("closes without a link dialog or error toast, and refreshes the list, when issuing returns an unreadable body", async () => {
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    fetchMock.mockResolvedValue(Response.json({}));
+    const { client } = await openDialog();
+    client.setQueryData(inviteKeys.pending("store"), { items: [] });
+    fireEvent.change(email(), { target: { value: "bia@example.com" } });
+
+    fireEvent.click(screen.getByRole("button", { name: "Criar convite" }));
+
+    await waitFor(() =>
+      expect(
+        client.getQueryState(inviteKeys.pending("store"))?.isInvalidated,
+      ).toBe(true),
+    );
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+    );
+    expect(logged).toHaveBeenCalled();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 });

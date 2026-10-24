@@ -1,15 +1,64 @@
-import type { PendingInvite } from "@/entities/invite";
-import type { TeamMember } from "@/entities/member";
+"use client";
+
+import { useSuspenseQuery } from "@tanstack/react-query";
+import { inviteReads, type PendingInvite } from "@/entities/invite";
+import { memberReads, type TeamMember } from "@/entities/member";
 import { InviteButton, PendingInvites } from "@/features/invite-actions";
 import { MemberRow } from "@/features/member-actions";
+import { readQuery } from "@/shared/api";
 import { pluralize } from "@/shared/lib/format";
 
 /**
- * The Equipe page body. Managers get every member and the invites; a seller
- * gets only their own row (pass just that member and `invites: null`,
- * which is also what hides every team control).
+ * The Equipe page body. Managers see every member and the pending invites,
+ * read from the cache the page seeds so removals and revocations show up. A
+ * seller gets only their own row (`ownRows`), which is also what hides every
+ * team control.
  */
 export function TeamView({
+  storeId,
+  viewerId,
+  ownRows,
+}: {
+  storeId: string;
+  viewerId: string;
+  /** A seller's own row; null for managers, who read the whole team. */
+  ownRows: TeamMember[] | null;
+}) {
+  if (ownRows) {
+    return (
+      <TeamSections
+        storeId={storeId}
+        viewerId={viewerId}
+        members={ownRows}
+        invites={null}
+      />
+    );
+  }
+  return <ManagerTeam storeId={storeId} viewerId={viewerId} />;
+}
+
+function ManagerTeam({
+  storeId,
+  viewerId,
+}: {
+  storeId: string;
+  viewerId: string;
+}) {
+  const { data: team } = useSuspenseQuery(readQuery(memberReads.list(storeId)));
+  const { data: pending } = useSuspenseQuery(
+    readQuery(inviteReads.pending(storeId)),
+  );
+  return (
+    <TeamSections
+      storeId={storeId}
+      viewerId={viewerId}
+      members={team.items}
+      invites={pending.items}
+    />
+  );
+}
+
+function TeamSections({
   storeId,
   viewerId,
   members,

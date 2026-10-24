@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { inviteReads, type PendingInvite } from "@/entities/invite";
+import { inviteReads } from "@/entities/invite";
 import { listingReads } from "@/entities/listing";
 import { memberReads, type TeamMember } from "@/entities/member";
 import { isManager, type Member } from "@/entities/session";
@@ -14,20 +14,23 @@ import { TeamView } from "./team-view";
 export const metadata: Metadata = { title: "Equipe" };
 
 /**
- * Managers load every member and the pending invites; a seller loads only
- * their own contact profile, and `invites: null` hides the team controls.
+ * Managers load every member and the pending invites into the cache the team
+ * view reads; a seller loads only their own contact profile and gets it as
+ * their single row. Returns null for managers.
  */
-async function loadTeam({ me, store, role, sellerId }: Member): Promise<{
-  members: TeamMember[];
-  invites: PendingInvite[] | null;
-}> {
+async function loadTeam({
+  me,
+  store,
+  role,
+  sellerId,
+}: Member): Promise<TeamMember[] | null> {
   if (isManager(role)) {
     const [team, pending] = await Promise.all([
       loadRead(memberReads.list(store.id), redirectToSessionExpired),
       loadRead(inviteReads.pending(store.id), redirectToSessionExpired),
     ]);
     if (!team || !pending) notFound();
-    return { members: team.items, invites: pending.items };
+    return null;
   }
   const sellers = await loadRead(
     listingReads.sellers(store.id),
@@ -35,30 +38,27 @@ async function loadTeam({ me, store, role, sellerId }: Member): Promise<{
   );
   if (!sellers) notFound();
   const own = sellers.items.find((seller) => seller.id === sellerId);
-  if (!own) return { members: [], invites: null };
-  return {
-    members: [
-      {
-        userId: me.user.id,
-        name: me.user.name,
-        email: me.user.email,
-        role,
-        sellerId: own.id,
-        displayName: own.displayName,
-        whatsappNumber: own.whatsappNumber,
-        avatarUrl: own.avatarUrl,
-        listingCount: own.listingCount,
-      },
-    ],
-    invites: null,
-  };
+  if (!own) return [];
+  return [
+    {
+      userId: me.user.id,
+      name: me.user.name,
+      email: me.user.email,
+      role,
+      sellerId: own.id,
+      displayName: own.displayName,
+      whatsappNumber: own.whatsappNumber,
+      avatarUrl: own.avatarUrl,
+      listingCount: own.listingCount,
+    },
+  ];
 }
 
 export async function TeamPage() {
   const member = await requireMember();
   const { me, store } = member;
   const manager = isManager(member.role);
-  const { members, invites } = await loadTeam(member);
+  const ownRows = await loadTeam(member);
 
   return (
     <Hydrated>
@@ -69,12 +69,7 @@ export async function TeamPage() {
           : "Seu contato na loja. O botão de WhatsApp dos seus anúncios abre a conversa com você."}
       </p>
       <div className="mt-8">
-        <TeamView
-          storeId={store.id}
-          viewerId={me.user.id}
-          members={members}
-          invites={invites}
-        />
+        <TeamView storeId={store.id} viewerId={me.user.id} ownRows={ownRows} />
       </div>
     </Hydrated>
   );

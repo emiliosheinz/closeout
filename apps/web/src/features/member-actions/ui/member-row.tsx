@@ -1,10 +1,17 @@
 "use client";
 
-import type { AssignableRole } from "@closeout/contracts/enums";
-import { useRouter } from "next/navigation";
+import {
+  memberRequestSchema,
+  sellerRequestSchema,
+} from "@closeout/contracts/schemas";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
+import { Controller, useForm } from "react-hook-form";
+import { z } from "zod";
+import { listingKeys } from "@/entities/listing";
 import type { TeamMember } from "@/entities/member";
-import { RoleToggle } from "@/entities/member";
+import { memberKeys, RoleToggle } from "@/entities/member";
 import { ApiError, api } from "@/shared/api";
 import { ROLE_DESCRIPTIONS, ROLE_LABELS } from "@/shared/lib/format";
 import { cn } from "@/shared/lib/utils";
@@ -19,7 +26,6 @@ import {
   DialogTitle,
 } from "@/shared/ui/dialog";
 import { Field, inputClass } from "@/shared/ui/field";
-import { notifyFailure } from "@/shared/ui/sonner";
 
 /** Shows a stored digits-only number the way people type it back. */
 function displayNumber(number: string | null): string {
@@ -78,8 +84,15 @@ export function MemberRow({
   canManageTeam: boolean;
 }) {
   const canManage = canManageTeam && !isSelf && member.role !== "owner";
-  const router = useRouter();
   const [editing, setEditing] = useState(false);
+  const remove = useMutation({
+    mutationFn: () =>
+      api("DELETE", `/stores/${storeId}/members/${member.userId}`),
+    meta: {
+      success: `${member.displayName} saiu da equipe.`,
+      invalidates: [memberKeys.list(storeId), listingKeys.all(storeId)],
+    },
+  });
   const menuLabel = `Ações para ${member.displayName}`;
   const editItem = (
     <ActionsMenuItem onSelect={() => setEditing(true)}>Editar</ActionsMenuItem>
@@ -129,18 +142,12 @@ export function MemberRow({
           confirmLabel="Remover da equipe"
           pendingLabel="Removendo..."
           onSuccess={() => document.getElementById("team-members")?.focus()}
-          onConfirm={async () => {
-            await api(
-              "DELETE",
-              `/stores/${storeId}/members/${member.userId}`,
-            ).catch(notifyFailure);
-            router.refresh();
-          }}
-          trigger={(remove) => (
+          onConfirm={() => remove.mutateAsync()}
+          trigger={(confirmRemoval) => (
             <ActionsMenu label={menuLabel}>
               {editItem}
               <ActionsMenuItem
-                onSelect={remove}
+                onSelect={confirmRemoval}
                 className="text-stamp focus:bg-stamp/10 focus:text-stamp"
               >
                 Remover
@@ -163,6 +170,29 @@ export function MemberRow({
   );
 }
 
+const formSchema = z.object({
+  displayName: sellerRequestSchema.shape.displayName.unwrap(),
+  whatsappNumber: z.string(),
+  role: memberRequestSchema.shape.role,
+});
+type FormValues = z.infer<typeof formSchema>;
+
+/** The API rejected the profile fields (a bad number); other failures toast. */
+class ProfileFieldError extends Error {}
+
+async function patchProfile(path: string, body: unknown): Promise<void> {
+  try {
+    await api("PATCH", path, body);
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 400)
+      throw new ProfileFieldError(error.message);
+    throw error;
+  }
+}
+
+const isProfileFieldError = (error: unknown) =>
+  error instanceof ProfileFieldError;
+
 function MemberDialog({
   storeId,
   member,
@@ -174,60 +204,61 @@ function MemberDialog({
   canChangeRole: boolean;
   onClose: () => void;
 }) {
-  const router = useRouter();
-  const initialRole: AssignableRole =
-    member.role === "admin" ? "admin" : "seller";
-  const [name, setName] = useState(member.displayName);
-  const [number, setNumber] = useState(displayNumber(member.whatsappNumber));
-  const [role, setRole] = useState(initialRole);
-  const [error, setError] = useState<string | null>(null);
-  const [photoStatus, setPhotoStatus] = useState<string | null>(null);
-  const [pending, setPending] = useState(false);
+  const initialRole = member.role === "admin" ? "admin" : "seller";
+  const {
+    register,
+    handleSubmit,
+    setError,
+    control,
+    formState: { errors },
+  } = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      displayName: member.displayName,
+      whatsappNumber: displayNumber(member.whatsappNumber),
+      role: initialRole,
+    },
+  });
   const profile = `/stores/${storeId}/sellers/${member.sellerId}`;
   const idPrefix = `member-${member.userId}`;
+  const invalidates = [memberKeys.list(storeId), listingKeys.all(storeId)];
 
-  async function save(event: React.FormEvent) {
-    event.preventDefault();
-    setPending(true);
-    setError(null);
-    try {
-      await api("PATCH", profile, {
-        displayName: name,
-        whatsappNumber: number,
+  const save = useMutation({
+    mutationFn: async (values: FormValues) => {
+      await patchProfile(profile, {
+        displayName: values.displayName,
+        whatsappNumber: values.whatsappNumber,
       });
-      if (canChangeRole && role !== initialRole) {
+      if (canChangeRole && values.role !== initialRole) {
         await api("PATCH", `/stores/${storeId}/members/${member.userId}`, {
-          role,
+          role: values.role,
         });
       }
-      onClose();
-      router.refresh();
-    } catch (err) {
-      setError(
-        err instanceof ApiError ? err.message : "Não foi possível salvar.",
-      );
-    } finally {
-      setPending(false);
-    }
-  }
+    },
+    meta: {
+      success: "Alterações salvas.",
+      invalidates,
+      handlesError: isProfileFieldError,
+    },
+  });
+  const uploadPhoto = useMutation({
+    mutationFn: (file: File) => {
+      const body = new FormData();
+      body.append("file", file);
+      return api("POST", `${profile}/avatar`, body);
+    },
+    meta: { success: "Foto atualizada.", invalidates },
+  });
+  const pending = save.isPending || uploadPhoto.isPending;
 
-  async function uploadPhoto(file: File | undefined) {
-    if (!file || pending) return;
-    const body = new FormData();
-    body.append("file", file);
-    setPending(true);
-    setPhotoStatus(null);
-    try {
-      await api("POST", `${profile}/avatar`, body);
-      setPhotoStatus("Foto atualizada.");
-      router.refresh();
-    } catch (err) {
-      setPhotoStatus(
-        err instanceof ApiError ? err.message : "Não foi possível enviar.",
-      );
-    } finally {
-      setPending(false);
-    }
+  function submit(values: FormValues) {
+    save.mutate(values, {
+      onSuccess: onClose,
+      onError: (error) => {
+        if (error instanceof ProfileFieldError)
+          setError("whatsappNumber", { message: error.message });
+      },
+    });
   }
 
   return (
@@ -251,46 +282,50 @@ function MemberDialog({
                   className="sr-only"
                   disabled={pending}
                   onChange={(e) => {
-                    uploadPhoto(e.target.files?.[0]);
+                    const file = e.target.files?.[0];
+                    if (file && !pending) uploadPhoto.mutate(file);
                     e.target.value = "";
                   }}
                 />
               </label>
-              <span
-                role="status"
-                aria-live="polite"
-                className="text-xs text-muted"
-              >
-                {photoStatus}
-              </span>
             </div>
           </div>
         </div>
-        <form onSubmit={save} noValidate>
+        <form onSubmit={handleSubmit(submit)} noValidate>
           <div className="flex flex-col gap-5 px-6 py-5">
-            <Field label="Nome na loja" htmlFor={`${idPrefix}-name`}>
+            <Field
+              label="Nome na loja"
+              htmlFor={`${idPrefix}-name`}
+              error={errors.displayName?.message}
+            >
               <input
                 id={`${idPrefix}-name`}
-                value={name}
-                onChange={(e) => setName(e.target.value)}
                 maxLength={60}
-                required
+                aria-invalid={Boolean(errors.displayName)}
+                aria-describedby={
+                  errors.displayName ? `${idPrefix}-name-error` : undefined
+                }
                 className={inputClass}
+                {...register("displayName")}
               />
             </Field>
             <Field
               label="WhatsApp"
               htmlFor={`${idPrefix}-number`}
               hint="Com + e código do país. Sem número, os anúncios só desta pessoa ficam sem botão de contato."
+              error={errors.whatsappNumber?.message}
             >
               <input
                 id={`${idPrefix}-number`}
-                value={number}
-                onChange={(e) => setNumber(e.target.value)}
                 inputMode="tel"
                 autoComplete="off"
                 placeholder="+55 11 99999-8888"
+                aria-invalid={Boolean(errors.whatsappNumber)}
+                aria-describedby={
+                  errors.whatsappNumber ? `${idPrefix}-number-error` : undefined
+                }
                 className={inputClass}
+                {...register("whatsappNumber")}
               />
             </Field>
             {canChangeRole && (
@@ -298,20 +333,25 @@ function MemberDialog({
                 <span aria-hidden="true" className="text-sm font-semibold">
                   Papel
                 </span>
-                <RoleToggle
-                  name={`${idPrefix}-role`}
-                  label={`Papel de ${member.displayName}`}
-                  value={role}
-                  onChange={setRole}
-                  className="w-full"
+                <Controller
+                  control={control}
+                  name="role"
+                  render={({ field }) => (
+                    <>
+                      <RoleToggle
+                        name={`${idPrefix}-role`}
+                        label={`Papel de ${member.displayName}`}
+                        value={field.value}
+                        onChange={field.onChange}
+                        className="w-full"
+                      />
+                      <p className="text-xs text-muted">
+                        {ROLE_DESCRIPTIONS[field.value]}
+                      </p>
+                    </>
+                  )}
                 />
-                <p className="text-xs text-muted">{ROLE_DESCRIPTIONS[role]}</p>
               </div>
-            )}
-            {error && (
-              <p role="alert" className="text-sm font-medium text-stamp">
-                {error}
-              </p>
             )}
           </div>
           <div className="flex justify-end gap-2 border-t border-line bg-paper/70 px-6 py-3.5">
@@ -321,7 +361,7 @@ function MemberDialog({
               </Button>
             </DialogClose>
             <Button type="submit" disabled={pending}>
-              {pending ? "Salvando..." : "Salvar alterações"}
+              {save.isPending ? "Salvando..." : "Salvar alterações"}
             </Button>
           </div>
         </form>

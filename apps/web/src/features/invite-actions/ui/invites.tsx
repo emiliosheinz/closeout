@@ -1,11 +1,20 @@
 "use client";
 
-import type { AssignableRole } from "@closeout/contracts/enums";
-import { issuedInviteSchema } from "@closeout/contracts/schemas";
+import {
+  inviteRequestSchema,
+  issuedInviteSchema,
+} from "@closeout/contracts/schemas";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation } from "@tanstack/react-query";
 import { Mail, Plus } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
-import type { IssuedInvite, PendingInvite } from "@/entities/invite";
+import { Controller, useForm } from "react-hook-form";
+import type { z } from "zod";
+import {
+  type IssuedInvite,
+  inviteKeys,
+  type PendingInvite,
+} from "@/entities/invite";
 import { RoleToggle } from "@/entities/member";
 import { ApiError, api, apiParsed } from "@/shared/api";
 import {
@@ -24,8 +33,9 @@ import {
   DialogTitle,
 } from "@/shared/ui/dialog";
 import { Field, inputClass } from "@/shared/ui/field";
-import { notifyFailure } from "@/shared/ui/sonner";
 import { InviteLinkDialog, type ShownInvite } from "./invite-link-dialog";
+
+type InviteRequest = z.infer<typeof inviteRequestSchema>;
 
 function toShown(issued: IssuedInvite): ShownInvite {
   return { email: issued.invite.email, link: issued.link };
@@ -33,7 +43,6 @@ function toShown(issued: IssuedInvite): ShownInvite {
 
 /** "Convidar pessoas": the invite form in a dialog, then the one-time link. */
 export function InviteButton({ storeId }: { storeId: string }) {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [shown, setShown] = useState<ShownInvite | null>(null);
 
@@ -50,12 +59,18 @@ export function InviteButton({ storeId }: { storeId: string }) {
           onIssued={(issued) => {
             setOpen(false);
             if (issued) setShown(toShown(issued));
-            router.refresh();
           }}
         />
       )}
       <InviteLinkDialog invite={shown} onClose={() => setShown(null)} />
     </>
+  );
+}
+
+/** Messages the API writes about the email; anything else is a toast. */
+function isFieldError(error: unknown): boolean {
+  return (
+    error instanceof ApiError && (error.status === 400 || error.status === 409)
   );
 }
 
@@ -69,31 +84,37 @@ function InviteDialog({
   /** Null when the API created the invite but its link could not be read. */
   onIssued: (issued: IssuedInvite | null) => void;
 }) {
-  const [email, setEmail] = useState("");
-  const [role, setRole] = useState<AssignableRole>("seller");
-  const [error, setError] = useState<string | null>(null);
-  const [pending, setPending] = useState(false);
-
-  async function submit(event: React.FormEvent) {
-    event.preventDefault();
-    setPending(true);
-    setError(null);
-    try {
-      const issued = await apiParsed(
+  const {
+    register,
+    handleSubmit,
+    setError,
+    control,
+    formState: { errors },
+  } = useForm<InviteRequest>({
+    resolver: zodResolver(inviteRequestSchema),
+    defaultValues: { email: "", role: "seller" },
+  });
+  const issue = useMutation({
+    mutationFn: (values: InviteRequest) =>
+      apiParsed(
         "POST",
         `/stores/${storeId}/invites`,
-        { email, role },
+        values,
         issuedInviteSchema,
-      );
-      if (issued.parsed) onIssued(issued.data);
-      else onIssued(null);
-    } catch (err) {
-      setError(
-        err instanceof ApiError ? err.message : "Não foi possível convidar.",
-      );
-    } finally {
-      setPending(false);
-    }
+      ),
+    meta: {
+      invalidates: [inviteKeys.pending(storeId)],
+      handlesError: isFieldError,
+    },
+  });
+
+  function submit(values: InviteRequest) {
+    issue.mutate(values, {
+      onSuccess: (issued) => onIssued(issued.parsed ? issued.data : null),
+      onError: (error) => {
+        if (isFieldError(error)) setError("email", { message: error.message });
+      },
+    });
   }
 
   return (
@@ -106,36 +127,48 @@ function InviteDialog({
             direto na loja.
           </DialogDescription>
         </div>
-        <form onSubmit={submit} noValidate>
+        <form onSubmit={handleSubmit(submit)} noValidate>
           <div className="flex flex-col gap-5 px-6 py-5">
             <Field
               label="E-mail da pessoa"
               htmlFor="invite-email"
-              error={error}
+              error={errors.email?.message}
             >
               <input
                 id="invite-email"
                 type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
                 autoComplete="off"
                 placeholder="nome@exemplo.com"
-                aria-invalid={Boolean(error)}
+                aria-invalid={Boolean(errors.email)}
+                aria-describedby={
+                  errors.email ? "invite-email-error" : undefined
+                }
                 className={inputClass}
+                {...register("email")}
               />
             </Field>
             <div className="flex flex-col gap-1.5">
               <span aria-hidden="true" className="text-sm font-semibold">
                 Papel
               </span>
-              <RoleToggle
-                name="invite-role"
-                label="Papel"
-                value={role}
-                onChange={setRole}
-                className="w-full"
+              <Controller
+                control={control}
+                name="role"
+                render={({ field }) => (
+                  <>
+                    <RoleToggle
+                      name="invite-role"
+                      label="Papel"
+                      value={field.value}
+                      onChange={field.onChange}
+                      className="w-full"
+                    />
+                    <p className="text-xs text-muted">
+                      {ROLE_DESCRIPTIONS[field.value]}
+                    </p>
+                  </>
+                )}
               />
-              <p className="text-xs text-muted">{ROLE_DESCRIPTIONS[role]}</p>
             </div>
           </div>
           <div className="flex justify-end gap-2 border-t border-line bg-paper/70 px-6 py-3.5">
@@ -144,8 +177,8 @@ function InviteDialog({
                 Cancelar
               </Button>
             </DialogClose>
-            <Button type="submit" disabled={pending}>
-              {pending ? "Criando convite..." : "Criar convite"}
+            <Button type="submit" disabled={issue.isPending}>
+              {issue.isPending ? "Criando convite..." : "Criar convite"}
             </Button>
           </div>
         </form>
@@ -161,28 +194,18 @@ function InviteRow({
   storeId: string;
   invite: PendingInvite;
 }) {
-  const router = useRouter();
   const [shown, setShown] = useState<ShownInvite | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const base = `/stores/${storeId}/invites/${invite.id}`;
-
-  async function regenerate() {
-    setError(null);
-    try {
-      const issued = await apiParsed(
-        "POST",
-        `${base}/regenerate`,
-        undefined,
-        issuedInviteSchema,
-      );
-      if (issued.parsed) setShown(toShown(issued.data));
-      router.refresh();
-    } catch (err) {
-      setError(
-        err instanceof ApiError ? err.message : "Não foi possível gerar.",
-      );
-    }
-  }
+  const invalidates = [inviteKeys.pending(storeId)];
+  const regenerate = useMutation({
+    mutationFn: () =>
+      apiParsed("POST", `${base}/regenerate`, undefined, issuedInviteSchema),
+    meta: { invalidates },
+  });
+  const revoke = useMutation({
+    mutationFn: () => api("DELETE", base),
+    meta: { success: "Convite revogado.", invalidates },
+  });
 
   return (
     <li className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 px-4 py-3 sm:grid-cols-[minmax(0,1.4fr)_minmax(0,0.8fr)_minmax(0,1.2fr)_auto] sm:px-5">
@@ -198,11 +221,6 @@ function InviteRow({
           <p className="truncate text-sm text-muted sm:hidden">
             {ROLE_LABELS[invite.role]}, vale até {formatDate(invite.expiresAt)}
           </p>
-          {error && (
-            <p role="alert" className="text-sm font-medium text-stamp">
-              {error}
-            </p>
-          )}
         </div>
       </div>
       <span className="hidden truncate text-sm text-ink-soft sm:block">
@@ -218,17 +236,22 @@ function InviteRow({
           confirmLabel="Revogar convite"
           pendingLabel="Revogando..."
           onSuccess={() => document.getElementById("team-invites")?.focus()}
-          onConfirm={async () => {
-            await api("DELETE", base).catch(notifyFailure);
-            router.refresh();
-          }}
-          trigger={(revoke) => (
+          onConfirm={() => revoke.mutateAsync()}
+          trigger={(confirmRevoke) => (
             <ActionsMenu label={`Ações para o convite de ${invite.email}`}>
-              <ActionsMenuItem onSelect={regenerate}>
+              <ActionsMenuItem
+                onSelect={() =>
+                  regenerate.mutate(undefined, {
+                    onSuccess: (issued) => {
+                      if (issued.parsed) setShown(toShown(issued.data));
+                    },
+                  })
+                }
+              >
                 Gerar novo link
               </ActionsMenuItem>
               <ActionsMenuItem
-                onSelect={revoke}
+                onSelect={confirmRevoke}
                 className="text-stamp focus:bg-stamp/10 focus:text-stamp"
               >
                 Revogar
