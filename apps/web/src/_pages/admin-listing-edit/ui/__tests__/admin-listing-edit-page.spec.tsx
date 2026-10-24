@@ -20,7 +20,6 @@ vi.mock("next/headers", () => ({
 
 const props = {
   params: Promise.resolve({ id: LISTING_ID }),
-  searchParams: Promise.resolve({}),
 };
 
 const api = (detail: unknown) => ({

@@ -13,25 +13,18 @@ import { ListingForm } from "@/features/listing-form";
 import { PhotoManager } from "@/features/manage-photos";
 import { Hydrated, isUuid, loadRead } from "@/shared/api/index.server";
 import { itemPath } from "@/shared/lib/site";
+import { ListingNoticeToast } from "./listing-notice-toast";
 
 export const metadata: Metadata = { title: "Editar anúncio" };
 
-const NOTICES: Record<string, string> = {
-  "1": "Alterações salvas.",
-  publicado: "Anúncio publicado. Já aparece na loja.",
-};
-
 export async function EditListingPage({
   params,
-  searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ salvo?: string; erro?: string; copiado?: string }>;
 }) {
   const { id } = await params;
   // Also checked here: layouts do not re-run on every client navigation.
   if (!isUuid(id)) notFound();
-  const query = await searchParams;
   const { store, role, sellerId } = await requireMember();
   const [listing, options] = await Promise.all([
     loadRead(listingReads.detail(store.id, id), redirectToSessionExpired),
@@ -39,15 +32,10 @@ export async function EditListingPage({
   ]);
   if (!listing) notFound();
 
-  const notice = query.copiado
-    ? "Cópia criada como rascunho. Ajuste o que mudou e adicione as fotos."
-    : query.salvo
-      ? NOTICES[query.salvo]
-      : undefined;
-
   return (
     <Hydrated>
       <div className="max-w-3xl">
+        <ListingNoticeToast />
         <Link
           href="/admin"
           className="inline-flex h-11 items-center gap-2 text-sm font-semibold text-ink-soft hover:text-ink"
@@ -72,23 +60,6 @@ export async function EditListingPage({
               : "Pré-visualizar"}
           </a>
         </div>
-        {notice && (
-          <p
-            role="status"
-            className="mt-4 rounded-md bg-go/10 px-3 py-2 text-sm font-medium text-go"
-          >
-            {notice}
-          </p>
-        )}
-        {query.erro === "envio" && (
-          <p
-            role="alert"
-            className="mt-4 rounded-md bg-stamp/10 px-3 py-2 text-sm font-medium text-stamp"
-          >
-            O anúncio foi salvo, mas o envio das fotos ou a publicação falhou.
-            Confira as fotos abaixo e tente de novo.
-          </p>
-        )}
         <div className="mt-8">
           <PhotoManager
             storeId={store.id}
