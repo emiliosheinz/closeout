@@ -153,4 +153,62 @@ describe("ListingForm", () => {
     await waitFor(() => expect(apiMock).toHaveBeenCalled());
     expect(apiMock.mock.calls[0]?.[2]).toMatchObject({ sellerIds: ["bia"] });
   });
+
+  describe("photo previews", () => {
+    const createObjectURL = vi.fn();
+    const revokeObjectURL = vi.fn();
+    const original = {
+      createObjectURL: URL.createObjectURL,
+      revokeObjectURL: URL.revokeObjectURL,
+    };
+
+    beforeEach(() => {
+      let next = 0;
+      createObjectURL.mockImplementation(() => `blob:preview-${++next}`);
+      URL.createObjectURL = createObjectURL;
+      URL.revokeObjectURL = revokeObjectURL;
+    });
+
+    afterEach(() => {
+      URL.createObjectURL = original.createObjectURL;
+      URL.revokeObjectURL = original.revokeObjectURL;
+    });
+
+    const addPhoto = () =>
+      fireEvent.change(screen.getByLabelText("Fotos"), {
+        target: {
+          files: [new File(["x"], "mesa.jpg", { type: "image/jpeg" })],
+        },
+      });
+
+    it("keeps one preview URL for a photo while the rest of the form changes", () => {
+      renderNew();
+      addPhoto();
+      fireEvent.change(screen.getByLabelText("Nome do item"), {
+        target: { value: "Mesa de jantar" },
+      });
+      fireEvent.change(screen.getByLabelText("Nome do item"), {
+        target: { value: "Mesa de jantar grande" },
+      });
+
+      expect(createObjectURL).toHaveBeenCalledTimes(1);
+      expect(revokeObjectURL).not.toHaveBeenCalled();
+    });
+
+    it("revokes a preview URL when its photo is removed", () => {
+      renderNew();
+      addPhoto();
+      fireEvent.click(screen.getByRole("button", { name: "Remover foto 1" }));
+
+      expect(revokeObjectURL).toHaveBeenCalledWith("blob:preview-1");
+    });
+
+    it("revokes the preview URLs when the form goes away", () => {
+      const { unmount } = renderNew();
+      addPhoto();
+      unmount();
+
+      expect(revokeObjectURL).toHaveBeenCalledWith("blob:preview-1");
+    });
+  });
 });

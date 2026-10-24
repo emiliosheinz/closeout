@@ -53,6 +53,7 @@ export function InviteForm({ token, email }: { token: string; email: string }) {
     if (Object.keys(local).length > 0) return;
 
     setPending(true);
+    const whatsappNumber = String(form.get("whatsappNumber") ?? "");
     try {
       const response = await fetch("/api/auth/invite", {
         method: "POST",
@@ -64,7 +65,7 @@ export function InviteForm({ token, email }: { token: string; email: string }) {
           token,
           name,
           password,
-          whatsappNumber: String(form.get("whatsappNumber") ?? ""),
+          whatsappNumber,
         }),
       });
       if (response.ok) {

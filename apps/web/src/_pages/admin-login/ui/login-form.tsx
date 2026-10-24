@@ -4,6 +4,9 @@ import { useState } from "react";
 import { Button } from "@/shared/ui/button";
 import { Field, inputClass } from "@/shared/ui/field";
 
+const loginError = (message?: string) =>
+  message ?? "Não foi possível entrar agora.";
+
 export function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -32,7 +35,7 @@ export function LoginForm() {
       const body = (await response.json().catch(() => ({}))) as {
         message?: string;
       };
-      setError(body.message ?? "Não foi possível entrar agora.");
+      setError(loginError(body.message));
     } catch {
       setError("Sem conexão. Verifique a internet e tente de novo.");
     }

@@ -2,7 +2,7 @@
 
 import { ImagePlus, Plus, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import type {
   AdminListingDetail,
   Category,
@@ -97,10 +97,10 @@ export function ListingForm({
   const [errors, setErrors] = useState<FormErrors>({});
   const [pending, setPending] = useState<string | null>(null);
 
-  const previews = useMemo(
-    () => files.map((file) => ({ file, url: URL.createObjectURL(file) })),
-    [files],
-  );
+  const previews = files.map((file) => ({
+    file,
+    url: URL.createObjectURL(file),
+  }));
   useEffect(
     () => () => {
       for (const preview of previews) URL.revokeObjectURL(preview.url);
@@ -141,17 +141,18 @@ export function ListingForm({
 
     setPending(publish ? "Publicando..." : "Salvando...");
     let id = listing?.id;
+    const updating = Boolean(editing && id);
+    const nextPublication = publish ? "published" : publication;
+    const savedParam = publish ? "publicado" : "1";
     try {
-      if (editing && id) {
+      if (updating) {
         await api("PATCH", `/stores/${storeId}/listings/${id}`, {
           ...fields,
           availability,
-          publication: publish ? "published" : publication,
+          publication: nextPublication,
         });
         setPending(null);
-        router.push(
-          `/admin/anuncios/${id}?salvo=${publish ? "publicado" : "1"}`,
-        );
+        router.push(`/admin/anuncios/${id}?salvo=${savedParam}`);
         router.refresh();
         return;
       }
@@ -163,7 +164,7 @@ export function ListingForm({
         },
         onProgress: setPending,
       });
-      router.push(`/admin/anuncios/${id}?salvo=${publish ? "publicado" : "1"}`);
+      router.push(`/admin/anuncios/${id}?salvo=${savedParam}`);
     } catch (err) {
       setPending(null);
       const message =

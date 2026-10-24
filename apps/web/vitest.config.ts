@@ -1,8 +1,20 @@
-import react from "@vitejs/plugin-react";
+import babel from "@rolldown/plugin-babel";
+import react, { reactCompilerPreset } from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
 
+const compilerPreset = reactCompilerPreset();
+// Async components are server components, which Next never compiles; keep
+// them out of the compiler here too (specs call them as plain functions).
+const { code } = compilerPreset.rolldown?.filter ?? {};
+compilerPreset.rolldown = {
+  ...compilerPreset.rolldown,
+  filter: {
+    code: { include: code as RegExp, exclude: /async function [A-Z]/ },
+  },
+};
+
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), babel({ presets: [compilerPreset] })],
   resolve: {
     tsconfigPaths: true,
     alias: {
