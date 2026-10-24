@@ -93,6 +93,19 @@
   }
 }
 
+/* Native selects keep their behavior but drop the platform arrow, which
+   sits flush against the border; ours gets the same inset as the text.
+   Unlayered so it outranks the padding utilities on each control. */
+select:not([multiple]) {
+  appearance: none;
+  padding-right: 2.5rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235b6573' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.875rem center;
+  background-size: 1rem;
+  cursor: pointer;
+}
+
 @utility pb-safe {
   padding-bottom: env(safe-area-inset-bottom);
 }
