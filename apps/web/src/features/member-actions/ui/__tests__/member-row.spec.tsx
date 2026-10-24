@@ -1,9 +1,15 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { TeamMember } from "@/entities/member";
+import { api } from "@/shared/api";
 import { MemberRow } from "../member-row";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
+}));
+
+vi.mock("@/shared/api", async () => ({
+  ...(await vi.importActual("@/shared/api")),
+  api: vi.fn(),
 }));
 
 const member: TeamMember = {
@@ -115,5 +121,33 @@ describe("MemberRow actions menu", () => {
       expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument(),
     );
     await waitFor(() => expect(trigger).toHaveFocus());
+  });
+
+  it("moves focus to the members heading after a removal", async () => {
+    vi.mocked(api).mockResolvedValue(undefined);
+    render(
+      <>
+        <h2 id="team-members" tabIndex={-1}>
+          Pessoas
+        </h2>
+        <ul>
+          <MemberRow
+            storeId="store"
+            member={member}
+            isSelf={false}
+            canManageTeam
+          />
+        </ul>
+      </>,
+    );
+    await openMenu(screen.getByRole("button", { name: "Ações para Ana" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Remover" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Remover da equipe" }),
+    );
+
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { name: "Pessoas" })).toHaveFocus(),
+    );
   });
 });

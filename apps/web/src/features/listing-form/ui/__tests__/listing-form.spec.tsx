@@ -66,6 +66,23 @@ beforeEach(() => {
   push.mockReset();
 });
 
+async function pickByKeyboard(trigger: HTMLElement, steps: number) {
+  trigger.focus();
+  fireEvent.keyDown(trigger, { key: "Enter" });
+  await screen.findByRole("listbox");
+  const options = screen.getAllByRole("option");
+  const start = options.findIndex(
+    (option) => option.getAttribute("aria-selected") === "true",
+  );
+  for (let step = 0; step < steps; step += 1) {
+    fireEvent.keyDown(options[start + step] as HTMLElement, {
+      key: "ArrowDown",
+    });
+    await waitFor(() => expect(options[start + step + 1]).toHaveFocus());
+  }
+  fireEvent.keyDown(options[start + steps] as HTMLElement, { key: "Enter" });
+}
+
 describe("ListingForm", () => {
   it("asks for photos before anything else on a new listing", () => {
     renderNew();
@@ -368,5 +385,35 @@ describe("ListingForm", () => {
         expect.objectContaining({ categoryId: "c2" }),
       ),
     );
+  });
+
+  it("saves the publication and availability picked by keyboard on an edit", async () => {
+    apiMock.mockResolvedValue({});
+    render(
+      <ListingForm
+        storeId="store"
+        categories={categories}
+        sellers={sellers}
+        ownSellerId="bia"
+        canAssignSellers
+        listing={listing}
+      />,
+    );
+    const publication = screen.getByLabelText("Publicação");
+    const availability = screen.getByLabelText("Disponibilidade");
+    expect(publication).toHaveTextContent("Rascunho");
+    expect(availability).toHaveTextContent("Disponível");
+
+    await pickByKeyboard(publication, 1);
+    await waitFor(() => expect(publication).toHaveTextContent("Publicado"));
+    await pickByKeyboard(availability, 1);
+    await waitFor(() => expect(availability).toHaveTextContent("Reservado"));
+    fireEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
+
+    await waitFor(() => expect(apiMock).toHaveBeenCalled());
+    expect(apiMock.mock.calls[0]?.[2]).toMatchObject({
+      publication: "published",
+      availability: "reserved",
+    });
   });
 });

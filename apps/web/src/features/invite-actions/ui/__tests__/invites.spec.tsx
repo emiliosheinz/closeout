@@ -1,9 +1,15 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { PendingInvite } from "@/entities/invite";
+import { api } from "@/shared/api";
 import { PendingInvites } from "../invites";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
+}));
+
+vi.mock("@/shared/api", async () => ({
+  ...(await vi.importActual("@/shared/api")),
+  api: vi.fn(),
 }));
 
 const invite: PendingInvite = {
@@ -91,5 +97,32 @@ describe("Invite row actions menu", () => {
         name: "Revogar o convite de bia@example.com?",
       }),
     ).toBeInTheDocument();
+  });
+
+  it("moves focus to the invites heading after a revocation", async () => {
+    vi.mocked(api).mockResolvedValue(undefined);
+    render(
+      <>
+        <h2 id="team-invites" tabIndex={-1}>
+          Convites pendentes
+        </h2>
+        <PendingInvites storeId="store" invites={[invite]} />
+      </>,
+    );
+    await openMenu(
+      screen.getByRole("button", {
+        name: "Ações para o convite de bia@example.com",
+      }),
+    );
+    fireEvent.click(screen.getByRole("menuitem", { name: "Revogar" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Revogar convite" }),
+    );
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole("heading", { name: "Convites pendentes" }),
+      ).toHaveFocus(),
+    );
   });
 });

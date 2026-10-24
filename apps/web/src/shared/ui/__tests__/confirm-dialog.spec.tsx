@@ -98,4 +98,42 @@ describe("ConfirmDialog", () => {
     expect(onSuccess).not.toHaveBeenCalled();
     await waitFor(() => expect(opener).toHaveFocus());
   });
+
+  it("clears the error as soon as the action is retried", async () => {
+    let attempt = 0;
+    let finish: () => void = () => undefined;
+    setup(() => {
+      attempt += 1;
+      if (attempt === 1) return Promise.reject(new Error("Falhou."));
+      return new Promise<void>((resolve) => {
+        finish = resolve;
+      });
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Abrir" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: copy.confirmLabel }),
+    );
+    expect(await screen.findByRole("alert")).toHaveTextContent("Falhou.");
+
+    fireEvent.click(screen.getByRole("button", { name: copy.confirmLabel }));
+
+    await screen.findByRole("button", { name: copy.pendingLabel });
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    finish();
+    await waitFor(() =>
+      expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument(),
+    );
+  });
+
+  it("falls back to a generic message when the failure carries none", async () => {
+    setup(() => Promise.reject("boom"));
+    fireEvent.click(screen.getByRole("button", { name: "Abrir" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: copy.confirmLabel }),
+    );
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Algo deu errado.",
+    );
+  });
 });

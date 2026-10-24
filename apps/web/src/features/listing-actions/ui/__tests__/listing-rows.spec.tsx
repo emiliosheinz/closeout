@@ -34,6 +34,23 @@ const row = (
   updatedAt: "2026-10-17T12:00:00.000Z",
 });
 
+async function pickByKeyboard(trigger: HTMLElement, steps: number) {
+  trigger.focus();
+  fireEvent.keyDown(trigger, { key: "Enter" });
+  await screen.findByRole("listbox");
+  const options = screen.getAllByRole("option");
+  const start = options.findIndex(
+    (option) => option.getAttribute("aria-selected") === "true",
+  );
+  for (let step = 0; step < steps; step += 1) {
+    fireEvent.keyDown(options[start + step] as HTMLElement, {
+      key: "ArrowDown",
+    });
+    await waitFor(() => expect(options[start + step + 1]).toHaveFocus());
+  }
+  fireEvent.keyDown(options[start + steps] as HTMLElement, { key: "Enter" });
+}
+
 describe("ListingRows", () => {
   it("warns on published items whose seller cannot be reached", () => {
     render(
@@ -137,6 +154,57 @@ describe("ListingRows", () => {
         "/stores/store/listings/a/status",
         { availability: "reserved" },
       ),
+    );
+  });
+
+  it("changes publication from the keyboard", async () => {
+    apiMock.mockReset();
+    apiMock.mockResolvedValue(undefined);
+    render(
+      <ListingRows
+        storeId="store"
+        storeSlug="loja"
+        listings={[row("a", [])]}
+      />,
+    );
+
+    await pickByKeyboard(
+      screen.getByRole("combobox", { name: "Publicação de Item a" }),
+      1,
+    );
+
+    await waitFor(() =>
+      expect(apiMock).toHaveBeenCalledWith(
+        "PATCH",
+        "/stores/store/listings/a/status",
+        { publication: "archived" },
+      ),
+    );
+  });
+
+  it("moves focus to the page heading after a listing is deleted", async () => {
+    apiMock.mockReset();
+    apiMock.mockResolvedValue(undefined);
+    render(
+      <>
+        <h1 id="listings-heading" tabIndex={-1}>
+          Anúncios
+        </h1>
+        <ListingRows
+          storeId="store"
+          storeSlug="loja"
+          listings={[row("a", [])]}
+        />
+      </>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Excluir Item a" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Excluir anúncio" }),
+    );
+
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { name: "Anúncios" })).toHaveFocus(),
     );
   });
 });
