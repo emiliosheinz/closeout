@@ -63,12 +63,13 @@ export class CreateListingDto {
   @IsUUID()
   declare categoryId: string;
 
+  /** Ignored for sellers, whose listings are always their own. */
+  @ValidateIf(isDefined)
   @IsArray()
-  @ArrayMinSize(1)
   @ArrayMaxSize(MAX_SELLERS)
   @ArrayUnique()
   @IsUUID("all", { each: true })
-  declare sellerIds: string[];
+  declare sellerIds?: string[];
 
   /** Null or absent means "a combinar". */
   @ValidateIf(isPresent)

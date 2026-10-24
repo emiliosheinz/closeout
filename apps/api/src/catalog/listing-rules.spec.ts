@@ -2,7 +2,9 @@ import {
   canContact,
   canPublish,
   canRemovePhoto,
+  canSetSellers,
   isPubliclyVisible,
+  sellersForNewListing,
 } from "./listing-rules";
 
 describe("listing rules", () => {
@@ -59,5 +61,41 @@ describe("listing rules", () => {
     expect(canRemovePhoto({ publication: "published" }, 1)).toBe(false);
     expect(canRemovePhoto({ publication: "published" }, 2)).toBe(true);
     expect(canRemovePhoto({ publication: "draft" }, 1)).toBe(true);
+  });
+});
+
+describe("listing assignment", () => {
+  const actor = (role: "owner" | "admin" | "seller") => ({
+    role,
+    sellerId: "own",
+  });
+
+  it.each([
+    ["owner", ["a", "b"], ["a", "b"]],
+    ["admin", ["a"], ["a"]],
+    ["owner", [], null],
+    ["admin", undefined, null],
+    ["seller", ["a", "b"], ["own"]],
+    ["seller", [], ["own"]],
+    ["seller", undefined, ["own"]],
+  ] as const)("an %s submitting %j creates a listing sold by %j", (role, submitted, expected) => {
+    expect(
+      sellersForNewListing(actor(role), submitted && [...submitted]),
+    ).toEqual(expected);
+  });
+
+  it.each([
+    ["owner", ["own"], ["a", "b"], true],
+    ["admin", ["own"], ["a"], true],
+    ["seller", ["own", "a"], undefined, true],
+    ["seller", ["own", "a"], ["own", "a"], true],
+    ["seller", ["own", "a"], ["a", "own"], true],
+    ["seller", ["own", "a"], ["own"], false],
+    ["seller", ["own"], ["own", "a"], false],
+    ["seller", ["own"], ["a"], false],
+  ] as const)("an %s editing sellers %j to %j is allowed: %s", (role, current, submitted, allowed) => {
+    expect(
+      canSetSellers(actor(role), [...current], submitted && [...submitted]),
+    ).toBe(allowed);
   });
 });

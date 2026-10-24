@@ -1,3 +1,4 @@
+import { applyDecorators } from "@nestjs/common";
 import { Transform } from "class-transformer";
 import {
   IsNotEmpty,
@@ -26,17 +27,16 @@ const NORMALIZE_NUMBER = ({ value }: { value: unknown }) => {
   return normalizeWhatsAppNumber(value) ?? INVALID_NUMBER;
 };
 
-export class CreateSellerDto {
-  @IsString()
-  @Transform(TRIM)
-  @IsNotEmpty()
-  @MaxLength(60)
-  declare displayName: string;
-
-  @Transform(NORMALIZE_NUMBER)
-  @ValidateIf((_, value) => value !== undefined && value !== null)
-  @Matches(WHATSAPP_NUMBER_PATTERN, { message: NUMBER_MESSAGE })
-  declare whatsappNumber?: string | null;
+/**
+ * Optional WhatsApp number, normalized to international digits; empty
+ * means none. Every form that takes a contact number uses this.
+ */
+export function IsOptionalWhatsAppNumber(): PropertyDecorator {
+  return applyDecorators(
+    Transform(NORMALIZE_NUMBER),
+    ValidateIf((_, value) => value !== undefined && value !== null),
+    Matches(WHATSAPP_NUMBER_PATTERN, { message: NUMBER_MESSAGE }),
+  );
 }
 
 export class UpdateSellerDto {
@@ -47,8 +47,6 @@ export class UpdateSellerDto {
   @MaxLength(60)
   declare displayName?: string;
 
-  @Transform(NORMALIZE_NUMBER)
-  @ValidateIf((_, value) => value !== undefined && value !== null)
-  @Matches(WHATSAPP_NUMBER_PATTERN, { message: NUMBER_MESSAGE })
+  @IsOptionalWhatsAppNumber()
   declare whatsappNumber?: string | null;
 }

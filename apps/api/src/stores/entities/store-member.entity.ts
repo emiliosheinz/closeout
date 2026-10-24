@@ -9,10 +9,15 @@ import {
   PrimaryColumn,
 } from "typeorm";
 import { User } from "@/auth/entities/user.entity";
+import type { StoreRole } from "../roles";
 import { Store } from "./store.entity";
 
-export const STORE_ROLES = ["owner", "admin", "seller"] as const;
-export type StoreRole = (typeof STORE_ROLES)[number];
+export {
+  ASSIGNABLE_ROLES,
+  type AssignableRole,
+  STORE_ROLES,
+  type StoreRole,
+} from "../roles";
 
 /**
  * Grants a user access to one store with exactly one role. Each store has at

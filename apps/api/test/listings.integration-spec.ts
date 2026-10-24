@@ -7,6 +7,8 @@ import {
   as,
   createStoreWithAdmin,
   createTestApp,
+  insertListing,
+  type Member,
   photo,
   resetDatabase,
   type TestContext,
@@ -643,6 +645,199 @@ describe("listing administration", () => {
       await request(server)
         .get("/media/00000000-0000-0000-0000-000000000000-lg.webp")
         .expect(404);
+    });
+  });
+
+  describe("seller access", () => {
+    let seller: Member;
+    let partner: Member;
+    const asSeller = () => as(ctx.app, seller.cookie);
+    const ids = (listings: { id: string }[]) =>
+      listings.map((listing) => listing.id).sort();
+    const sellersOf = async (id: string) =>
+      (
+        await ctx.dataSource.query(
+          `SELECT seller_id FROM listing_sellers WHERE listing_id = $1 ORDER BY seller_id`,
+          [id],
+        )
+      ).map((row: { seller_id: string }) => row.seller_id);
+
+    beforeEach(async () => {
+      seller = await addMember(ctx, admin, {
+        email: "vendedora@example.com",
+        name: "Vendedora",
+        role: "seller",
+        whatsapp: "+55 21 97777-1234",
+      });
+      partner = await addMember(ctx, admin, {
+        email: "parceira@example.com",
+        name: "Parceira",
+        role: "seller",
+      });
+    });
+
+    it("lists exactly the listings assigned to the seller", async () => {
+      const mine = [
+        await insertListing(ctx.dataSource, admin, {
+          sellerIds: [seller.sellerId],
+        }),
+        await insertListing(ctx.dataSource, admin, {
+          sellerIds: [seller.sellerId, partner.sellerId],
+          publication: "published",
+        }),
+        await insertListing(ctx.dataSource, admin, {
+          sellerIds: [admin.sellerId, seller.sellerId],
+          publication: "archived",
+        }),
+      ];
+      await insertListing(ctx.dataSource, admin);
+      await insertListing(ctx.dataSource, admin, {
+        sellerIds: [partner.sellerId],
+        publication: "published",
+      });
+
+      const res = await asSeller().get(base()).expect(200);
+      expect(ids(res.body.items)).toEqual(ids(mine));
+      const all = await client().get(base()).expect(200);
+      expect(all.body.items).toHaveLength(5);
+    });
+
+    it("computes the dashboard over the seller's listings only", async () => {
+      const states = [
+        { publication: "draft" },
+        { publication: "published", availability: "available" },
+        { publication: "published", availability: "reserved" },
+        { publication: "published", availability: "sold" },
+        { publication: "archived" },
+      ] as const;
+      for (const state of states) {
+        await insertListing(ctx.dataSource, admin, {
+          ...state,
+          sellerIds: [seller.sellerId],
+        });
+        await insertListing(ctx.dataSource, admin, state);
+        await insertListing(ctx.dataSource, admin, state);
+      }
+      await insertListing(ctx.dataSource, admin, {
+        publication: "draft",
+        sellerIds: [seller.sellerId, admin.sellerId],
+      });
+
+      const res = await asSeller()
+        .get(`/stores/${admin.storeId}/dashboard`)
+        .expect(200);
+      expect(res.body).toEqual({
+        published: 3,
+        available: 1,
+        reserved: 1,
+        sold: 1,
+        draft: 2,
+        archived: 1,
+      });
+    });
+
+    it("makes the seller the only seller of what they create, whatever they submit", async () => {
+      const submissions = [
+        { sellerIds: [admin.sellerId, partner.sellerId] },
+        { sellerIds: [] },
+        {},
+      ];
+      for (const submitted of submissions) {
+        const res = await asSeller()
+          .post(base())
+          .send({
+            title: "Luminária",
+            categoryId: admin.categoryId,
+            condition: "good",
+            ...submitted,
+          })
+          .expect(201);
+        expect(res.body.sellers).toEqual([
+          { id: seller.sellerId, displayName: "Vendedora" },
+        ]);
+      }
+    });
+
+    it("lets a seller edit an assigned listing without changing who sells it", async () => {
+      const listing = await insertListing(ctx.dataSource, admin, {
+        sellerIds: [seller.sellerId, partner.sellerId],
+      });
+      const url = `${base()}/${listing.id}`;
+
+      await asSeller()
+        .patch(`${url}/status`)
+        .send({ availability: "reserved" })
+        .expect(200);
+      await asSeller()
+        .patch(url)
+        .send({
+          title: "Mesa nova",
+          sellerIds: [partner.sellerId, seller.sellerId],
+        })
+        .expect(200);
+
+      const refused = await asSeller()
+        .patch(url)
+        .send({ title: "Mesa trocada", sellerIds: [seller.sellerId] })
+        .expect(403);
+      expect(refused.body.message).toBe(
+        "Você não tem permissão para esta ação.",
+      );
+      await asSeller()
+        .patch(url)
+        .send({
+          sellerIds: [seller.sellerId, partner.sellerId, admin.sellerId],
+        })
+        .expect(403);
+
+      const after = await asSeller().get(url).expect(200);
+      expect(after.body).toMatchObject({
+        title: "Mesa nova",
+        availability: "reserved",
+      });
+      expect(await sellersOf(listing.id)).toEqual(
+        [seller.sellerId, partner.sellerId].sort(),
+      );
+    });
+
+    it("keeps the original sellers when a seller duplicates a listing", async () => {
+      const listing = await insertListing(ctx.dataSource, admin, {
+        sellerIds: [seller.sellerId, partner.sellerId],
+      });
+      const copy = await asSeller()
+        .post(`${base()}/${listing.id}/duplicate`)
+        .expect(201);
+      expect(await sellersOf(copy.body.id)).toEqual(
+        [seller.sellerId, partner.sellerId].sort(),
+      );
+    });
+
+    it("shows a seller the names and WhatsApp state of their co-sellers", async () => {
+      const listing = await insertListing(ctx.dataSource, admin, {
+        sellerIds: [seller.sellerId, partner.sellerId],
+      });
+      const detail = await asSeller()
+        .get(`${base()}/${listing.id}`)
+        .expect(200);
+      expect(detail.body.sellers).toEqual([
+        { id: partner.sellerId, displayName: "Parceira" },
+        { id: seller.sellerId, displayName: "Vendedora" },
+      ]);
+      const profiles = await asSeller()
+        .get(`/stores/${admin.storeId}/sellers`)
+        .expect(200);
+      expect(profiles.body.items).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            id: partner.sellerId,
+            whatsappNumber: null,
+          }),
+          expect.objectContaining({
+            id: seller.sellerId,
+            whatsappNumber: "5521977771234",
+          }),
+        ]),
+      );
     });
   });
 });

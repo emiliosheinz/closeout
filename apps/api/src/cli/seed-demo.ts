@@ -10,7 +10,10 @@ import type {
   Publication,
 } from "@/catalog/listing-types";
 import type { ListingImagesService } from "@/catalog/services/listing-images.service";
-import type { ListingsService } from "@/catalog/services/listings.service";
+import type {
+  ListingActor,
+  ListingsService,
+} from "@/catalog/services/listings.service";
 import { Category } from "@/stores/entities/category.entity";
 import { provisionMember } from "@/stores/member-provisioning";
 import type { StoresService } from "@/stores/services/stores.service";
@@ -364,12 +367,17 @@ export async function seedDemo(
     return category.id;
   };
 
+  const owner: ListingActor = {
+    storeId: store.id,
+    role: "owner",
+    sellerId: profiles.owner,
+  };
   const created: string[] = [];
   try {
     for (const demo of DEMO_LISTINGS) {
       await createDemoListing(
         deps,
-        store.id,
+        owner,
         demo,
         demo.sellers.map((role) => profiles[role]),
         categoryId,
@@ -397,13 +405,13 @@ export async function seedDemo(
 /** Reports the listing id as soon as it exists, so a later failure can undo it. */
 async function createDemoListing(
   deps: SeedDeps,
-  storeId: string,
+  owner: ListingActor,
   demo: DemoListing,
   sellerIds: string[],
   categoryId: (slug: string) => string,
   onCreated: (id: string) => void,
 ): Promise<void> {
-  const listing = await deps.listings.create(storeId, {
+  const listing = await deps.listings.create(owner, {
     title: demo.title,
     description: `${demo.description}\n\n${DEMO_NOTE}`,
     categoryId: categoryId(demo.category),
@@ -419,9 +427,9 @@ async function createDemoListing(
         placeholderImage(demo.category, i),
       ),
     );
-    await deps.images.add(storeId, listing.id, files);
+    await deps.images.add(owner.storeId, listing.id, files);
   }
-  await deps.listings.update(storeId, listing.id, {
+  await deps.listings.update(owner, listing.id, {
     publication: demo.publication,
     availability: demo.availability,
   });

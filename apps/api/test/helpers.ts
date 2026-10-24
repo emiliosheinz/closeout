@@ -1,4 +1,4 @@
-import type { INestApplication } from "@nestjs/common";
+import type { INestApplication, Type } from "@nestjs/common";
 import {
   GUARDS_METADATA,
   METHOD_METADATA,
@@ -12,6 +12,8 @@ import { DataSource } from "typeorm";
 import { AppModule } from "@/app.module";
 import { createAdmin } from "@/cli/admin-commands";
 import { configureApp } from "@/configure-app";
+import type { StoreRole } from "@/stores/entities/store-member.entity";
+import { Roles } from "@/stores/membership";
 import { StoresService } from "@/stores/services/stores.service";
 
 export const ORIGIN = "http://storefront.test";
@@ -23,9 +25,12 @@ export interface TestContext {
   dataSource: DataSource;
 }
 
-export async function createTestApp(): Promise<TestContext> {
+/** `extraModules` lets a suite mount test-only controllers next to the app. */
+export async function createTestApp(
+  extraModules: Type[] = [],
+): Promise<TestContext> {
   const moduleRef = await Test.createTestingModule({
-    imports: [AppModule],
+    imports: [AppModule, ...extraModules],
   }).compile();
   const app = moduleRef.createNestApplication({ logger: false });
   configureApp(app);
@@ -90,17 +95,29 @@ export interface Member {
   cookie: string;
 }
 
-/** Add a member to the admin's store (via the real CLI command) and sign in. */
+/**
+ * Add a member to the admin's store (via the real CLI command, which makes
+ * them an admin), give them `role` and sign in.
+ */
 export async function addMember(
   ctx: TestContext,
   admin: Admin,
-  input: { email: string; name: string; whatsapp?: string },
+  {
+    role,
+    ...input
+  }: { email: string; name: string; whatsapp?: string; role?: StoreRole },
 ): Promise<Member> {
   const { userId } = await createAdmin(
     ctx.dataSource,
     ctx.app.get(StoresService),
     { ...input, password: PASSWORD, store: { slug: admin.storeSlug } },
   );
+  if (role) {
+    await ctx.dataSource.query(
+      `UPDATE store_members SET role = $2 WHERE user_id = $1`,
+      [userId, role],
+    );
+  }
   const [seller] = await ctx.dataSource.query(
     `SELECT id FROM sellers WHERE user_id = $1`,
     [userId],
@@ -126,6 +143,14 @@ export async function login(
     .send({ email, password })
     .expect(200);
   return `closeout_session=${res.body.sessionToken}`;
+}
+
+/** A call the way apps/web makes it server-side: internal secret plus visitor IP. */
+export function internalPost(app: INestApplication, url: string, ip: string) {
+  return request(app.getHttpServer())
+    .post(url)
+    .set("x-internal-secret", INTERNAL_SECRET)
+    .set("x-client-ip", ip);
 }
 
 /** An admin-side HTTP client: same-origin Origin header and session cookie. */
@@ -167,6 +192,8 @@ export async function insertListing(
     publication?: "draft" | "published" | "archived";
     availability?: "available" | "reserved" | "sold";
     publishedAt?: Date;
+    /** Defaults to the admin's own contact profile. */
+    sellerIds?: string[];
   } = {},
 ): Promise<{ id: string; slug: string }> {
   const title = state.title ?? "Item";
@@ -177,12 +204,13 @@ export async function insertListing(
        VALUES ($1, (SELECT id FROM categories WHERE store_id = $1 AND slug = $3), $4, $5, $6, $7, $8, $9, $10, $11)
        RETURNING id, slug
      ), seller AS (
-       INSERT INTO listing_sellers (listing_id, seller_id) SELECT id, $2 FROM listing
+       INSERT INTO listing_sellers (listing_id, seller_id)
+       SELECT listing.id, unnest($2::uuid[]) FROM listing
      )
      SELECT id, slug FROM listing`,
     [
       admin.storeId,
-      admin.sellerId,
+      state.sellerIds ?? [admin.sellerId],
       state.category ?? "moveis",
       `item-${Math.random().toString(36).slice(2, 10)}`,
       title,
@@ -212,6 +240,8 @@ interface Route {
   method: string;
   path: string;
   guarded: boolean;
+  /** Roles the handler declares with `@Roles`, if any. */
+  roles: readonly StoreRole[] | undefined;
 }
 
 /** Every route the app registers, read from Nest's controller metadata. */
@@ -240,6 +270,7 @@ export function registeredRoutes(app: INestApplication): Route[] {
           guarded:
             guardedClass ||
             (Reflect.getMetadata(GUARDS_METADATA, handler) ?? []).length > 0,
+          roles: Reflect.getMetadata(Roles.KEY, handler),
         });
       }
     }
