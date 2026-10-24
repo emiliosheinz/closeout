@@ -3,6 +3,7 @@
 import {
   AVAILABILITIES,
   type Availability,
+  PUBLICATIONS,
   type Publication,
 } from "@closeout/contracts/enums";
 import { Copy, Eye, ImageOff, Pencil, PhoneOff, Trash2 } from "lucide-react";
@@ -20,7 +21,6 @@ import {
 import { itemPath } from "@/shared/lib/site";
 import { ConfirmDialog } from "@/shared/ui/confirm-dialog";
 
-const PUBLICATIONS: Publication[] = ["draft", "published", "archived"];
 const selectClass =
   "h-11 w-full rounded-md border border-line bg-surface px-2 text-sm font-medium text-ink";
 

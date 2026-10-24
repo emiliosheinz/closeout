@@ -5,6 +5,7 @@ import {
   type Availability,
   CONDITIONS,
   type Condition,
+  PUBLICATIONS,
   type Publication,
 } from "@closeout/contracts/enums";
 import { ImagePlus, Plus, X } from "lucide-react";
@@ -46,8 +47,6 @@ interface FormErrors {
   price?: string;
   form?: string;
 }
-
-const PUBLICATIONS: Publication[] = ["draft", "published", "archived"];
 
 /**
  * Create and edit form. New listings can attach photos right away: the
