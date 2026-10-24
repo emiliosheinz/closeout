@@ -3,6 +3,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   PrimaryColumn,
@@ -10,12 +11,19 @@ import {
 import { User } from "@/auth/entities/user.entity";
 import { Store } from "./store.entity";
 
-export const STORE_ROLES = ["owner", "admin"] as const;
+export const STORE_ROLES = ["owner", "admin", "seller"] as const;
 export type StoreRole = (typeof STORE_ROLES)[number];
 
-/** Grants a user administrative access to one store. */
+/**
+ * Grants a user access to one store with exactly one role. Each store has at
+ * most one owner.
+ */
 @Entity({ name: "store_members" })
-@Check("store_members_role_valid", `"role" IN ('owner', 'admin')`)
+@Check("store_members_role_valid", `"role" IN ('owner', 'admin', 'seller')`)
+@Index("store_members_one_owner_uq", ["storeId"], {
+  unique: true,
+  where: `"role" = 'owner'`,
+})
 export class StoreMember {
   @PrimaryColumn({ name: "store_id", type: "uuid" })
   declare storeId: string;

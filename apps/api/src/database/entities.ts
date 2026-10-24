@@ -3,6 +3,7 @@ import { User } from "@/auth/entities/user.entity";
 import { Listing } from "@/catalog/entities/listing.entity";
 import { ListingImage } from "@/catalog/entities/listing-image.entity";
 import { ListingSeller } from "@/catalog/entities/listing-seller.entity";
+import { StoreInvite } from "@/invites/entities/store-invite.entity";
 import { Seller } from "@/sellers/entities/seller.entity";
 import { Category } from "@/stores/entities/category.entity";
 import { Store } from "@/stores/entities/store.entity";
@@ -18,4 +19,5 @@ export const ENTITIES = [
   Listing,
   ListingImage,
   ListingSeller,
+  StoreInvite,
 ];

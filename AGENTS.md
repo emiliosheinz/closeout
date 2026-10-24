@@ -20,7 +20,7 @@ bin/closeout pnpm test                             # unit tests
 bin/closeout pnpm --filter api test:integration    # real Postgres, per-run database
 bin/closeout e2e                                   # Playwright, isolated compose project
 bin/closeout db migration:generate <Name>          # then re-run: must say "No changes"
-bin/closeout cli admin:create --email ... --name ... [--whatsapp "+55 ..."]
+bin/closeout cli admin:create --store <slug> [--store-name ...] --email ... --name ... [--whatsapp "+55 ..."]
 ```
 
 Details: `docs/development.md`. Decisions: `docs/architecture/decisions/`.

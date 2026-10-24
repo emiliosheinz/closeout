@@ -1,5 +1,7 @@
 import sharp from "sharp";
 import type { DataSource } from "typeorm";
+import { User } from "@/auth/entities/user.entity";
+import { hashPassword } from "@/auth/services/passwords";
 import { Listing } from "@/catalog/entities/listing.entity";
 import type {
   Availability,
@@ -9,8 +11,8 @@ import type {
 } from "@/catalog/listing-types";
 import type { ListingImagesService } from "@/catalog/services/listing-images.service";
 import type { ListingsService } from "@/catalog/services/listings.service";
-import { Seller } from "@/sellers/entities/seller.entity";
 import { Category } from "@/stores/entities/category.entity";
+import { provisionMember } from "@/stores/member-provisioning";
 import type { StoresService } from "@/stores/services/stores.service";
 import { ensureStore, type StoreIdentity } from "./admin-commands";
 
@@ -22,6 +24,22 @@ const DEMO_ATTRIBUTE: ListingAttribute = {
 const DEMO_NOTE =
   "Anúncio de demonstração criado pelo seed de desenvolvimento. A imagem é ilustrativa.";
 
+type DemoRole = "owner" | "admin" | "seller";
+
+/** Known to anyone reading the CLI output; demo accounts are not secrets. */
+export const DEMO_PASSWORD = "demo-password";
+
+const DEMO_MEMBERS: Record<DemoRole, string> = {
+  owner: "Dona de exemplo",
+  admin: "Admin de exemplo",
+  seller: "Vendedora de exemplo",
+};
+
+/** Slug-derived, so demo accounts of two stores never collide. */
+export function demoEmail(role: DemoRole, storeSlug: string): string {
+  return `${role}@${storeSlug}.test`;
+}
+
 interface DemoListing {
   title: string;
   category: string;
@@ -29,8 +47,8 @@ interface DemoListing {
   condition: Condition;
   availability: Availability;
   publication: Publication;
-  /** Index into the demo sellers, or both of them for a shared item. */
-  seller: 0 | 1 | "both";
+  /** Who sells it; two names make a shared item. */
+  sellers: DemoRole[];
   description: string;
   attributes: ListingAttribute[];
   images: number;
@@ -44,7 +62,7 @@ const DEMO_LISTINGS: DemoListing[] = [
     condition: "good",
     availability: "available",
     publication: "published",
-    seller: "both",
+    sellers: ["owner", "seller"],
     description:
       "Sofá retrátil e reclinável, tecido suede cinza. Sem rasgos, só um leve desbotado no braço esquerdo. Precisa de carro grande ou frete para levar.",
     attributes: [
@@ -60,7 +78,7 @@ const DEMO_LISTINGS: DemoListing[] = [
     condition: "like_new",
     availability: "reserved",
     publication: "published",
-    seller: "both",
+    sellers: ["admin", "seller"],
     description:
       "Mesa de madeira maciça com tampo de vidro e quatro cadeiras estofadas. Usamos pouco, está como nova.",
     attributes: [{ label: "Tampo", value: "1,40 m × 0,90 m" }],
@@ -73,7 +91,7 @@ const DEMO_LISTINGS: DemoListing[] = [
     condition: "good",
     availability: "available",
     publication: "published",
-    seller: 0,
+    sellers: ["owner"],
     description:
       "TV 4K com Wi-Fi, funcionando perfeitamente. Acompanha controle remoto e base original (sem o suporte de parede).",
     attributes: [
@@ -89,7 +107,7 @@ const DEMO_LISTINGS: DemoListing[] = [
     condition: "like_new",
     availability: "available",
     publication: "published",
-    seller: 1,
+    sellers: ["seller"],
     description: "Fone over-ear com cancelamento de ruído. Na caixa, com cabo.",
     attributes: [],
     images: 1,
@@ -101,7 +119,7 @@ const DEMO_LISTINGS: DemoListing[] = [
     condition: "good",
     availability: "available",
     publication: "published",
-    seller: "both",
+    sellers: ["owner", "admin"],
     description:
       "Geladeira duplex inox, gelando muito bem. Pequeno amassado na lateral que fica encostada na parede.",
     attributes: [{ label: "Voltagem", value: "220 V" }],
@@ -114,7 +132,7 @@ const DEMO_LISTINGS: DemoListing[] = [
     condition: "fair",
     availability: "available",
     publication: "published",
-    seller: "both",
+    sellers: ["owner", "seller"],
     description:
       "Funciona bem, mas faz barulho na centrifugação. Aceitamos proposta.",
     attributes: [{ label: "Voltagem", value: "127 V" }],
@@ -127,7 +145,7 @@ const DEMO_LISTINGS: DemoListing[] = [
     condition: "good",
     availability: "sold",
     publication: "published",
-    seller: 1,
+    sellers: ["seller"],
     description: "Air fryer com cesto antiaderente. Tudo funcionando.",
     attributes: [],
     images: 1,
@@ -139,7 +157,7 @@ const DEMO_LISTINGS: DemoListing[] = [
     condition: "like_new",
     availability: "available",
     publication: "published",
-    seller: 0,
+    sellers: ["admin"],
     description: "Panelas de fundo triplo, compatíveis com indução.",
     attributes: [{ label: "Peças", value: "5" }],
     images: 1,
@@ -151,7 +169,7 @@ const DEMO_LISTINGS: DemoListing[] = [
     condition: "good",
     availability: "available",
     publication: "published",
-    seller: 1,
+    sellers: ["seller"],
     description: "Luminária de piso com cúpula de linho. Lâmpada não inclusa.",
     attributes: [{ label: "Altura", value: "1,60 m" }],
     images: 1,
@@ -163,7 +181,7 @@ const DEMO_LISTINGS: DemoListing[] = [
     condition: "fair",
     availability: "available",
     publication: "published",
-    seller: 0,
+    sellers: ["owner"],
     description: "Tapete felpudo bege. Lavado, mas com uma manchinha discreta.",
     attributes: [],
     images: 1,
@@ -175,7 +193,7 @@ const DEMO_LISTINGS: DemoListing[] = [
     condition: "good",
     availability: "available",
     publication: "published",
-    seller: 0,
+    sellers: ["admin"],
     description:
       "Mountain bike 21 marchas, freio a disco. Revisada no começo do ano.",
     attributes: [
@@ -191,7 +209,7 @@ const DEMO_LISTINGS: DemoListing[] = [
     condition: "like_new",
     availability: "available",
     publication: "published",
-    seller: 1,
+    sellers: ["seller"],
     description: "Tapete de yoga 6 mm e um par de halteres de 3 kg.",
     attributes: [],
     images: 1,
@@ -203,7 +221,7 @@ const DEMO_LISTINGS: DemoListing[] = [
     condition: "good",
     availability: "available",
     publication: "published",
-    seller: 1,
+    sellers: ["admin"],
     description: "Doze livros de ficção em português. Vendemos o lote junto.",
     attributes: [{ label: "Quantidade", value: "12 livros" }],
     images: 1,
@@ -215,7 +233,7 @@ const DEMO_LISTINGS: DemoListing[] = [
     condition: "for_parts",
     availability: "available",
     publication: "draft",
-    seller: 0,
+    sellers: ["owner"],
     description: "Pistão com defeito. Rascunho ainda não publicado.",
     attributes: [],
     images: 0,
@@ -260,16 +278,25 @@ export interface SeedDeps {
   images: ListingImagesService;
 }
 
+export interface SeedResult {
+  created: number;
+  skipped: boolean;
+  /** Emails of the demo accounts this run created, all with DEMO_PASSWORD. */
+  accounts: string[];
+}
+
 /**
- * Populate a store with demo listings. Idempotent: a store that already has
- * listings is left untouched. Demo sellers get a WhatsApp number only when
- * one is passed explicitly, so the seed never links to a stranger's phone.
+ * Populate a store with demo members and listings. Idempotent: a store that
+ * already has listings is left untouched. An existing owner is reused;
+ * otherwise a demo owner is created, plus a demo admin and a demo seller.
+ * Demo members get a WhatsApp number only when one is passed explicitly, so
+ * the seed never links to a stranger's phone.
  */
 export async function seedDemo(
   dataSource: DataSource,
   deps: SeedDeps,
   options: { store: StoreIdentity; whatsapp: string | null },
-): Promise<{ created: number; skipped: boolean }> {
+): Promise<SeedResult> {
   const store = await dataSource.transaction((manager) =>
     ensureStore(manager, deps.stores, options.store),
   );
@@ -278,7 +305,7 @@ export async function seedDemo(
       .getRepository(Listing)
       .exists({ where: { storeId: store.id } })
   ) {
-    return { created: 0, skipped: true };
+    return { created: 0, skipped: true, accounts: [] };
   }
 
   if (!store.headline && !store.intro) {
@@ -289,18 +316,45 @@ export async function seedDemo(
     });
   }
 
-  const sellerRepo = dataSource.getRepository(Seller);
-  const sellers = await Promise.all(
-    ["Vendedor de exemplo", "Vendedora de exemplo"].map((displayName) =>
-      sellerRepo.save({
-        storeId: store.id,
-        userId: null,
-        displayName,
-        whatsappNumber: options.whatsapp,
-        avatarKey: null,
-      }),
-    ),
+  const passwordHash = await hashPassword(DEMO_PASSWORD);
+  const { profiles, createdUsers } = await dataSource.transaction(
+    async (manager) => {
+      const profiles = {} as Record<DemoRole, string>;
+      const createdUsers: { id: string; email: string }[] = [];
+      for (const role of Object.keys(DEMO_MEMBERS) as DemoRole[]) {
+        const email = demoEmail(role, store.slug);
+        const [existing] =
+          role === "owner"
+            ? await manager.query(
+                `SELECT s.id FROM store_members m
+                   JOIN sellers s ON s.store_id = m.store_id AND s.user_id = m.user_id
+                  WHERE m.store_id = $1 AND m.role = 'owner'`,
+                [store.id],
+              )
+            : await manager.query(
+                `SELECT s.id FROM sellers s JOIN users u ON u.id = s.user_id
+                  WHERE s.store_id = $1 AND u.email = $2`,
+                [store.id, email],
+              );
+        if (existing) {
+          profiles[role] = existing.id;
+          continue;
+        }
+        const member = await provisionMember(manager, {
+          storeId: store.id,
+          email,
+          name: DEMO_MEMBERS[role],
+          passwordHash,
+          whatsappNumber: options.whatsapp,
+          role,
+        });
+        profiles[role] = member.sellerId;
+        createdUsers.push({ id: member.userId, email });
+      }
+      return { profiles, createdUsers };
+    },
   );
+
   const categories = await dataSource
     .getRepository(Category)
     .find({ where: { storeId: store.id } });
@@ -313,18 +367,31 @@ export async function seedDemo(
   const created: string[] = [];
   try {
     for (const demo of DEMO_LISTINGS) {
-      await createDemoListing(deps, store.id, demo, sellers, categoryId, (id) =>
-        created.push(id),
+      await createDemoListing(
+        deps,
+        store.id,
+        demo,
+        demo.sellers.map((role) => profiles[role]),
+        categoryId,
+        (id) => created.push(id),
       );
     }
   } catch (err) {
     // Leave no half-seeded store behind: the "store has listings" guard
     // would otherwise skip every later run.
     for (const id of created) await deps.listings.remove(store.id, id);
-    await sellerRepo.delete(sellers.map((seller) => seller.id));
+    if (createdUsers.length > 0) {
+      await dataSource
+        .getRepository(User)
+        .delete(createdUsers.map((user) => user.id));
+    }
     throw err;
   }
-  return { created: created.length, skipped: false };
+  return {
+    created: created.length,
+    skipped: false,
+    accounts: createdUsers.map((user) => user.email),
+  };
 }
 
 /** Reports the listing id as soon as it exists, so a later failure can undo it. */
@@ -332,15 +399,10 @@ async function createDemoListing(
   deps: SeedDeps,
   storeId: string,
   demo: DemoListing,
-  sellers: Seller[],
+  sellerIds: string[],
   categoryId: (slug: string) => string,
   onCreated: (id: string) => void,
 ): Promise<void> {
-  const chosen = demo.seller === "both" ? sellers : [sellers[demo.seller]];
-  const sellerIds = chosen.map((seller) => {
-    if (!seller) throw new Error("Demo seller index out of range");
-    return seller.id;
-  });
   const listing = await deps.listings.create(storeId, {
     title: demo.title,
     description: `${demo.description}\n\n${DEMO_NOTE}`,

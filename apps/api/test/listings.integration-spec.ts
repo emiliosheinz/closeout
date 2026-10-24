@@ -3,6 +3,7 @@ import sharp from "sharp";
 import request from "supertest";
 import {
   type Admin,
+  addMember,
   as,
   createStoreWithAdmin,
   createTestApp,
@@ -168,31 +169,32 @@ describe("listing administration", () => {
     });
 
     it("sells one listing through several sellers, listed by name", async () => {
-      const partner = await client()
-        .post(`/stores/${admin.storeId}/sellers`)
-        .send({ displayName: "Bia", whatsappNumber: "+55 21 97777-1234" })
-        .expect(201);
+      const partner = await addMember(ctx, admin, {
+        email: "bia@example.com",
+        name: "Bia",
+        whatsapp: "+55 21 97777-1234",
+      });
       const listing = await createListing({
-        sellerIds: [admin.sellerId, partner.body.id],
+        sellerIds: [admin.sellerId, partner.sellerId],
       });
       expect(listing.sellers).toEqual([
         { id: admin.sellerId, displayName: "Admin loja-a" },
-        { id: partner.body.id, displayName: "Bia" },
+        { id: partner.sellerId, displayName: "Bia" },
       ]);
 
       const updated = await client()
         .patch(`${base()}/${listing.id}`)
-        .send({ sellerIds: [partner.body.id] })
+        .send({ sellerIds: [partner.sellerId] })
         .expect(200);
       expect(updated.body.sellers).toEqual([
-        { id: partner.body.id, displayName: "Bia" },
+        { id: partner.sellerId, displayName: "Bia" },
       ]);
 
       await upload(listing.id, [await photo()]).expect(201);
       await client()
         .patch(`${base()}/${listing.id}`)
         .send({
-          sellerIds: [partner.body.id, admin.sellerId],
+          sellerIds: [partner.sellerId, admin.sellerId],
           publication: "published",
         })
         .expect(200);

@@ -35,7 +35,7 @@ export async function createTestApp(): Promise<TestContext> {
 
 export async function resetDatabase(dataSource: DataSource): Promise<void> {
   await dataSource.query(
-    `TRUNCATE "listing_images", "listings", "categories", "sellers", "store_members", "sessions", "users", "stores" CASCADE`,
+    `TRUNCATE "listing_images", "listings", "categories", "sellers", "store_invites", "store_members", "sessions", "users", "stores" CASCADE`,
   );
 }
 
@@ -80,6 +80,36 @@ export async function createStoreWithAdmin(
     cookie: await login(ctx.app, email, PASSWORD),
     sellerId: seller.id,
     categoryId: category.id,
+  };
+}
+
+export interface Member {
+  email: string;
+  userId: string;
+  sellerId: string;
+  cookie: string;
+}
+
+/** Add a member to the admin's store (via the real CLI command) and sign in. */
+export async function addMember(
+  ctx: TestContext,
+  admin: Admin,
+  input: { email: string; name: string; whatsapp?: string },
+): Promise<Member> {
+  const { userId } = await createAdmin(
+    ctx.dataSource,
+    ctx.app.get(StoresService),
+    { ...input, password: PASSWORD, store: { slug: admin.storeSlug } },
+  );
+  const [seller] = await ctx.dataSource.query(
+    `SELECT id FROM sellers WHERE user_id = $1`,
+    [userId],
+  );
+  return {
+    email: input.email,
+    userId,
+    sellerId: seller.id,
+    cookie: await login(ctx.app, input.email, PASSWORD),
   };
 }
 

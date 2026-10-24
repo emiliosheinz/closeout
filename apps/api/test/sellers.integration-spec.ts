@@ -1,6 +1,7 @@
 import request from "supertest";
 import {
   type Admin,
+  addMember,
   as,
   createStoreWithAdmin,
   createTestApp,
@@ -27,9 +28,9 @@ describe("seller profiles", () => {
 
   it("stores WhatsApp numbers as international digits", async () => {
     const res = await client()
-      .post(base())
+      .patch(`${base()}/${admin.sellerId}`)
       .send({ displayName: "Ana", whatsappNumber: "+55 (11) 99999-8888" })
-      .expect(201);
+      .expect(200);
     expect(res.body).toMatchObject({
       displayName: "Ana",
       whatsappNumber: "5511999998888",
@@ -45,7 +46,7 @@ describe("seller profiles", () => {
       "+12",
     ]) {
       const res = await client()
-        .post(base())
+        .patch(`${base()}/${admin.sellerId}`)
         .send({ displayName: "Ana", whatsappNumber })
         .expect(400);
       expect(res.body.message.join(" ")).toMatch(/código do país/);
@@ -76,22 +77,23 @@ describe("seller profiles", () => {
 
   it("removes a deleted seller from listings they share and keeps the co-seller", async () => {
     const listing = await insertListing(ctx.dataSource, admin);
-    const partner = await client()
-      .post(base())
-      .send({ displayName: "Bia", whatsappNumber: "+55 21 97777-1234" })
-      .expect(201);
+    const partner = await addMember(ctx, admin, {
+      email: "bia@example.com",
+      name: "Bia",
+      whatsapp: "+55 21 97777-1234",
+    });
     await client()
       .patch(`/stores/${admin.storeId}/listings/${listing.id}`)
-      .send({ sellerIds: [admin.sellerId, partner.body.id] })
+      .send({ sellerIds: [admin.sellerId, partner.sellerId] })
       .expect(200);
     const counted = await client().get(base()).expect(200);
     expect(counted.body.items).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ id: partner.body.id, listingCount: 1 }),
+        expect.objectContaining({ id: partner.sellerId, listingCount: 1 }),
       ]),
     );
 
-    await client().delete(`${base()}/${partner.body.id}`).expect(204);
+    await client().delete(`${base()}/${partner.sellerId}`).expect(204);
 
     const after = await client()
       .get(`/stores/${admin.storeId}/listings/${listing.id}`)
@@ -111,43 +113,43 @@ describe("seller profiles", () => {
   });
 
   it("refuses to delete the only seller of one listing and leaves their shared ones alone", async () => {
-    const partner = await client()
-      .post(base())
-      .send({ displayName: "Bia" })
-      .expect(201);
+    const partner = await addMember(ctx, admin, {
+      email: "bia@example.com",
+      name: "Bia",
+    });
     const shared = await insertListing(ctx.dataSource, admin);
     await client()
       .patch(`/stores/${admin.storeId}/listings/${shared.id}`)
-      .send({ sellerIds: [admin.sellerId, partner.body.id] })
+      .send({ sellerIds: [admin.sellerId, partner.sellerId] })
       .expect(200);
     const solo = await insertListing(ctx.dataSource, admin);
     await client()
       .patch(`/stores/${admin.storeId}/listings/${solo.id}`)
-      .send({ sellerIds: [partner.body.id] })
+      .send({ sellerIds: [partner.sellerId] })
       .expect(200);
 
-    await client().delete(`${base()}/${partner.body.id}`).expect(409);
+    await client().delete(`${base()}/${partner.sellerId}`).expect(409);
 
     const sharedAfter = await client()
       .get(`/stores/${admin.storeId}/listings/${shared.id}`)
       .expect(200);
     expect(sharedAfter.body.sellers.map((s: { id: string }) => s.id)).toEqual(
-      expect.arrayContaining([admin.sellerId, partner.body.id]),
+      expect.arrayContaining([admin.sellerId, partner.sellerId]),
     );
     const list = await client().get(base()).expect(200);
     expect(list.body.items).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ id: partner.body.id, listingCount: 2 }),
+        expect.objectContaining({ id: partner.sellerId, listingCount: 2 }),
       ]),
     );
   });
 
   it("deletes a seller without listings", async () => {
-    const created = await client()
-      .post(base())
-      .send({ displayName: "Bia" })
-      .expect(201);
-    await client().delete(`${base()}/${created.body.id}`).expect(204);
+    const created = await addMember(ctx, admin, {
+      email: "bia@example.com",
+      name: "Bia",
+    });
+    await client().delete(`${base()}/${created.sellerId}`).expect(204);
     const list = await client().get(base()).expect(200);
     expect(list.body.items.map((s: { id: string }) => s.id)).toEqual([
       admin.sellerId,

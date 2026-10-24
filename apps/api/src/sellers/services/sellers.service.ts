@@ -12,8 +12,8 @@ import { Seller } from "../entities/seller.entity";
 
 export interface SellerResponse {
   id: string;
-  /** The administrator this profile represents, if any. */
-  userId: string | null;
+  /** The member this profile represents. */
+  userId: string;
   displayName: string;
   whatsappNumber: string | null;
   avatarUrl: string | null;
