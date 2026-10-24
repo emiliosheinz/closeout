@@ -1,0 +1,89 @@
+import { render, screen } from "@testing-library/react";
+import { requireMember } from "@/lib/admin/current-store";
+import { adminGet } from "@/lib/admin/server-api";
+import TeamPage from "../page";
+
+jest.mock("next/navigation", () => ({
+  useRouter: () => ({ push: jest.fn(), refresh: jest.fn() }),
+}));
+jest.mock("@/lib/admin/server-api", () => ({ adminGet: jest.fn() }));
+jest.mock("@/lib/admin/current-store", () => ({
+  ...jest.requireActual("@/lib/admin/current-store"),
+  requireMember: jest.fn(),
+}));
+
+const seller = (id: string, displayName: string) => ({
+  id,
+  displayName,
+  whatsappNumber: "5511988887777",
+  avatarUrl: null,
+  listingCount: 1,
+});
+
+const asMember = (role: "owner" | "seller") =>
+  (requireMember as jest.Mock).mockResolvedValue({
+    me: { user: { id: "u-caio", name: "Caio", email: "caio@loja.test" } },
+    store: { id: "store-1" },
+    role,
+    sellerId: "s-caio",
+  });
+
+describe("team page", () => {
+  beforeEach(() => jest.mocked(adminGet).mockReset());
+
+  it("gives a seller only their own row, from the sellers list", async () => {
+    asMember("seller");
+    jest.mocked(adminGet).mockResolvedValue({
+      items: [seller("s-ana", "Ana"), seller("s-caio", "Caio Vendedor")],
+    });
+    render(await TeamPage());
+    expect(adminGet).toHaveBeenCalledTimes(1);
+    expect(adminGet).toHaveBeenCalledWith("/stores/store-1/sellers");
+    expect(screen.getAllByRole("listitem")).toHaveLength(1);
+    expect(screen.getByText("Caio Vendedor")).toBeInTheDocument();
+    expect(screen.getByText("caio@loja.test")).toBeInTheDocument();
+    expect(screen.queryByText("Ana")).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Convidar pessoas" }),
+    ).toBeNull();
+  });
+
+  it("shows a seller no row when their profile is not in the list", async () => {
+    asMember("seller");
+    jest
+      .mocked(adminGet)
+      .mockResolvedValue({ items: [seller("s-ana", "Ana")] });
+    render(await TeamPage());
+    expect(screen.queryAllByRole("listitem")).toEqual([]);
+  });
+
+  it("gives a manager every member and the invites", async () => {
+    asMember("owner");
+    jest.mocked(adminGet).mockImplementation(async (path: string) =>
+      path.endsWith("/members")
+        ? {
+            items: [
+              {
+                userId: "u-ana",
+                name: "Ana",
+                email: "ana@loja.test",
+                role: "owner",
+                sellerId: "s-ana",
+                displayName: "Ana",
+                whatsappNumber: null,
+                avatarUrl: null,
+                listingCount: 0,
+              },
+            ],
+          }
+        : { items: [] },
+    );
+    render(await TeamPage());
+    expect(adminGet).toHaveBeenCalledWith("/stores/store-1/members");
+    expect(adminGet).toHaveBeenCalledWith("/stores/store-1/invites");
+    expect(screen.getByText("Ana")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Convidar pessoas" }),
+    ).toBeInTheDocument();
+  });
+});

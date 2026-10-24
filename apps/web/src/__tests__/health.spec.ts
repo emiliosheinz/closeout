@@ -7,7 +7,6 @@ const VALID = {
   API_BASE_URL: "http://api.railway.internal:8080",
   PUBLIC_BASE_URL: "https://closeout.up.railway.app",
   INTERNAL_API_SECRET: "s3cret-value-that-must-never-leak-0123456789",
-  STORE_SLUG: "nosso-desapego",
 };
 
 describe("GET /health", () => {
@@ -37,6 +36,11 @@ describe("GET /health", () => {
     const { status, body } = await check();
     expect(status).toBe(503);
     expect(JSON.parse(body).unusable).toEqual([name]);
+  });
+
+  it("is ready with only these variables, so no store is preselected", async () => {
+    process.env = { NODE_ENV: "test", ...VALID };
+    expect((await check()).status).toBe(200);
   });
 
   it("never leaks the values of the other variables", async () => {

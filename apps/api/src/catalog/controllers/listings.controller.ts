@@ -29,12 +29,19 @@ import {
 } from "@/media/upload-limits";
 import { StoreMemberGuard } from "@/stores/guards/store-member.guard";
 import {
+  ANY_MEMBER,
+  CurrentMember,
+  type MembershipContext,
+  Roles,
+} from "@/stores/membership";
+import {
   AdminListingsQueryDto,
   CreateListingDto,
   ListingStatusDto,
   ReorderImagesDto,
   UpdateListingDto,
 } from "../dto/listing.dto";
+import { AssignedListingGuard } from "../guards/assigned-listing.guard";
 import type { PublicListingDetail } from "../public-mappers";
 import { ListingImagesService } from "../services/listing-images.service";
 import {
@@ -45,7 +52,7 @@ import {
 } from "../services/listings.service";
 
 @Controller("stores/:storeId/listings")
-@UseGuards(SessionGuard, StoreMemberGuard)
+@UseGuards(SessionGuard, StoreMemberGuard, AssignedListingGuard)
 export class ListingsController {
   constructor(
     private readonly listings: ListingsService,
@@ -53,75 +60,84 @@ export class ListingsController {
   ) {}
 
   @Get()
+  @Roles(ANY_MEMBER)
   async list(
-    @Param("storeId") storeId: string,
+    @CurrentMember() member: MembershipContext,
     @Query() query: AdminListingsQueryDto,
   ): Promise<{ items: AdminListingSummary[] }> {
-    return { items: await this.listings.list(storeId, query.q) };
+    return { items: await this.listings.list(member, query.q) };
   }
 
   @Post()
+  @Roles(ANY_MEMBER)
   @HttpCode(201)
   create(
-    @Param("storeId") storeId: string,
+    @CurrentMember() member: MembershipContext,
     @Body() body: CreateListingDto,
   ): Promise<AdminListingDetail> {
-    return this.listings.create(storeId, body);
+    return this.listings.create(member, body);
   }
 
   @Get(":id")
+  @Roles(ANY_MEMBER)
   get(
-    @Param("storeId") storeId: string,
+    @CurrentMember() member: MembershipContext,
     @Param("id", new ParseUUIDPipe()) id: string,
   ): Promise<AdminListingDetail> {
-    return this.listings.get(storeId, id);
+    return this.listings.get(member.storeId, id);
   }
 
   @Get(":id/preview")
+  @Roles(ANY_MEMBER)
   preview(
-    @Param("storeId") storeId: string,
+    @CurrentMember() member: MembershipContext,
     @Param("id", new ParseUUIDPipe()) id: string,
   ): Promise<PublicListingDetail> {
-    return this.listings.preview(storeId, id);
+    return this.listings.preview(member.storeId, id);
   }
 
   @Patch(":id")
+  @Roles(ANY_MEMBER)
   update(
-    @Param("storeId") storeId: string,
+    @CurrentMember() member: MembershipContext,
     @Param("id", new ParseUUIDPipe()) id: string,
     @Body() body: UpdateListingDto,
   ): Promise<AdminListingDetail> {
-    return this.listings.update(storeId, id, body);
+    return this.listings.update(member, id, body);
   }
 
   @Patch(":id/status")
+  @Roles(ANY_MEMBER)
   setStatus(
-    @Param("storeId") storeId: string,
+    @CurrentMember() member: MembershipContext,
     @Param("id", new ParseUUIDPipe()) id: string,
     @Body() body: ListingStatusDto,
   ): Promise<AdminListingDetail> {
-    return this.listings.update(storeId, id, body);
+    return this.listings.update(member, id, body);
   }
 
   @Post(":id/duplicate")
+  @Roles(ANY_MEMBER)
   @HttpCode(201)
   duplicate(
-    @Param("storeId") storeId: string,
+    @CurrentMember() member: MembershipContext,
     @Param("id", new ParseUUIDPipe()) id: string,
   ): Promise<AdminListingDetail> {
-    return this.listings.duplicate(storeId, id);
+    return this.listings.duplicate(member.storeId, id);
   }
 
   @Delete(":id")
+  @Roles(ANY_MEMBER)
   @HttpCode(204)
   remove(
-    @Param("storeId") storeId: string,
+    @CurrentMember() member: MembershipContext,
     @Param("id", new ParseUUIDPipe()) id: string,
   ): Promise<void> {
-    return this.listings.remove(storeId, id);
+    return this.listings.remove(member.storeId, id);
   }
 
   @Post(":id/images")
+  @Roles(ANY_MEMBER)
   @HttpCode(201)
   @UseFilters(new UploadErrorsFilter(TOO_MANY_PHOTOS))
   @UseInterceptors(
@@ -132,7 +148,7 @@ export class ListingsController {
     ),
   )
   async addImages(
-    @Param("storeId") storeId: string,
+    @CurrentMember() member: MembershipContext,
     @Param("id", new ParseUUIDPipe()) id: string,
     @UploadedFiles() files: Express.Multer.File[] | undefined,
   ): Promise<{ items: AdminImage[] }> {
@@ -141,7 +157,7 @@ export class ListingsController {
     }
     try {
       const items = await this.images.add(
-        storeId,
+        member.storeId,
         id,
         files.map((file) => file.buffer),
       );
@@ -155,20 +171,22 @@ export class ListingsController {
   }
 
   @Put(":id/images/order")
+  @Roles(ANY_MEMBER)
   async reorderImages(
-    @Param("storeId") storeId: string,
+    @CurrentMember() member: MembershipContext,
     @Param("id", new ParseUUIDPipe()) id: string,
     @Body() body: ReorderImagesDto,
   ): Promise<{ items: AdminImage[] }> {
-    return { items: await this.images.reorder(storeId, id, body.ids) };
+    return { items: await this.images.reorder(member.storeId, id, body.ids) };
   }
 
   @Delete(":id/images/:imageId")
+  @Roles(ANY_MEMBER)
   async removeImage(
-    @Param("storeId") storeId: string,
+    @CurrentMember() member: MembershipContext,
     @Param("id", new ParseUUIDPipe()) id: string,
     @Param("imageId", new ParseUUIDPipe()) imageId: string,
   ): Promise<{ items: AdminImage[] }> {
-    return { items: await this.images.remove(storeId, id, imageId) };
+    return { items: await this.images.remove(member.storeId, id, imageId) };
   }
 }

@@ -1,6 +1,7 @@
 import request from "supertest";
 import {
   type Admin,
+  addMember,
   as,
   createStoreWithAdmin,
   createTestApp,
@@ -33,6 +34,19 @@ describe("public catalog", () => {
     admin = await createStoreWithAdmin(ctx, "loja-a");
   });
   afterAll(() => ctx.app.close());
+
+  it("lists the slug of every store and nothing else", async () => {
+    await createStoreWithAdmin(ctx, "loja-b");
+    await ctx.dataSource.query(
+      `INSERT INTO stores (slug, name) VALUES ('loja-vazia', 'Loja vazia')`,
+    );
+    const res = await request(ctx.app.getHttpServer())
+      .get("/public/stores")
+      .expect(200);
+    expect(res.body).toEqual({
+      items: [{ slug: "loja-a" }, { slug: "loja-b" }, { slug: "loja-vazia" }],
+    });
+  });
 
   it("lists published listings only", async () => {
     await publish({ title: "Publicado" });
@@ -345,10 +359,10 @@ describe("public catalog", () => {
       title: "E",
       publication: "draft",
     });
-    await as(ctx.app, admin.cookie)
-      .post(`/stores/${admin.storeId}/sellers`)
-      .send({ displayName: "Sem número" })
-      .expect(201);
+    await addMember(ctx, admin, {
+      email: "sem-numero@example.com",
+      name: "Sem número",
+    });
 
     const res = await get("").expect(200);
     expect(res.body).toMatchObject({

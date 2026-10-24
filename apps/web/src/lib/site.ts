@@ -9,11 +9,11 @@ export function absoluteUrl(path: string): string {
   return `${publicBaseUrl()}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
-export function listingPath(slug: string): string {
-  return `/itens/${encodeURIComponent(slug)}`;
+/** Root of a store's storefront; every storefront URL starts here. */
+export function storePath(slug: string): string {
+  return `/store/${encodeURIComponent(slug)}`;
 }
 
-/** The storefront this deployment serves at its root. */
-export function storeSlug(): string {
-  return requireEnv("STORE_SLUG");
+export function itemPath(slug: string, item: string): string {
+  return `${storePath(slug)}/items/${encodeURIComponent(item)}`;
 }

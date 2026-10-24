@@ -3,6 +3,7 @@
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { storePath } from "@/lib/site";
 
 const KEY = "closeout:last-catalog-view";
 
@@ -26,18 +27,19 @@ export function RememberCatalogView({ href }: { href: string }) {
 }
 
 /**
- * Back to the catalog view the visitor came from in this tab, or to the
- * plain catalog for someone who opened a shared item link directly.
+ * Back to the catalog view of store `storeSlug` the visitor came from in this
+ * tab, or to its plain catalog for someone who opened a shared item link
+ * directly or came from another store.
  */
-export function BackToCatalog() {
-  const [href, setHref] = useState("/");
+export function BackToCatalog({ storeSlug }: { storeSlug: string }) {
+  const catalog = storePath(storeSlug);
+  const [href, setHref] = useState(catalog);
   useEffect(() => {
     const remembered = read();
-    // Only same-site paths; "//host" would leave the site.
-    if (remembered?.startsWith("/") && !remembered.startsWith("//")) {
+    if (remembered === catalog || remembered?.startsWith(`${catalog}?`)) {
       setHref(remembered);
     }
-  }, []);
+  }, [catalog]);
   return (
     <Link
       href={href}

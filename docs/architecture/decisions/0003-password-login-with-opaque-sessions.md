@@ -4,7 +4,7 @@ Date: 2026-10-17
 
 ## Status
 
-Accepted
+Accepted. Account creation and store access superseded by [8. Invite links and enforced store roles](0008-invite-links-and-enforced-store-roles.md).
 
 ## Context
 

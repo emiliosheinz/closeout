@@ -1,11 +1,18 @@
 import { Search } from "lucide-react";
 import { type CatalogFilters, catalogEntries } from "@/lib/catalog/params";
+import { storePath } from "@/lib/site";
 
 /** GET search that keeps the other active filters. */
-export function SearchForm({ filters }: { filters: CatalogFilters }) {
+export function SearchForm({
+  storeSlug,
+  filters,
+}: {
+  storeSlug: string;
+  filters: CatalogFilters;
+}) {
   return (
     <search className="relative min-w-0 flex-1">
-      <form action="/" method="get">
+      <form action={storePath(storeSlug)} method="get">
         <label htmlFor="catalog-search" className="sr-only">
           Buscar itens
         </label>

@@ -162,25 +162,25 @@ describe("admin authentication", () => {
 
   it("rejects mutating requests from a foreign or missing Origin", async () => {
     const admin = await createStoreWithAdmin(ctx, "loja-a");
-    const url = `/stores/${admin.storeId}/sellers`;
+    const url = `/stores/${admin.storeId}/sellers/${admin.sellerId}`;
     await request(server())
-      .post(url)
+      .patch(url)
       .set("Cookie", admin.cookie)
       .set("Origin", "https://evil.example")
       .send({ displayName: "X" })
       .expect(403);
     await request(server())
-      .post(url)
+      .patch(url)
       .set("Cookie", admin.cookie)
       .send({ displayName: "X" })
       .expect(403);
     await as(ctx.app, admin.cookie)
-      .post(url)
+      .patch(url)
       .send({ displayName: "X" })
-      .expect(201);
+      .expect(200);
   });
 
-  it("guards every route except the public catalog, media, health and login", () => {
+  it("guards every route except the public catalog, media, health, login and invite acceptance", () => {
     const open = registeredRoutes(ctx.app)
       .filter((route) => !route.guarded)
       .map((route) => `${route.method} ${route.path}`)
@@ -188,9 +188,12 @@ describe("admin authentication", () => {
     expect(open).toEqual([
       "GET /health",
       "GET /media/:file",
+      "GET /public/stores",
       "GET /public/stores/:storeSlug",
       "GET /public/stores/:storeSlug/listings",
       "GET /public/stores/:storeSlug/listings/:listingSlug",
+      "POST /auth/invites/accept",
+      "POST /auth/invites/lookup",
       "POST /auth/login",
     ]);
   });

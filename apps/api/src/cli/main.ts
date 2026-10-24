@@ -15,21 +15,23 @@ import {
   resetPassword,
   type StoreIdentity,
 } from "./admin-commands";
-import { seedDemo } from "./seed-demo";
+import { DEMO_PASSWORD, seedDemo } from "./seed-demo";
 
 const USAGE = `Usage:
-  admin:create --email <email> --name <name> [--whatsapp "+55 11 99999-8888"]
+  admin:create --store <slug> [--store-name <name>] --email <email> --name <name> [--whatsapp "+55 11 99999-8888"]
   admin:password --email <email>
-  seed:demo [--whatsapp "+55 11 99999-8888"]
+  seed:demo --store <slug> [--store-name <name>] [--whatsapp "+55 11 99999-8888"]
 
 The password is read from CLOSEOUT_PASSWORD or prompted for.
-The store comes from STORE_SLUG / STORE_NAME and is created when missing.`;
+A missing store is created; --store-name is required then and ignored otherwise.`;
 
 async function main(): Promise<void> {
   const [command, ...rest] = process.argv.slice(2);
   const { values } = parseArgs({
     args: rest,
     options: {
+      store: { type: "string" },
+      "store-name": { type: "string" },
       email: { type: "string" },
       name: { type: "string" },
       whatsapp: { type: "string" },
@@ -45,6 +47,17 @@ async function main(): Promise<void> {
     return;
   }
 
+  // Checked before booting the app, so a usage mistake fails fast.
+  if (command !== "admin:password" && !values.store) {
+    console.error(`--store is required.\n\n${USAGE}`);
+    process.exitCode = 1;
+    return;
+  }
+  const store = (): StoreIdentity => ({
+    slug: required(values.store, "--store"),
+    name: values["store-name"],
+  });
+
   const app = await NestFactory.createApplicationContext(AppModule, {
     logger: ["error", "warn"],
   });
@@ -58,10 +71,10 @@ async function main(): Promise<void> {
         name: required(values.name, "--name"),
         password: await readPassword(),
         whatsapp: values.whatsapp,
-        store: storeFromEnv(),
+        store: store(),
       });
       console.log(
-        `Created ${result.role} ${values.email} for store ${storeFromEnv().slug}.`,
+        `Created ${result.role} ${values.email} for store ${values.store}.`,
       );
     } else if (command === "admin:password") {
       await resetPassword(dataSource, app.get(SessionsService), {
@@ -78,15 +91,20 @@ async function main(): Promise<void> {
           images: app.get(ListingImagesService),
         },
         {
-          store: storeFromEnv(),
+          store: store(),
           whatsapp: values.whatsapp ? parseWhatsApp(values.whatsapp) : null,
         },
       );
-      console.log(
-        result.skipped
-          ? "Store already has listings; demo seed skipped."
-          : `Created ${result.created} demo listings.`,
-      );
+      if (result.skipped) {
+        console.log("Store already has listings; demo seed skipped.");
+      } else {
+        console.log(`Created ${result.created} demo listings.`);
+        if (result.accounts.length > 0) {
+          console.log(
+            `Demo accounts (password "${DEMO_PASSWORD}"): ${result.accounts.join(", ")}`,
+          );
+        }
+      }
     }
   } catch (err) {
     if (!(err instanceof CommandError)) throw err;
@@ -95,13 +113,6 @@ async function main(): Promise<void> {
   } finally {
     await app.close();
   }
-}
-
-function storeFromEnv(): StoreIdentity {
-  return {
-    slug: required(process.env.STORE_SLUG, "STORE_SLUG"),
-    name: required(process.env.STORE_NAME, "STORE_NAME"),
-  };
 }
 
 function required(value: string | undefined, name: string): string {

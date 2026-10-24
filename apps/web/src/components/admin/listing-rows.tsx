@@ -17,7 +17,7 @@ import {
   joinNames,
   PUBLICATION_LABELS,
 } from "@/lib/format";
-import { listingPath } from "@/lib/site";
+import { itemPath } from "@/lib/site";
 import { ConfirmDialog } from "./confirm-dialog";
 
 const PUBLICATIONS: Publication[] = ["draft", "published", "archived"];
@@ -30,10 +30,12 @@ const selectClass =
  */
 export function ListingRows({
   storeId,
+  storeSlug,
   listings,
   unreachableSellerIds = [],
 }: {
   storeId: string;
+  storeSlug: string;
   listings: AdminListingSummary[];
   /** Sellers without a WhatsApp number; an item none of whose sellers has one shows no contact button. */
   unreachableSellerIds?: string[];
@@ -149,7 +151,7 @@ export function ListingRows({
                   unreachableSellerIds.includes(seller.id),
                 ) && (
                   <Link
-                    href="/admin/vendedores"
+                    href="/admin/equipe"
                     className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-stamp/10 px-2.5 py-1 text-xs font-semibold text-stamp hover:bg-stamp/15"
                     title="Este item aparece na loja sem botão de contato."
                   >
@@ -217,7 +219,7 @@ export function ListingRows({
               <a
                 href={
                   listing.publication === "published"
-                    ? listingPath(listing.slug)
+                    ? itemPath(storeSlug, listing.slug)
                     : `/admin/anuncios/${listing.id}/previa`
                 }
                 target="_blank"

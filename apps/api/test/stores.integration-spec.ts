@@ -1,5 +1,6 @@
 import request from "supertest";
 import {
+  addMember,
   as,
   createStoreWithAdmin,
   createTestApp,
@@ -28,6 +29,37 @@ describe("store administration", () => {
       }),
     ]);
     expect(JSON.stringify(res.body)).not.toContain("scrypt");
+  });
+
+  it("gives each member their role and own contact profile on /me", async () => {
+    const owner = await createStoreWithAdmin(ctx, "loja-a");
+    const admin = await addMember(ctx, owner, {
+      email: "admin@example.com",
+      name: "Admin",
+    });
+    const seller = await addMember(ctx, owner, {
+      email: "vendedora@example.com",
+      name: "Vendedora",
+    });
+    await ctx.dataSource.query(
+      `UPDATE store_members SET role = 'seller' WHERE user_id = $1`,
+      [seller.userId],
+    );
+
+    for (const [member, role] of [
+      [owner, "owner"],
+      [admin, "admin"],
+      [seller, "seller"],
+    ] as const) {
+      const res = await as(ctx.app, member.cookie).get("/me").expect(200);
+      expect(res.body.memberships).toEqual([
+        {
+          role,
+          sellerId: member.sellerId,
+          store: expect.objectContaining({ id: owner.storeId }),
+        },
+      ]);
+    }
   });
 
   it("creates every store with the default categories in order", async () => {

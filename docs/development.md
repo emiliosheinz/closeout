@@ -8,7 +8,6 @@
 | Variable | Purpose |
 | --- | --- |
 | `PUBLIC_BASE_URL` | Origin visitors use. Drives canonical URLs, link previews, WhatsApp messages and the Origin check on writes. Set it to the public HTTPS origin in production. |
-| `STORE_SLUG`, `STORE_NAME` | Store served at the site root; created by the first `admin:create` or `seed:demo`. |
 | `INTERNAL_API_SECRET` | Shared secret for web-to-api server calls (login, client IP forwarding). At least 32 characters; the API refuses to start otherwise. |
 | `MEDIA_DIR` | Where the API stores image files (a Docker volume in development). |
 | `POSTGRES_*` | Database connection. `POSTGRES_HOST_PORT` publishes Postgres on `127.0.0.1` for database tools. |
@@ -50,18 +49,36 @@ will not start on 18: while still on 17, dump what you need (`docker compose exe
 postgres pg_dumpall -U closeout > dump.sql`), then remove the volume (`docker compose down` and `docker
 volume rm closeout_db-data`), start again, and restore with `psql` if you need the data.
 
-## Administrators
+## Stores and members
+
+One deployment serves every store: the storefront of store `<slug>` is at
+`/store/<slug>` (items at `/store/<slug>/items/<item>`), and `/` is a landing page that
+lists no stores. The admin at `/admin` shows the signed-in user's store; a user
+belongs to one store.
 
 ```bash
-bin/closeout cli admin:create --email <email> --name <name> [--whatsapp "+55 ..."]
+bin/closeout cli admin:create --store <slug> --store-name <name> --email <email> --name <name> [--whatsapp "+55 ..."]
+bin/closeout cli seed:demo --store <slug> --store-name <name> [--whatsapp "+55 ..."]
 bin/closeout cli admin:password --email <email>   # also signs the user out everywhere
 ```
 
+`admin:create` creates the store (with the default categories) when the slug is new,
+then the user, an owner membership (admin when the store already has an owner) and a
+contact profile. `--store-name` is required for a new store and ignored otherwise.
+`seed:demo` adds demo members (`owner@<slug>.test` unless the store has an owner,
+`admin@<slug>.test`, `seller@<slug>.test`, password `demo-password`) and demo listings;
+it does nothing when the store already has listings.
+
 Passwords need at least 10 characters. For non-interactive use set
 `CLOSEOUT_PASSWORD` in the environment of the `bin/closeout` call. There is no
-self-registration endpoint; these commands are the only way to create users.
+self-registration: everyone after the first owner joins through an invite.
 
-Seller contact numbers are edited in the admin under **Vendedores** and must include
+Roles: owners and admins manage the store settings (**Loja**), the team and every
+listing; sellers manage only the listings they sell and their own contact profile.
+Owners and admins invite people from **Equipe**: the invite link is shown once, is
+single-use and expires after 7 days; it can be regenerated or revoked while pending.
+
+Seller contact numbers are edited in the admin under **Equipe** and must include
 the country code (`+55 ...`). A listing can have several sellers; buyers pick whom to
 message when more than one has a number. A listing none of whose sellers has a number
 shows "contato indisponível" instead of a WhatsApp button.
@@ -72,7 +89,7 @@ shows "contato indisponível" instead of a WhatsApp button.
 | --- | --- |
 | `bin/closeout pnpm test` | Unit tests (Jest) for api and web |
 | `bin/closeout pnpm --filter api test:integration` | API integration suites. Each run creates a throwaway `closeout_test_*` database on the compose Postgres, applies the real migrations and drops it at the end. |
-| `bin/closeout e2e` | Playwright against an isolated `closeout-e2e` Compose project with its own database, media and fixture admin; torn down afterwards. |
+| `bin/closeout e2e` | Playwright against an isolated `closeout-e2e` Compose project with its own database, media and two fixture stores with their members; torn down afterwards. |
 | `bin/closeout pnpm check && bin/closeout pnpm typecheck` | Biome lint + format over the whole repo (warnings fail) and `tsc --noEmit` per package |
 | `bin/closeout db migration:check` | Fails when entities differ from the migrated schema |
 
@@ -180,8 +197,7 @@ Dashboard edits are staged: nothing is live until you click **Deploy Changes**.
 3. Usage limits: see "Usage limits".
 4. Railway project "Closeout" (New > Empty Project), its environment named
    `production`.
-5. Shared variables: `STORE_SLUG`, and `INTERNAL_API_SECRET`
-   from `openssl rand -hex 32`, sealed.
+5. Shared variable: `INTERNAL_API_SECRET` from `openssl rand -hex 32`, sealed.
 6. A project token scoped to `production` (Settings > Tokens), stored as
    `RAILWAY_TOKEN` in both the `production` and `production-plan` GitHub
    Environments (`gh secret set RAILWAY_TOKEN --env <env>`, value on stdin).
@@ -198,13 +214,13 @@ Dashboard edits are staged: nothing is live until you click **Deploy Changes**.
    deploys were skipped: on each service, open the newest skipped deployment and
    choose **Deploy commit** (redeploy would rebuild an older commit).
 10. Check: a plan reports no changes, `/health` and `/api/v1/health` answer 200.
-    Create the first admin.
+    Create the first store and its owner with `admin:create`.
 
 ### Operator CLI
 
 Run it inside the api service, from the dashboard (api > Console) or with
-`railway ssh --service api -- node dist/cli/main.js admin:create --email <email>
---name <name>`. `admin:password --email <email>` rotates a password and signs the
+`railway ssh --service api -- node dist/cli/main.js admin:create --store <slug>
+--store-name <name> --email <email> --name <name>`. `admin:password --email <email>` rotates a password and signs the
 user out everywhere. Type passwords at the prompt only, never on the command line
 or in `CLOSEOUT_PASSWORD`. Never run `seed:demo` in production.
 
@@ -246,14 +262,14 @@ raise the limit, then redeploy anything Railway does not restart.
 
 ## Towards multiple storefronts
 
-Every tenant-owned row already carries `store_id`, admin routes are scoped to
-`/stores/:storeId/*` behind a membership guard, and public routes take the store
-slug. To serve more than one store:
+One deployment already serves every store at `/store/<slug>`, every tenant-owned row
+carries `store_id`, admin routes are scoped to `/stores/:storeId/*` behind a
+membership guard with per-route roles, and people join a store by invite. What is
+still missing:
 
-1. Resolve the store per request (subdomain or `/s/:slug` path) instead of the
-   `STORE_SLUG` setting in `apps/web/src/lib/site.ts`.
-2. Add a store switcher to the admin (the `/me` response already lists memberships).
-3. Add self-service onboarding (store creation + invitations) in place of the CLI.
-4. Give `store_members.role` real permission differences when needed.
-5. Move the login rate limiter from memory to Postgres or Redis before running more
-   than one API instance.
+1. Multi-store membership (issue #12): a user belongs to one store, and the admin
+   picks the store from that single membership. Belonging to several needs a store
+   switcher (the `/me` response already lists memberships).
+2. Self-service store creation in place of the `admin:create` CLI.
+3. Move the login and invite rate limiters from memory to Postgres or Redis before
+   running more than one API instance.

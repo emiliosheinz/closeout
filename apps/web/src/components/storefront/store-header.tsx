@@ -2,6 +2,7 @@ import { MessageCircle } from "lucide-react";
 import Link from "next/link";
 import type { StoreInfo } from "@/lib/catalog/types";
 import { pluralize } from "@/lib/format";
+import { storePath } from "@/lib/site";
 import { sellerContactUrl } from "@/lib/whatsapp";
 
 /**
@@ -19,7 +20,7 @@ export function StoreHeader({
     return (
       <header className="mx-auto max-w-6xl px-4 pt-5 pb-1 sm:px-6 sm:pt-8 lg:px-8">
         <h1 className="text-lg font-extrabold tracking-[-0.01em]">
-          <Link href="/" className="hover:underline">
+          <Link href={storePath(store.slug)} className="hover:underline">
             {store.name}
           </Link>
         </h1>

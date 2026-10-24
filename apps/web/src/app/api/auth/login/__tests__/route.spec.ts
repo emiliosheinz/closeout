@@ -2,6 +2,14 @@
 import { NextRequest } from "next/server";
 import { POST } from "../route";
 
+beforeEach(() => {
+  jest.spyOn(console, "warn").mockImplementation(() => undefined);
+});
+
+afterEach(() => {
+  jest.restoreAllMocks();
+});
+
 function login(body: string, headers: Record<string, string> = {}) {
   return POST(
     new NextRequest("http://web:3000/api/auth/login", {

@@ -3,6 +3,7 @@ import {
   CONDITION_LABELS,
   formatStickerPrice,
 } from "../format";
+import { storePath } from "../site";
 import type { Condition } from "./types";
 
 /*
@@ -136,10 +137,10 @@ export function catalogEntries(
   );
 }
 
-/** Catalog URL for `filters`, omitting defaults so links stay short. */
-export function catalogHref(filters: CatalogFilters): string {
+/** Catalog URL of store `slug` for `filters`, omitting defaults so links stay short. */
+export function catalogHref(slug: string, filters: CatalogFilters): string {
   const query = new URLSearchParams(catalogEntries(filters)).toString();
-  return query ? `/?${query}` : "/";
+  return query ? `${storePath(slug)}?${query}` : storePath(slug);
 }
 
 /** Apply a change; any change other than the page itself returns to page 1. */
@@ -195,8 +196,9 @@ export interface FilterChip {
 
 /** One removable chip per active filter, in the order the controls show them. */
 export function activeFilterChips(
+  slug: string,
   filters: CatalogFilters,
-  categoryName: (slug: string) => string | undefined,
+  categoryName: (categorySlug: string) => string | undefined,
 ): FilterChip[] {
   // The sticker format would print a zero bound as "Grátis".
   const reais = (value: number) =>
@@ -229,7 +231,9 @@ export function activeFilterChips(
     [price, { minPrice: null, maxPrice: null }],
   ];
   return chips.flatMap(([label, patch]) =>
-    label ? [{ label, href: catalogHref(withFilters(filters, patch)) }] : [],
+    label
+      ? [{ label, href: catalogHref(slug, withFilters(filters, patch)) }]
+      : [],
   );
 }
 

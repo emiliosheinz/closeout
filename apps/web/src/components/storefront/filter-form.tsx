@@ -14,6 +14,7 @@ import {
   CONDITION_LABELS,
   SORT_LABELS,
 } from "@/lib/format";
+import { storePath } from "@/lib/site";
 
 const AVAILABILITY_OPTIONS: AvailabilityFilter[] = [
   "listed",
@@ -53,9 +54,19 @@ function Choice({
  * Plain GET form: it works without JavaScript and produces the same shareable
  * URL as every other catalog control.
  */
-export function FilterForm({ filters }: { filters: CatalogFilters }) {
+export function FilterForm({
+  storeSlug,
+  filters,
+}: {
+  storeSlug: string;
+  filters: CatalogFilters;
+}) {
   return (
-    <form action="/" method="get" className="flex flex-col gap-6">
+    <form
+      action={storePath(storeSlug)}
+      method="get"
+      className="flex flex-col gap-6"
+    >
       {catalogEntries(filters, [
         "estado",
         "disponibilidade",
@@ -164,7 +175,7 @@ export function FilterForm({ filters }: { filters: CatalogFilters }) {
           Aplicar filtros
         </button>
         <Link
-          href="/"
+          href={storePath(storeSlug)}
           className="inline-flex h-11 items-center px-3 text-sm font-medium underline decoration-ink/30 underline-offset-4"
         >
           Limpar tudo

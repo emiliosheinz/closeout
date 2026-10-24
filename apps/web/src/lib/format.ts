@@ -1,3 +1,4 @@
+import type { AssignableRole, Role } from "./admin/types";
 import type { Availability, Condition, Publication } from "./catalog/types";
 
 /*
@@ -7,6 +8,8 @@ import type { Availability, Condition, Publication } from "./catalog/types";
 
 export const DEFAULT_LOCALE = "pt-BR";
 export const DEFAULT_CURRENCY = "BRL";
+/** Fixed so server and browser render the same calendar day. */
+export const DEFAULT_TIME_ZONE = "America/Sao_Paulo";
 
 /** `null` means "a combinar"; zero is a real price ("grátis"). */
 export function formatPrice(
@@ -82,4 +85,28 @@ export function joinNames(names: string[]): string {
 
 export function pluralize(count: number, one: string, many: string): string {
   return `${count.toLocaleString(DEFAULT_LOCALE)} ${count === 1 ? one : many}`;
+}
+
+export const ROLE_LABELS: Record<Role, string> = {
+  owner: "Dono(a)",
+  admin: "Admin",
+  seller: "Vendedor(a)",
+};
+
+/** What each role an invite can grant lets the person do. */
+export const ROLE_DESCRIPTIONS: Record<AssignableRole, string> = {
+  admin: "Cuida da loja, da equipe e de todos os anúncios.",
+  seller: "Cuida só dos próprios anúncios e do próprio contato.",
+};
+
+/** "30 de outubro de 2026". */
+export function formatDate(
+  iso: string,
+  locale = DEFAULT_LOCALE,
+  timeZone = DEFAULT_TIME_ZONE,
+): string {
+  return new Intl.DateTimeFormat(locale, {
+    dateStyle: "long",
+    timeZone,
+  }).format(new Date(iso));
 }

@@ -53,7 +53,15 @@ const nextConfig: NextConfig = {
     root: monorepoRoot,
   },
   async headers() {
-    return [{ source: "/:path*", headers: securityHeaders }];
+    return [
+      { source: "/:path*", headers: securityHeaders },
+      // Invite links carry a secret token; never leak it to another site.
+      // Later rules win for the same header.
+      {
+        source: "/invite/:path*",
+        headers: [{ key: "Referrer-Policy", value: "no-referrer" }],
+      },
+    ];
   },
 };
 

@@ -18,6 +18,18 @@ describe("next config headers", () => {
     expect(csp).toContain("img-src 'self' data: blob:");
   });
 
+  it("sends no referrer from invite pages, whose URLs hold a secret token", async () => {
+    const rules = (await nextConfig.headers?.()) ?? [];
+    const policies = rules.map((rule) => [
+      rule.source,
+      rule.headers.find((h) => h.key === "Referrer-Policy")?.value,
+    ]);
+    expect(policies).toEqual([
+      ["/:path*", "strict-origin-when-cross-origin"],
+      ["/invite/:path*", "no-referrer"],
+    ]);
+  });
+
   it("drops dev-only eval and ws: in production", async () => {
     const env = process.env as Record<string, string | undefined>;
     const original = env.NODE_ENV;

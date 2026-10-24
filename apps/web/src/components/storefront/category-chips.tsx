@@ -9,9 +9,11 @@ import { cn } from "@/lib/utils";
 
 /** Horizontal category strip; each chip is a plain link. */
 export function CategoryChips({
+  storeSlug,
   categories,
   filters,
 }: {
+  storeSlug: string;
   categories: StoreInfo["categories"];
   filters: CatalogFilters;
 }) {
@@ -33,7 +35,10 @@ export function CategoryChips({
       <ul className="flex gap-2">
         <li>
           <Link
-            href={catalogHref(withFilters(filters, { category: null }))}
+            href={catalogHref(
+              storeSlug,
+              withFilters(filters, { category: null }),
+            )}
             className={chip(filters.category === null)}
             aria-current={filters.category === null ? "page" : undefined}
           >
@@ -46,6 +51,7 @@ export function CategoryChips({
             <li key={category.slug}>
               <Link
                 href={catalogHref(
+                  storeSlug,
                   withFilters(filters, { category: category.slug }),
                 )}
                 className={chip(active)}

@@ -13,7 +13,7 @@ const listing = {
 
 describe("ListingCard", () => {
   it("shows a placeholder instead of an image when there is no photo", () => {
-    render(<ListingCard listing={listing} />);
+    render(<ListingCard storeSlug="loja" listing={listing} />);
     expect(screen.getByTestId("photo-placeholder")).toBeInTheDocument();
     expect(document.querySelector("img")).toBeNull();
   });
@@ -28,6 +28,7 @@ describe("ListingCard", () => {
     };
     const { unmount } = render(
       <ListingCard
+        storeSlug="loja"
         listing={{ ...listing, cover }}
         priority
         fetchPriority="high"
@@ -36,7 +37,9 @@ describe("ListingCard", () => {
     expect(screen.getByRole("img")).toHaveAttribute("fetchpriority", "high");
     unmount();
 
-    render(<ListingCard listing={{ ...listing, cover }} priority />);
+    render(
+      <ListingCard storeSlug="loja" listing={{ ...listing, cover }} priority />,
+    );
     expect(screen.getByRole("img")).not.toHaveAttribute(
       "fetchpriority",
       "high",
@@ -44,11 +47,24 @@ describe("ListingCard", () => {
   });
 
   it("links to the item page and stamps sold items", () => {
-    render(<ListingCard listing={{ ...listing, availability: "sold" }} />);
+    render(
+      <ListingCard
+        storeSlug="nosso-desapego"
+        listing={{ ...listing, availability: "sold" }}
+      />,
+    );
     expect(screen.getByRole("link", { name: "Mesa" })).toHaveAttribute(
       "href",
-      "/itens/mesa-abc123",
+      "/store/nosso-desapego/items/mesa-abc123",
     );
     expect(screen.getByText("Vendido")).toBeInTheDocument();
+  });
+
+  it("links to the item under the store it is shown in", () => {
+    render(<ListingCard storeSlug="loja-da-bia" listing={listing} />);
+    expect(screen.getByRole("link", { name: "Mesa" })).toHaveAttribute(
+      "href",
+      "/store/loja-da-bia/items/mesa-abc123",
+    );
   });
 });

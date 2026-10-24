@@ -11,7 +11,7 @@ import {
   formatPrice,
   joinNames,
 } from "@/lib/format";
-import { absoluteUrl, listingPath } from "@/lib/site";
+import { absoluteUrl, itemPath } from "@/lib/site";
 import { listingContactUrl } from "@/lib/whatsapp";
 import { ContactAction, type SellerContact } from "./contact-action";
 import { Gallery } from "./gallery";
@@ -21,9 +21,15 @@ import { PriceSticker } from "./price-sticker";
 import { ShareButton } from "./share-button";
 import { StatusStamp } from "./status-stamp";
 
-/** Item detail, shared by the public page and the admin preview. */
-export function ListingView({ listing }: { listing: ListingDetail }) {
-  const url = absoluteUrl(listingPath(listing.slug));
+/** Item detail of store `storeSlug`, shared by the public page and the admin preview. */
+export function ListingView({
+  storeSlug,
+  listing,
+}: {
+  storeSlug: string;
+  listing: ListingDetail;
+}) {
+  const url = absoluteUrl(itemPath(storeSlug, listing.slug));
   const contacts: SellerContact[] = listing.canContact
     ? listing.sellers.flatMap((seller) => {
         const href = listingContactUrl(
@@ -71,6 +77,7 @@ export function ListingView({ listing }: { listing: ListingDetail }) {
         <div className="mt-6 lg:sticky lg:top-8 lg:mt-0 lg:self-start">
           <Link
             href={catalogHref(
+              storeSlug,
               withFilters(DEFAULT_FILTERS, { category: listing.category.slug }),
             )}
             className="text-sm font-medium text-muted underline decoration-ink/20 underline-offset-4 hover:text-ink"
@@ -150,7 +157,7 @@ export function ListingView({ listing }: { listing: ListingDetail }) {
           <ul className="mt-6 grid grid-cols-2 gap-x-4 gap-y-12 sm:grid-cols-4 sm:gap-x-6">
             {listing.related.map((related) => (
               <li key={related.slug}>
-                <ListingCard listing={related} />
+                <ListingCard storeSlug={storeSlug} listing={related} />
               </li>
             ))}
           </ul>

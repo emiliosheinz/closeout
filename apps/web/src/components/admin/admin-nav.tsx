@@ -3,16 +3,27 @@
 import { ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { storePath } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
-const LINKS = [
+const LINKS: { href: string; label: string; managersOnly?: boolean }[] = [
   { href: "/admin", label: "Anúncios" },
-  { href: "/admin/vendedores", label: "Vendedores" },
-  { href: "/admin/loja", label: "Loja" },
+  { href: "/admin/equipe", label: "Equipe" },
+  { href: "/admin/loja", label: "Loja", managersOnly: true },
 ];
 
-export function AdminNav({ storeName }: { storeName: string }) {
+export function AdminNav({
+  storeName,
+  storeSlug,
+  managesStore,
+}: {
+  storeName: string;
+  storeSlug: string;
+  /** Owners and admins see the store settings; sellers do not. */
+  managesStore: boolean;
+}) {
   const pathname = usePathname();
+  const links = LINKS.filter((link) => !link.managersOnly || managesStore);
 
   return (
     <header className="border-b border-line bg-surface">
@@ -24,7 +35,7 @@ export function AdminNav({ storeName }: { storeName: string }) {
           aria-label="Administração"
           className="order-3 -mx-2.5 -my-1.5 flex w-full gap-1 overflow-x-auto px-1.5 py-1.5 sm:order-none sm:w-auto"
         >
-          {LINKS.map((link) => {
+          {links.map((link) => {
             const active =
               link.href === "/admin"
                 ? pathname === "/admin" ||
@@ -49,7 +60,7 @@ export function AdminNav({ storeName }: { storeName: string }) {
         </nav>
         <div className="ml-auto flex items-center gap-1">
           <a
-            href="/"
+            href={storePath(storeSlug)}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex h-11 items-center gap-1.5 rounded-full px-3 text-sm font-semibold text-ink-soft hover:bg-ink/5"

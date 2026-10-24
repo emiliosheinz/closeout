@@ -1,5 +1,6 @@
 import {
   CONDITION_LABELS,
+  formatDate,
   formatPrice,
   formatStickerPrice,
   pluralize,
@@ -40,5 +41,19 @@ describe("labels", () => {
     expect(pluralize(0, "item", "itens")).toBe("0 itens");
     expect(pluralize(1, "item", "itens")).toBe("1 item");
     expect(pluralize(1500, "item", "itens")).toBe("1.500 itens");
+  });
+});
+
+describe("formatDate", () => {
+  it("writes the Brazilian calendar day in full", () => {
+    expect(formatDate("2026-10-30T15:00:00.000Z")).toBe(
+      "30 de outubro de 2026",
+    );
+  });
+
+  it("uses the Brazilian day even when UTC already turned the page", () => {
+    expect(formatDate("2026-10-31T01:00:00.000Z")).toBe(
+      "30 de outubro de 2026",
+    );
   });
 });

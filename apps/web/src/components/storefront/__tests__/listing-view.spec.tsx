@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import type { ListingDetail } from "@/lib/catalog/types";
 import { ListingView } from "../listing-view";
 
@@ -25,20 +25,46 @@ describe("ListingView", () => {
     process.env.PUBLIC_BASE_URL = "https://loja.example";
   });
 
-  it("links to the seller's WhatsApp with the item URL", () => {
-    render(<ListingView listing={base} />);
+  it.each([
+    [
+      "nosso-desapego",
+      "https://loja.example/store/nosso-desapego/items/mesa-abc123",
+    ],
+    ["loja-da-bia", "https://loja.example/store/loja-da-bia/items/mesa-abc123"],
+  ])("links to the seller's WhatsApp with the item URL of %s", (slug, url) => {
+    render(<ListingView storeSlug={slug} listing={base} />);
     const [link] = screen.getAllByTestId("whatsapp-contact");
     expect(link?.getAttribute("href")).toMatch(
       /^https:\/\/wa\.me\/5511988887777\?text=/,
     );
     expect(decodeURIComponent(link?.getAttribute("href") ?? "")).toContain(
-      "https://loja.example/itens/mesa-abc123",
+      `catálogo de vocês: ${url}.`,
+    );
+  });
+
+  it("shares the item URL of its store", async () => {
+    const writeText = jest.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "share", {
+      value: undefined,
+      configurable: true,
+    });
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText },
+      configurable: true,
+    });
+    render(<ListingView storeSlug="loja-da-bia" listing={base} />);
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Compartilhar" }));
+    });
+    expect(writeText).toHaveBeenCalledWith(
+      "https://loja.example/store/loja-da-bia/items/mesa-abc123",
     );
   });
 
   it("shows a neutral note and no link when the seller has no number", () => {
     render(
       <ListingView
+        storeSlug="loja"
         listing={{
           ...base,
           canContact: false,
@@ -54,7 +80,7 @@ describe("ListingView", () => {
   });
 
   it("never prints R$ 0 for a missing price and shows a placeholder without photos", () => {
-    render(<ListingView listing={base} />);
+    render(<ListingView storeSlug="loja" listing={base} />);
     expect(screen.getAllByText("Preço a combinar").length).toBeGreaterThan(0);
     expect(document.body.textContent).not.toContain("R$ 0");
     expect(screen.getByTestId("photo-placeholder")).toBeInTheDocument();
@@ -63,6 +89,7 @@ describe("ListingView", () => {
   it("shows the sold state without any contact action", () => {
     render(
       <ListingView
+        storeSlug="loja"
         listing={{
           ...base,
           availability: "sold",
@@ -78,11 +105,32 @@ describe("ListingView", () => {
   });
 
   it("shows the price once and links the category to its catalog view", () => {
-    render(<ListingView listing={{ ...base, priceCents: 45000 }} />);
+    render(
+      <ListingView
+        storeSlug="nosso-desapego"
+        listing={{ ...base, priceCents: 45000 }}
+      />,
+    );
     expect(screen.getAllByText("R$ 450,00")).toHaveLength(1);
     expect(screen.getByRole("link", { name: "Móveis" })).toHaveAttribute(
       "href",
-      "/?categoria=moveis",
+      "/store/nosso-desapego?categoria=moveis",
+    );
+  });
+
+  it("links related items under the same store", () => {
+    render(
+      <ListingView
+        storeSlug="loja-da-bia"
+        listing={{
+          ...base,
+          related: [{ ...base, slug: "sofa-x9", title: "Sofá" }],
+        }}
+      />,
+    );
+    expect(screen.getByRole("link", { name: "Sofá" })).toHaveAttribute(
+      "href",
+      "/store/loja-da-bia/items/sofa-x9",
     );
   });
 
@@ -104,6 +152,7 @@ describe("ListingView", () => {
     try {
       render(
         <ListingView
+          storeSlug="loja"
           listing={{ ...base, images: [image(1), image(2), image(3)] }}
         />,
       );
@@ -116,6 +165,7 @@ describe("ListingView", () => {
   it("asks which seller to message when several people sell the item", () => {
     render(
       <ListingView
+        storeSlug="loja"
         listing={{
           ...base,
           sellers: [
@@ -155,6 +205,7 @@ describe("ListingView", () => {
   it("opens the only reachable seller directly, without asking", () => {
     render(
       <ListingView
+        storeSlug="loja"
         listing={{
           ...base,
           sellers: [

@@ -4,9 +4,9 @@ import { Listing } from "./listing.entity";
 
 /**
  * Who sells a listing; a couple usually sells the same item together. Every
- * listing keeps at least one row here (enforced by the listings and sellers
- * services). Removing a seller removes their rows, which is why the sellers
- * service refuses to delete a listing's only seller first.
+ * listing keeps at least one row here (enforced by the listings and team
+ * services). Removing a member removes their profile's rows, which is why
+ * team removal refuses while they are a listing's only seller.
  */
 @Entity({ name: "listing_sellers" })
 @Index("listing_sellers_seller_idx", ["sellerId"])
