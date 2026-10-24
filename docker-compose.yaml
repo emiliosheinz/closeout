@@ -85,8 +85,6 @@ services:
       MEDIA_DIR: ${MEDIA_DIR:?required}
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:?required}
       INTERNAL_API_SECRET: ${INTERNAL_API_SECRET:?required}
-      STORE_SLUG: ${STORE_SLUG:?required}
-      STORE_NAME: ${STORE_NAME:?required}
     depends_on:
       setup:
         condition: service_completed_successfully
@@ -114,7 +112,6 @@ services:
       API_BASE_URL: ${API_BASE_URL:?required}
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:?required}
       INTERNAL_API_SECRET: ${INTERNAL_API_SECRET:?required}
-      STORE_SLUG: ${STORE_SLUG:?required}
     depends_on:
       setup:
         condition: service_completed_successfully

@@ -43,7 +43,6 @@ export default defineRailway((ctx, project) => {
   const commonEnv = {
     PUBLIC_BASE_URL: `https://\${{web.RAILWAY_PUBLIC_DOMAIN}}`,
     INTERNAL_API_SECRET: ctx.shared.INTERNAL_API_SECRET,
-    STORE_SLUG: ctx.shared.STORE_SLUG,
     NODE_ENV: "production",
   };
 
@@ -63,7 +62,6 @@ export default defineRailway((ctx, project) => {
       ...commonEnv,
       PORT: API_PORT,
       HOST: "::",
-      STORE_NAME: "Nosso Desapego",
       POSTGRES_HOST: postgres.env.PGHOST,
       POSTGRES_PORT: postgres.env.PGPORT,
       POSTGRES_DB: postgres.env.PGDATABASE,
