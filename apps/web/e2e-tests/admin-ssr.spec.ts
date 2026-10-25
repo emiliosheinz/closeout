@@ -18,7 +18,7 @@ async function documentWithoutScripts(page: Page, path: string) {
   let previous: string;
   do {
     previous = html;
-    html = html.replace(/<script\b[\s\S]*?<\/script\s*>/gi, "");
+    html = html.replace(/<script\b[\s\S]*?<\/script[^>]*>/gi, "");
   } while (html !== previous);
   return html;
 }
