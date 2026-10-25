@@ -236,6 +236,7 @@ describe("Invite row actions menu", () => {
     );
     expect(logged).toHaveBeenCalled();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Link do convite")).not.toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 });
@@ -259,6 +260,48 @@ describe("InviteButton", () => {
     expect(email()).toHaveAttribute("aria-invalid", "true");
     expect(email()).toHaveAccessibleDescription("Informe um e-mail válido.");
     expect(apiCalls()).toHaveLength(0);
+    expect(document.querySelector("[data-sonner-toast]")).toBeNull();
+  });
+
+  it("clears the email message once the email is fixed and resubmitted", async () => {
+    let finish: (response: Response) => void = () => {};
+    fetchMock.mockImplementation(
+      () => new Promise<Response>((resolve) => (finish = resolve)),
+    );
+    await openDialog();
+    fireEvent.change(email(), { target: { value: "bia@example" } });
+    fireEvent.click(screen.getByRole("button", { name: "Criar convite" }));
+    await screen.findByText("Informe um e-mail válido.");
+
+    fireEvent.change(email(), { target: { value: "bia@example.com" } });
+    fireEvent.click(screen.getByRole("button", { name: "Criar convite" }));
+
+    await waitFor(() =>
+      expect(
+        screen.queryByText("Informe um e-mail válido."),
+      ).not.toBeInTheDocument(),
+    );
+    expect(email()).toHaveAttribute("aria-invalid", "false");
+    await act(async () => finish(Response.json(issued)));
+  });
+
+  it("sends one request when the form is submitted twice while the invite is pending", async () => {
+    let finish: (response: Response) => void = () => {};
+    fetchMock.mockImplementation(
+      () => new Promise<Response>((resolve) => (finish = resolve)),
+    );
+    await openDialog();
+    const form = email().closest("form") as HTMLFormElement;
+    fireEvent.change(email(), { target: { value: "bia@example.com" } });
+
+    fireEvent.submit(form);
+    await screen.findByRole("button", { name: "Criando convite..." });
+    fireEvent.submit(form);
+    fireEvent.submit(form);
+    await act(async () => {});
+
+    expect(apiCalls()).toHaveLength(1);
+    await act(async () => finish(Response.json(issued)));
   });
 
   it('shows "Criando convite..." and blocks a second submit while pending', async () => {
@@ -350,6 +393,8 @@ describe("InviteButton", () => {
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
     );
     expect(logged).toHaveBeenCalled();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Link do convite")).not.toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 });

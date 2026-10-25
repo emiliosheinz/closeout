@@ -31,6 +31,9 @@ function renderForm() {
   );
 }
 
+const noToast = () =>
+  expect(document.querySelector("[data-sonner-toast]")).toBeNull();
+
 const nameInput = () => screen.getByLabelText("Nome da loja");
 const save = () => screen.getByRole("button", { name: /Salvar loja|Salvando/ });
 
@@ -45,6 +48,21 @@ describe("StoreSettingsForm", () => {
     expect(nameInput()).toHaveAttribute("aria-invalid", "true");
     expect(nameInput()).toHaveAccessibleDescription("Informe o nome da loja.");
     expect(apiCalls()).toHaveLength(0);
+    noToast();
+  });
+
+  it("limits the name to 80, the headline to 160 and the intro to 1200 characters", () => {
+    renderForm();
+
+    expect(nameInput()).toHaveAttribute("maxlength", "80");
+    expect(screen.getByLabelText("Chamada principal")).toHaveAttribute(
+      "maxlength",
+      "160",
+    );
+    expect(screen.getByLabelText("Apresentação")).toHaveAttribute(
+      "maxlength",
+      "1200",
+    );
   });
 
   it("clears the message once the name is fixed and resubmitted", async () => {
@@ -76,6 +94,24 @@ describe("StoreSettingsForm", () => {
     const pending = await screen.findByRole("button", { name: "Salvando..." });
     expect(pending).toBeDisabled();
     fireEvent.click(pending);
+    expect(apiCalls()).toHaveLength(1);
+    await act(async () => finish(new Response(null, { status: 204 })));
+  });
+
+  it("sends one request when the form is submitted twice while the save is pending", async () => {
+    let finish: (response: Response) => void = () => {};
+    fetchMock.mockImplementation(
+      () => new Promise<Response>((resolve) => (finish = resolve)),
+    );
+    const { container } = renderForm();
+    const form = container.querySelector("form") as HTMLFormElement;
+
+    fireEvent.submit(form);
+    await screen.findByRole("button", { name: "Salvando..." });
+    fireEvent.submit(form);
+    fireEvent.submit(form);
+    await act(async () => {});
+
     expect(apiCalls()).toHaveLength(1);
     await act(async () => finish(new Response(null, { status: 204 })));
   });

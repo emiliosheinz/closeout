@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { InviteForm } from "../invite-form";
 
 describe("InviteForm", () => {
@@ -196,6 +202,8 @@ describe("InviteForm", () => {
     expect(pending).toBeDisabled();
     fireEvent.click(pending);
     fireEvent.submit(container.querySelector("form") as HTMLFormElement);
+    fireEvent.submit(container.querySelector("form") as HTMLFormElement);
+    await act(async () => {});
     expect(fetchMock).toHaveBeenCalledTimes(1);
 
     resolve({ ok: false, json: async () => ({}) });

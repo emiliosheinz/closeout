@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { LoginForm } from "../login-form";
 
 describe("LoginForm", () => {
@@ -17,9 +23,9 @@ describe("LoginForm", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Entrar" }));
 
-    expect(
-      await screen.findByText("E-mail ou senha inválidos."),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "E-mail ou senha inválidos.",
+    );
     await waitFor(() =>
       expect(fetchMock).toHaveBeenCalledWith(
         "/api/auth/login",
@@ -132,10 +138,84 @@ describe("LoginForm", () => {
     expect(pending).toBeDisabled();
     fireEvent.click(pending);
     fireEvent.submit(container.querySelector("form") as HTMLFormElement);
+    fireEvent.submit(container.querySelector("form") as HTMLFormElement);
+    await act(async () => {});
     expect(fetchMock).toHaveBeenCalledTimes(1);
 
     resolve({ ok: false, json: async () => ({}) });
     expect(await screen.findByRole("alert")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Entrar" })).toBeEnabled();
+  });
+
+  it("clears the field messages once both are fixed and resubmitted", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      json: async () => ({ message: "E-mail ou senha inválidos." }),
+    });
+    global.fetch = fetchMock as unknown as typeof fetch;
+    render(<LoginForm />);
+    fireEvent.change(screen.getByLabelText("E-mail"), {
+      target: { value: "sem-arroba" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Entrar" }));
+    await screen.findByText("Informe um e-mail válido.");
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByLabelText("E-mail"), {
+      target: { value: "ana@loja.test" },
+    });
+    fireEvent.change(screen.getByLabelText("Senha"), {
+      target: { value: "senha-longa-1" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Entrar" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    await screen.findByText("E-mail ou senha inválidos.");
+    expect(
+      screen.queryByText("Informe um e-mail válido."),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText("Informe sua senha.")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("E-mail")).toHaveAttribute(
+      "aria-invalid",
+      "false",
+    );
+    expect(screen.getByLabelText("Senha")).toHaveAttribute(
+      "aria-invalid",
+      "false",
+    );
+  });
+
+  it("clears the wrong-credentials message when the form is resubmitted", async () => {
+    let resolve: (value: unknown) => void = () => {};
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: false,
+        json: async () => ({ message: "E-mail ou senha inválidos." }),
+      })
+      .mockReturnValueOnce(
+        new Promise((r) => {
+          resolve = r;
+        }),
+      );
+    global.fetch = fetchMock as unknown as typeof fetch;
+    render(<LoginForm />);
+    fireEvent.change(screen.getByLabelText("E-mail"), {
+      target: { value: "ana@loja.test" },
+    });
+    fireEvent.change(screen.getByLabelText("Senha"), {
+      target: { value: "senha-longa-1" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Entrar" }));
+    await screen.findByRole("alert");
+
+    fireEvent.click(screen.getByRole("button", { name: "Entrar" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    await waitFor(() =>
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument(),
+    );
+    resolve({ ok: false, json: async () => ({}) });
+    await screen.findByRole("alert");
   });
 });

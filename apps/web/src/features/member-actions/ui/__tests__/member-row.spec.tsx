@@ -259,6 +259,53 @@ describe("Member edit dialog", () => {
       "Informe o nome.",
     );
     expect(apiCalls()).toHaveLength(0);
+    expect(document.querySelector("[data-sonner-toast]")).toBeNull();
+  });
+
+  it("clears the name message once the name is fixed and resubmitted", async () => {
+    await openEditDialog();
+    fireEvent.change(screen.getByLabelText("Nome na loja"), {
+      target: { value: "" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
+    await screen.findByText("Informe o nome.");
+
+    fireEvent.change(screen.getByLabelText("Nome na loja"), {
+      target: { value: "Aninha" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
+
+    await waitFor(() =>
+      expect(screen.queryByText("Informe o nome.")).not.toBeInTheDocument(),
+    );
+    await waitFor(() => expect(apiCalls()).toHaveLength(1));
+  });
+
+  it("limits the name to 60 characters", async () => {
+    await openEditDialog();
+
+    expect(screen.getByLabelText("Nome na loja")).toHaveAttribute(
+      "maxlength",
+      "60",
+    );
+  });
+
+  it("sends one request when the form is submitted twice while the save is pending", async () => {
+    let finish: (response: Response) => void = () => {};
+    fetchMock.mockImplementation(
+      () => new Promise<Response>((resolve) => (finish = resolve)),
+    );
+    await openEditDialog();
+    const form = screen.getByLabelText("Nome na loja").closest("form");
+
+    fireEvent.submit(form as HTMLFormElement);
+    await screen.findByRole("button", { name: "Salvando..." });
+    fireEvent.submit(form as HTMLFormElement);
+    fireEvent.submit(form as HTMLFormElement);
+    await act(async () => {});
+
+    expect(apiCalls()).toHaveLength(1);
+    await act(async () => finish(new Response(null, { status: 204 })));
   });
 
   it('shows "Salvando..." and blocks a second submit while pending', async () => {

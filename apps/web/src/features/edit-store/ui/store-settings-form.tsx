@@ -47,6 +47,11 @@ export function StoreSettingsForm({
     },
   });
 
+  function submit(values: FormValues) {
+    if (save.isPending) return;
+    save.mutate(values);
+  }
+
   async function copyLink() {
     await navigator.clipboard.writeText(storeUrl);
     setCopied(true);
@@ -86,7 +91,7 @@ export function StoreSettingsForm({
       </section>
 
       <form
-        onSubmit={handleSubmit((values) => save.mutate(values))}
+        onSubmit={handleSubmit(submit)}
         noValidate
         className="flex flex-col gap-5"
       >

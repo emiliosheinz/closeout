@@ -109,6 +109,7 @@ function InviteDialog({
   });
 
   function submit(values: InviteRequest) {
+    if (issue.isPending) return;
     issue.mutate(values, {
       onSuccess: (issued) => onIssued(issued.parsed ? issued.data : null),
       onError: (error) => {

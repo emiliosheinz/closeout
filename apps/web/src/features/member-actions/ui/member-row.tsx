@@ -252,6 +252,7 @@ function MemberDialog({
   const pending = save.isPending || uploadPhoto.isPending;
 
   function submit(values: FormValues) {
+    if (pending) return;
     save.mutate(values, {
       onSuccess: onClose,
       onError: (error) => {

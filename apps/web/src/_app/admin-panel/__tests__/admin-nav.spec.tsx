@@ -1,8 +1,15 @@
 import type { Me } from "@closeout/contracts/schemas";
 import { dehydrate, QueryClient } from "@tanstack/react-query";
-import { act, screen, within } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { AdminNav } from "@/_app/admin-panel/admin-nav";
 import { sessionKeys } from "@/entities/session";
+import { StoreSettingsForm } from "@/features/edit-store";
 import { renderWithFeedback } from "@/test/feedback-harness";
 
 vi.mock("next/navigation", () => ({ usePathname: () => "/admin" }));
@@ -75,5 +82,50 @@ describe("AdminNav", () => {
       "href",
       "/store/loja",
     );
+  });
+
+  it("shows the new store name after the store settings are saved", async () => {
+    let me = meAs("owner", "Brechó da Bia");
+    const { store } = me.memberships[0] as Me["memberships"][number];
+    const fetchMock = vi.fn(
+      async (_url: RequestInfo | URL, init?: RequestInit) => {
+        if (init?.method === "PATCH") {
+          const { name } = JSON.parse(init.body as string) as { name: string };
+          me = meAs("owner", name);
+          return new Response(null, { status: 204 });
+        }
+        return Response.json(me);
+      },
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const seed = new QueryClient();
+    seed.setQueryData(sessionKeys.me(), me);
+    renderWithFeedback(
+      <>
+        <AdminNav />
+        <StoreSettingsForm
+          store={store}
+          storeUrl="https://closeout.test/loja"
+        />
+      </>,
+      dehydrate(seed),
+    );
+    expect(screen.getByRole("link", { name: "Brechó da Bia" })).toBeVisible();
+
+    fireEvent.change(screen.getByLabelText("Nome da loja"), {
+      target: { value: "Bia Vintage" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Salvar loja" }));
+
+    expect(
+      await screen.findByRole("link", { name: "Bia Vintage" }),
+    ).toHaveAttribute("href", "/admin");
+    expect(screen.queryByRole("link", { name: "Brechó da Bia" })).toBeNull();
+    await waitFor(() =>
+      expect(fetchMock.mock.calls.map(([, init]) => init?.method)).toContain(
+        "PATCH",
+      ),
+    );
+    vi.unstubAllGlobals();
   });
 });
