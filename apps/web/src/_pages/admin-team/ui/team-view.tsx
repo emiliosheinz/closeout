@@ -133,6 +133,15 @@ function SearchInput({
   );
 }
 
+// Phones show a column's content under the name or email instead, so its
+// header must not keep the column wide. These hide a column by position:
+// Contato is the 3rd members column and Papel the 2nd invites column, so they
+// depend on the order of the column lists below.
+const hideMemberContactOnPhones =
+  "max-sm:[&_th:nth-child(3)]:hidden max-sm:[&_td:nth-child(3)]:hidden";
+const hideInviteRoleOnPhones =
+  "max-sm:[&_th:nth-child(2)]:hidden max-sm:[&_td:nth-child(2)]:hidden";
+
 type MemberRow = {
   member: TeamMember;
   storeId: string;
@@ -238,14 +247,16 @@ function MembersTable({
           onChange={(value) => set({ query: value })}
         />
       )}
-      <DataTable
-        table={table}
-        empty={
-          query && (
-            <p className="text-sm text-muted">{`Ninguém encontrado com "${query}".`}</p>
-          )
-        }
-      />
+      <div className={hideMemberContactOnPhones}>
+        <DataTable
+          table={table}
+          empty={
+            query && (
+              <p className="text-sm text-muted">{`Ninguém encontrado com "${query}".`}</p>
+            )
+          }
+        />
+      </div>
     </>
   );
 }
@@ -319,14 +330,16 @@ function InvitesTable({
         value={query}
         onChange={(value) => set({ query: value })}
       />
-      <DataTable
-        table={table}
-        empty={
-          query && (
-            <p className="text-sm text-muted">{`Nenhum convite com "${query}".`}</p>
-          )
-        }
-      />
+      <div className={hideInviteRoleOnPhones}>
+        <DataTable
+          table={table}
+          empty={
+            query && (
+              <p className="text-sm text-muted">{`Nenhum convite com "${query}".`}</p>
+            )
+          }
+        />
+      </div>
     </>
   );
 }
