@@ -13,7 +13,14 @@ const escapeHtml = (text: string) =>
 async function documentWithoutScripts(page: Page, path: string) {
   const response = await page.request.get(path);
   expect(response.status()).toBe(200);
-  return (await response.text()).replace(/<script[\s\S]*?<\/script>/g, "");
+  // Repeats until stable so a removal cannot join two fragments into a new tag.
+  let html = await response.text();
+  let previous: string;
+  do {
+    previous = html;
+    html = html.replace(/<script\b[\s\S]*?<\/script\s*>/gi, "");
+  } while (html !== previous);
+  return html;
 }
 
 test("admin pages carry their data in the first server response", async ({
