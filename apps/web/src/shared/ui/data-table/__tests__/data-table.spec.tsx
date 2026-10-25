@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { useState } from "react";
 import type { TableSort } from "@/shared/lib/table-url-state";
 import { DataTable, type DataTableColumns, useDataTable } from "../data-table";
@@ -172,9 +172,11 @@ describe("pagination", () => {
     expect(names()).toHaveLength(5);
   });
 
-  it("keeps the controlled page when the data changes", () => {
+  it("keeps the controlled page when the data changes", async () => {
     const { rerender } = render(<Harness data={many(45)} initialPage={2} />);
-    rerender(<Harness data={many(44)} initialPage={2} />);
+    await act(async () => {
+      rerender(<Harness data={many(44)} initialPage={2} />);
+    });
     expect(screen.getByText("Página 2 de 3")).toBeInTheDocument();
   });
 });
@@ -226,6 +228,54 @@ it("keeps each row's cell state when the rows reorder", () => {
     "true",
   );
   expect(screen.getByRole("button", { name: "Marcar Carla" })).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  );
+});
+
+it("keeps each row's cell state with its item when an earlier item is removed", () => {
+  function Toggle({ name }: { name: string }) {
+    const [on, setOn] = useState(false);
+    return (
+      <button
+        type="button"
+        aria-pressed={on}
+        onClick={() => setOn(true)}
+      >{`Marcar ${name}`}</button>
+    );
+  }
+  const stateful: DataTableColumns<Row> = [
+    { accessorKey: "name", header: "Nome" },
+    {
+      id: "toggle",
+      header: "Marca",
+      enableSorting: false,
+      cell: ({ row }) => <Toggle name={row.original.name} />,
+    },
+  ];
+  function Unsorted({ data }: { data: Row[] }) {
+    const table = useDataTable({
+      data,
+      columns: stateful,
+      getRowId: (row) => row.name,
+      sort: null,
+      onSortChange: () => {},
+      page: 1,
+      onPageChange: () => {},
+    });
+    return <DataTable table={table} empty={null} />;
+  }
+  const { rerender } = render(<Unsorted data={people} />);
+  fireEvent.click(screen.getByRole("button", { name: "Marcar Bruno" }));
+
+  rerender(<Unsorted data={people.slice(1)} />);
+
+  expect(names()).toEqual(["Ana", "Bruno"]);
+  expect(screen.getByRole("button", { name: "Marcar Bruno" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  expect(screen.getByRole("button", { name: "Marcar Ana" })).toHaveAttribute(
     "aria-pressed",
     "false",
   );

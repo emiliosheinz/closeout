@@ -453,6 +453,17 @@ describe("search", () => {
     expect(titles()).toEqual(["Café expresso"]);
   });
 
+  it("ignores spaces around the search and shows every row for blank spaces", async () => {
+    serve([item("Mesa de jantar"), item("Cadeira")]);
+    await show();
+
+    search("  mesa  ");
+    expect(titles()).toEqual(["Mesa de jantar"]);
+
+    search("   ");
+    expect(titles()).toEqual(["Mesa de jantar", "Cadeira"]);
+  });
+
   it("says nothing matched the search", async () => {
     serve([item("Sofá")]);
     await show("?q=mesa");
@@ -475,6 +486,76 @@ describe("search", () => {
     expect(
       screen.getByText("Nenhum anúncio ainda. Comece pelo botão Novo anúncio."),
     ).toBeInTheDocument();
+  });
+});
+
+describe("rows", () => {
+  it("flags only the listings whose seller has no WhatsApp number", async () => {
+    stubAdminApi({
+      "/me": meResponse(),
+      "/stores/store-1/listings": {
+        items: [
+          item("Sem contato", {
+            sellers: [{ id: "s-mudo", displayName: "Mudo" }],
+          }),
+          item("Com contato", {
+            sellers: [{ id: "s-ana", displayName: "Ana" }],
+          }),
+        ],
+      },
+      "/stores/store-1/sellers": {
+        items: [
+          { ...seller("s-mudo", "Mudo"), whatsappNumber: null },
+          seller("s-ana", "Ana"),
+        ],
+      },
+    });
+    await show();
+
+    const flagged = (title: string) =>
+      within(
+        screen.getByRole("link", { name: title }).closest("tr") as HTMLElement,
+      ).queryByRole("link", { name: /Vendedor sem WhatsApp/ });
+    expect(flagged("Sem contato")).toBeInTheDocument();
+    expect(flagged("Com contato")).toBeNull();
+  });
+
+  it("keeps a pending copy with its own listing when two listings share a title and the sort flips", async () => {
+    serve([
+      listingSummary({
+        id: "m-1",
+        slug: "mesa-1",
+        title: "Mesa",
+        priceCents: 1000,
+        availability: "available",
+      }),
+      listingSummary({
+        id: "m-2",
+        slug: "mesa-2",
+        title: "Mesa",
+        priceCents: 2000,
+        availability: "sold",
+      }),
+    ]);
+    await show("?ordem=preco-asc");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => new Promise<Response>(() => {})),
+    );
+    const copies = () =>
+      screen
+        .getAllByRole("button", { name: "Duplicar Mesa" })
+        .map((button) => (button as HTMLButtonElement).disabled);
+    expect(copies()).toEqual([false, false]);
+
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "Duplicar Mesa" })[1],
+    );
+    await waitFor(() => expect(copies()).toEqual([false, true]));
+
+    sortBy(/Preço/);
+
+    expect(copies()).toEqual([true, false]);
   });
 });
 
@@ -574,6 +655,68 @@ describe("a row whose status changed under a filter", () => {
     server = [sold[0]];
     await act(() => client.refetchQueries({ queryKey: ["listings"] }));
     await waitFor(() => expect(titles()).toEqual(["Abajur"]));
+  });
+});
+
+describe("a row changed twice under a filter", () => {
+  it("keeps its original place after the second change", async () => {
+    const sold = [
+      item("Abajur", {
+        availability: "sold",
+        updatedAt: "2026-10-16T12:00:00.000Z",
+      }),
+      item("Cadeira", {
+        availability: "sold",
+        updatedAt: "2026-10-15T12:00:00.000Z",
+      }),
+    ];
+    serve(sold);
+    renderWithFeedback(await atUrl("?status=vendidos"));
+    const server = [
+      sold[0],
+      {
+        ...sold[1],
+        availability: "available",
+        updatedAt: "2026-10-20T12:00:00.000Z",
+      },
+    ];
+    let listFetches = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init: RequestInit = {}) => {
+        if (init.method === "GET" && String(url).endsWith("/listings")) {
+          listFetches++;
+          return Response.json({ items: server });
+        }
+        if (init.method === "GET") return Response.json({ items: [] });
+        return new Response(null, { status: 204 });
+      }),
+    );
+    const change = async (option: string) => {
+      const trigger = screen.getByRole("combobox", {
+        name: "Disponibilidade de Cadeira",
+      });
+      trigger.focus();
+      fireEvent.keyDown(trigger, { key: "Enter" });
+      fireEvent.keyDown(await screen.findByRole("option", { name: option }), {
+        key: "Enter",
+      });
+    };
+    const settle = () =>
+      act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      });
+
+    await change("Disponível");
+    await waitFor(() => expect(listFetches).toBe(1));
+    await settle();
+    expect(titles()).toEqual(["Abajur", "Cadeira"]);
+
+    await change("Reservado");
+    await waitFor(() => expect(listFetches).toBe(2));
+    await settle();
+
+    expect(titles()).toEqual(["Abajur", "Cadeira"]);
   });
 });
 

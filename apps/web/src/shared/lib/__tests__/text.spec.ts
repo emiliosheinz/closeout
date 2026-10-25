@@ -10,6 +10,7 @@ describe("search", () => {
   it("matches inside the text and rejects other text", () => {
     expect(matchesSearch("ana@loja.com", "ana@")).toBe(true);
     expect(matchesSearch("Mesa", "cadeira")).toBe(false);
+    expect(matchesSearch("Mesa de jantar", "jantar")).toBe(true);
   });
 });
 
