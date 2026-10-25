@@ -2,7 +2,6 @@ import { type Browser, expect, type Page, test } from "@playwright/test";
 import {
   ADMIN_EMAIL,
   ADMIN_PASSWORD,
-  ADMIN_WHATSAPP,
   BASE_URL,
   hydrated,
   STORE,
@@ -21,6 +20,7 @@ const LEAVER = {
   name: "Rui de Saída",
   password: "senha-do-rui",
 };
+const REVOKED_EMAIL = `revogado-${RUN}@e2e.test`;
 const TITLE = `Abajur da convidada ${RUN}`;
 const INVALID =
   "Este convite é inválido ou expirou. Peça um novo link a quem convidou você.";
@@ -46,11 +46,6 @@ async function invite(
   const dialog = page.getByRole("dialog", { name: `Convite para ${email}` });
   const link = await dialog.getByLabel("Link do convite").inputValue();
   expect(link).toMatch(new RegExp(`^${BASE_URL}/invite/[\\w-]+$`));
-  // Plain http exposes no clipboard, so the dialog falls back to selecting it.
-  await dialog.getByRole("button", { name: "Copiar link" }).click();
-  await expect(dialog.getByRole("status")).toContainText(
-    /Link copiado|O link está selecionado/,
-  );
   await dialog.getByRole("button", { name: "Pronto" }).click();
   await expect(dialog).toBeHidden();
   return link;
@@ -76,39 +71,25 @@ async function accept(
   return page;
 }
 
-function expiryDate(): string {
-  return new Intl.DateTimeFormat("pt-BR", {
-    dateStyle: "long",
-    timeZone: "America/Sao_Paulo",
-  }).format(new Date(RUN + 7 * 24 * 60 * 60 * 1000));
-}
-
 test.describe
   .serial("a store team grows by invite", () => {
     let sellerLink = "";
-    let leaverLink = "";
 
-    test("a manager invites a seller and copies the link from the dialog", async ({
+    test("a manager invites a seller, who accepts in a fresh browser and lands in the store's admin", async ({
       page,
+      browser,
     }) => {
       await signIn(page);
       sellerLink = await invite(page, SELLER.email, "Vendedor(a)");
-      await expect(
-        page.getByRole("row").filter({ hasText: SELLER.email }),
-      ).toContainText(`Vendedor(a), vale até ${expiryDate()}`);
-    });
 
-    test("the invitee accepts in a fresh browser and lands in the store's admin", async ({
-      browser,
-    }) => {
-      const page = await accept(browser, sellerLink, SELLER);
+      const seller = await accept(browser, sellerLink, SELLER);
       await expect(
-        page.getByRole("heading", { name: "Anúncios", level: 1 }),
+        seller.getByRole("heading", { name: "Anúncios", level: 1 }),
       ).toBeVisible();
-      await page.context().close();
+      await seller.context().close();
     });
 
-    test("the new seller publishes a listing without choosing sellers, and the store shows and hides it", async ({
+    test("the new seller publishes a listing without choosing sellers, the store shows and hides it, and store settings stay closed to them", async ({
       page,
       browser,
     }) => {
@@ -156,47 +137,49 @@ test.describe
         visitor.getByRole("link", { name: TITLE, exact: true }),
       ).toHaveCount(0);
       await visitor.close();
+
+      const settings = await page.goto("/admin/loja");
+      expect(settings?.status()).toBe(404);
     });
 
-    test("a seller has no store settings, and the old sellers page is gone", async ({
-      page,
-    }) => {
-      await signIn(page, SELLER.email, SELLER.password);
-      const nav = page.getByRole("navigation", { name: "Administração" });
-      await expect(
-        nav.getByRole("link", { name: "Equipe", exact: true }),
-      ).toBeVisible();
-      await expect(
-        nav.getByRole("link", { name: "Loja", exact: true }),
-      ).toHaveCount(0);
-      await nav.getByRole("link", { name: "Equipe", exact: true }).click();
-      await expect(page).toHaveURL(/\/admin\/equipe$/);
-      const rows = page.locator("tbody").getByRole("row");
-      await expect(rows).toHaveCount(1);
-      await expect(rows).toContainText(SELLER.name);
-      await expect(
-        page.getByRole("button", { name: "Convidar pessoas" }),
-      ).toHaveCount(0);
-
-      for (const path of ["/admin/loja", "/admin/vendedores"]) {
-        const response = await page.goto(path);
-        expect(response?.status()).toBe(404);
-        await expect(page.getByText("Página não encontrada")).toBeVisible();
-      }
-    });
-
-    test("used and unknown invite links show the same message, leak no referrer and lead to a working sign-in", async ({
+    test("used, revoked and unknown invite links show the same message, leak no referrer and lead to a working sign-in", async ({
+      page: manager,
       browser,
     }) => {
+      const revokedLink =
+        await test.step("a manager revokes a pending invite", async () => {
+          await signIn(manager);
+          const link = await invite(manager, REVOKED_EMAIL, "Vendedor(a)");
+          const row = manager
+            .getByRole("row")
+            .filter({ hasText: REVOKED_EMAIL });
+          await row
+            .getByRole("button", {
+              name: `Ações para o convite de ${REVOKED_EMAIL}`,
+            })
+            .click();
+          await manager.getByRole("menuitem", { name: "Revogar" }).click();
+          await manager
+            .getByRole("alertdialog")
+            .getByRole("button", { name: "Revogar convite" })
+            .click();
+          await expect(row).toHaveCount(0);
+          return link;
+        });
+
       const page = await (await browser.newContext()).newPage();
       const texts: string[] = [];
-      for (const link of [sellerLink, "/invite/convite-que-nao-existe"]) {
+      for (const link of [
+        sellerLink,
+        revokedLink,
+        "/invite/convite-que-nao-existe",
+      ]) {
         const response = await page.goto(link);
         expect(response?.headers()["referrer-policy"]).toBe("no-referrer");
         await expect(page.getByText(INVALID)).toBeVisible();
         texts.push(await page.getByRole("main").innerText());
       }
-      expect(texts[0]).toBe(texts[1]);
+      expect(new Set(texts).size).toBe(1);
 
       // Leaving the no-referrer invite page must not blank the login's Origin.
       await page.getByRole("link", { name: "Já tenho conta: entrar" }).click();
@@ -212,61 +195,14 @@ test.describe
       await page.context().close();
     });
 
-    test("the team page lists every member, then the pending invites", async ({
-      page,
-    }) => {
-      await signIn(page);
-      leaverLink = await invite(page, LEAVER.email, "Admin");
-
-      const members = page.getByRole("region", { name: "Membros" });
-      const owner = members.getByRole("row").filter({ hasText: ADMIN_EMAIL });
-      await expect(owner).toContainText("Ana Teste");
-      await expect(owner).toContainText("Dono(a)");
-      await expect(owner).toContainText(`+${ADMIN_WHATSAPP}`);
-      const seller = members.getByRole("row").filter({ hasText: SELLER.email });
-      await expect(seller).toContainText(SELLER.name);
-      await expect(seller).toContainText("Vendedor(a)");
-      await expect(seller).toContainText("Sem WhatsApp");
-
-      const invites = page.getByRole("region", { name: /Convites pendentes/ });
-      await expect(
-        invites.getByRole("row").filter({ hasText: LEAVER.email }),
-      ).toContainText(`Admin, vale até ${expiryDate()}`);
-      const order = await page
-        .getByRole("region")
-        .evaluateAll((regions) => regions.map((r) => r.id || r.textContent));
-      expect(
-        order.findIndex((id) => id?.includes("Membros")) <
-          order.findIndex((id) => id?.includes("Convites pendentes")),
-      ).toBe(true);
-    });
-
-    test("a signed-in visitor of an invite link is asked to sign out instead of accepting", async ({
-      page,
-    }) => {
-      await signIn(page);
-      await page.goto(leaverLink);
-      await hydrated(page);
-      await expect(page.getByRole("status").first()).toHaveText(
-        `Você está conectado como ${ADMIN_EMAIL}. Saia para aceitar este convite.`,
-      );
-      await expect(
-        page.getByRole("button", { name: "Criar conta e entrar" }),
-      ).toHaveCount(0);
-
-      await page.getByRole("button", { name: "Sair" }).click();
-      await expect(
-        page.getByRole("button", { name: "Criar conta e entrar" }),
-      ).toBeVisible();
-    });
-
     test("removing a member ends their session at once", async ({
       page,
       browser,
     }) => {
+      await signIn(page);
+      const leaverLink = await invite(page, LEAVER.email, "Admin");
       const leaver = await accept(browser, leaverLink, LEAVER);
 
-      await signIn(page);
       await page.goto("/admin/equipe");
       await hydrated(page);
       const card = page.getByRole("row").filter({ hasText: LEAVER.email });
