@@ -4,6 +4,7 @@ import {
   apiAs,
   hydrated,
   listingRows,
+  restoreDraft,
   seedTablesStore,
   signIn,
   TABLES_OWNER_EMAIL,
@@ -311,6 +312,9 @@ test.describe
         .poll(() => rowTitles(page))
         .toEqual(["Peça da Vera 1", "Peça da Vera 2", "Peça da Vera 3"]);
     });
+
+    // Later files seed against the full store, so give the listing back.
+    test.afterAll(() => restoreDraft("Rascunho 12"));
 
     test("deleting a listing moves the tab counts it belonged to", async ({
       page,

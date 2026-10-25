@@ -631,4 +631,34 @@ describe("pinned rows and the view", () => {
 
     await waitFor(() => expect(titles()).toEqual(["Abajur"]));
   });
+
+  it("drops a pinned row once the page changes", async () => {
+    const soldMany = Array.from({ length: 22 }, (_, i) =>
+      item(`Vendido ${String(i).padStart(2, "0")}`, { availability: "sold" }),
+    );
+    serve(soldMany);
+    await show("?status=vendidos&ordem=titulo-asc");
+    const first = screen.getByRole("combobox", {
+      name: "Disponibilidade de Vendido 00",
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => new Promise<Response>(() => {})),
+    );
+    first.focus();
+    fireEvent.keyDown(first, { key: "Enter" });
+    fireEvent.keyDown(
+      await screen.findByRole("option", { name: "Disponível" }),
+      { key: "Enter" },
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId("count-sold")).toHaveTextContent("21"),
+    );
+    expect(titles()).toContain("Vendido 00");
+
+    fireEvent.click(screen.getByRole("button", { name: "Próxima página" }));
+    fireEvent.click(screen.getByRole("button", { name: "Página anterior" }));
+
+    expect(titles()).not.toContain("Vendido 00");
+  });
 });

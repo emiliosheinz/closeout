@@ -52,10 +52,12 @@ function renderTeam({
   members = team,
   invites = pending,
   search = "",
+  ownRows = null,
 }: {
   members?: TeamMember[];
   invites?: PendingInvite[];
   search?: string;
+  ownRows?: TeamMember[] | null;
 } = {}) {
   const onUrlUpdate = vi.fn();
   const seeded = new QueryClient();
@@ -68,7 +70,7 @@ function renderTeam({
   });
   renderWithFeedback(
     <Nuqs>
-      <TeamView storeId="store" viewerId="zeca" ownRows={null} />
+      <TeamView storeId="store" viewerId="zeca" ownRows={ownRows} />
     </Nuqs>,
     dehydrate(seeded),
   );
@@ -137,7 +139,10 @@ describe("members table", () => {
       "Ágata",
     ]);
     sortBy(membersRegion(), "Papel");
-    expect(order(membersRegion(), teamNames).slice(-1)).toEqual(["Ana"]);
+    const descending = order(membersRegion(), teamNames);
+    expect(new Set(descending.slice(0, 2))).toEqual(new Set(["Zeca", "Ágata"]));
+    expect(new Set(descending.slice(2, 4))).toEqual(new Set(["José", "Bia"]));
+    expect(descending[4]).toBe("Ana");
   });
 
   it("restores the sort from the URL", async () => {
@@ -172,6 +177,14 @@ describe("members table", () => {
     expect(
       within(membersRegion()).getByText('Ninguém encontrado com "zzz".'),
     ).toBeVisible();
+  });
+
+  it("keeps a seller's own row whatever the URL searches for", async () => {
+    renderTeam({
+      ownRows: [member("Zeca", "seller")],
+      search: "?membros-q=zzz",
+    });
+    expect(order(screen.getByRole("table"), teamNames)).toEqual(["Zeca"]);
   });
 
   it("has no role filter", async () => {

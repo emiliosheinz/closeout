@@ -7,6 +7,7 @@ export * from "./model/photo-drop";
 export * from "./model/status-filter";
 export * from "./model/types";
 export { ListingCard } from "./ui/listing-card";
+export { ListingTitle } from "./ui/listing-title";
 export { PhotoDropzone } from "./ui/photo-dropzone";
 export { PhotoPlaceholder } from "./ui/photo-placeholder";
 export { PriceSticker } from "./ui/price-sticker";

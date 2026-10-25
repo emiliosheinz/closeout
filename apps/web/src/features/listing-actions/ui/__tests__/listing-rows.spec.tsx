@@ -8,11 +8,7 @@ import { listingKeys, tabCounts } from "@/entities/listing";
 import { renderWithFeedback } from "@/test/feedback-harness";
 import { listingSummary } from "@/test/fixtures";
 import { useListings } from "../../model/use-listings";
-import {
-  ListingRowActions,
-  ListingStatusControls,
-  ListingTitle,
-} from "../listing-rows";
+import { ListingRowActions, ListingStatusControls } from "../listing-rows";
 
 const push = vi.fn();
 vi.mock("next/navigation", () => ({
@@ -51,13 +47,7 @@ const row = (id: string, overrides: Partial<Row> = {}): Row =>
     ...overrides,
   });
 
-function Host({
-  storeSlug = "loja",
-  unreachableSellerIds,
-}: {
-  storeSlug?: string;
-  unreachableSellerIds?: string[];
-}) {
+function Host({ storeSlug = "loja" }: { storeSlug?: string }) {
   const listings = useListings("store");
   return (
     <>
@@ -69,12 +59,7 @@ function Host({
         <tbody>
           {listings.map((listing) => (
             <tr key={listing.id}>
-              <td>
-                <ListingTitle
-                  listing={listing}
-                  unreachableSellerIds={unreachableSellerIds}
-                />
-              </td>
+              <td>{listing.title}</td>
               <td>
                 <ListingStatusControls storeId="store" listing={listing} />
               </td>
@@ -143,30 +128,6 @@ async function pick(trigger: HTMLElement, option: string) {
 }
 
 describe("listing row cells", () => {
-  it("warns on published items whose seller cannot be reached", () => {
-    renderRows(
-      [
-        row("a", { sellers: [{ id: "no-phone", displayName: "x" }] }),
-        row("b", { sellers: [{ id: "with-phone", displayName: "y" }] }),
-        row("c", {
-          publication: "draft",
-          sellers: [{ id: "no-phone", displayName: "x" }],
-        }),
-        row("d", {
-          sellers: [
-            { id: "no-phone", displayName: "x" },
-            { id: "with-phone", displayName: "y" },
-          ],
-        }),
-      ],
-      { unreachableSellerIds: ["no-phone"] },
-    );
-    const warnings = screen.getAllByRole("link", { name: /sem WhatsApp/ });
-    expect(warnings).toHaveLength(1);
-    expect(warnings[0]).toHaveAttribute("href", "/admin/equipe");
-    expect(warnings[0]?.closest("tr")).toHaveTextContent("Item a");
-  });
-
   it.each([
     ["nosso-desapego", "/store/nosso-desapego/items/a"],
     ["loja-da-bia", "/store/loja-da-bia/items/a"],

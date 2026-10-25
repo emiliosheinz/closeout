@@ -181,6 +181,38 @@ export async function apiAs(
   return api;
 }
 
+/**
+ * Re-create a seeded draft listing a journey deleted, so the store returns to
+ * its seeded state for the next file.
+ */
+export async function restoreDraft(title: string): Promise<void> {
+  const seed = MANAGER_LISTINGS.find((item) => item.title === title);
+  if (seed?.publication !== "draft")
+    throw new Error(`${title} is no seeded draft`);
+  const owner = await apiAs(TABLES_OWNER_EMAIL, ADMIN_PASSWORD);
+  const { memberships } = await ok<{
+    memberships: { sellerId: string; store: { id: string } }[];
+  }>(await owner.get("/api/v1/me"));
+  const membership = memberships[0];
+  if (!membership) throw new Error("loja-tabelas has no store");
+  const base = `/api/v1/stores/${membership.store.id}`;
+  const { items: categories } = await ok<{ items: { id: string }[] }>(
+    await owner.get(`${base}/categories`),
+  );
+  await ok(
+    await owner.post(`${base}/listings`, {
+      data: {
+        title,
+        categoryId: categories[0]?.id,
+        sellerIds: [membership.sellerId],
+        priceCents: seed.priceCents,
+        condition: "good",
+      },
+    }),
+  );
+  await owner.dispose();
+}
+
 async function ok<T>(
   response: Awaited<ReturnType<APIRequestContext["get"]>>,
 ): Promise<T> {
@@ -235,9 +267,8 @@ let seeding: Promise<string> | undefined;
  * span two pages in every table, and return its store id. Seeds once per
  * provisioned database (a store matching the seed in every part is taken as
  * seeded), so several files can call it. A store holding anything else, a
- * half-finished seed included, throws: recreate the stack. The listing count
- * may be one short, because the delete journey removes a listing. Goes
- * through the same HTTP API the admin uses.
+ * half-finished seed or a rerun after the delete journey included, throws:
+ * recreate the stack. Goes through the same HTTP API the admin uses.
  */
 export function seedTablesStore(): Promise<string> {
   seeding ??= seed();
@@ -262,14 +293,14 @@ async function seed(): Promise<string> {
   const seeded =
     found.members === TABLES_SEED.members &&
     found.invites === TABLES_SEED.invites &&
-    [TABLES_SEED.listings, TABLES_SEED.listings - 1].includes(found.listings);
+    found.listings === TABLES_SEED.listings;
   if (seeded) {
     await owner.dispose();
     return storeId;
   }
   if (!fresh) {
     throw new Error(
-      "partial seed: recreate the e2e stack (bin/closeout e2e down -v)",
+      "seeded store not in its initial state: recreate the e2e stack (bin/closeout e2e down -v)",
     );
   }
 

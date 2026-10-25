@@ -223,6 +223,7 @@ function MembersTable({
   const rows: MemberRow[] = members
     .filter(
       (member) =>
+        !canManage ||
         !query ||
         matchesSearch(member.displayName, query) ||
         matchesSearch(member.email, query),
