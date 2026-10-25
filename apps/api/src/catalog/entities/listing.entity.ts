@@ -1,3 +1,8 @@
+import type {
+  Availability,
+  Condition,
+  Publication,
+} from "@closeout/contracts/enums";
 import {
   Check,
   Column,
@@ -13,12 +18,7 @@ import {
 } from "typeorm";
 import { Category } from "@/stores/entities/category.entity";
 import { Store } from "@/stores/entities/store.entity";
-import type {
-  Availability,
-  Condition,
-  ListingAttribute,
-  Publication,
-} from "../listing-types";
+import type { ListingAttribute } from "../listing-types";
 import { ListingImage } from "./listing-image.entity";
 import { ListingSeller } from "./listing-seller.entity";
 

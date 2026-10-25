@@ -1,0 +1,999 @@
+[
+  {
+    "params": {},
+    "filters": {
+      "q": "",
+      "category": null,
+      "condition": null,
+      "availability": "listed",
+      "minPrice": null,
+      "maxPrice": null,
+      "sort": "recent",
+      "page": 1
+    },
+    "entries": [],
+    "href": "/store/nosso-desapego",
+    "searchHidden": [],
+    "filterHidden": [],
+    "allChipHref": "/store/nosso-desapego",
+    "chipHrefs": [
+      "/store/nosso-desapego?categoria=cozinha",
+      "/store/nosso-desapego?categoria=moveis",
+      "/store/nosso-desapego?categoria=sala-de-estar"
+    ],
+    "listingCategoryHref": "/store/nosso-desapego?categoria=cozinha"
+  },
+  {
+    "params": {
+      "q": "  bicicleta  "
+    },
+    "filters": {
+      "q": "bicicleta",
+      "category": null,
+      "condition": null,
+      "availability": "listed",
+      "minPrice": null,
+      "maxPrice": null,
+      "sort": "recent",
+      "page": 1
+    },
+    "entries": [["q", "bicicleta"]],
+    "href": "/store/nosso-desapego?q=bicicleta",
+    "searchHidden": [],
+    "filterHidden": [["q", "bicicleta"]],
+    "allChipHref": "/store/nosso-desapego?q=bicicleta",
+    "chipHrefs": [
+      "/store/nosso-desapego?q=bicicleta&categoria=cozinha",
+      "/store/nosso-desapego?q=bicicleta&categoria=moveis",
+      "/store/nosso-desapego?q=bicicleta&categoria=sala-de-estar"
+    ],
+    "listingCategoryHref": "/store/nosso-desapego?categoria=cozinha"
+  },
+  {
+    "params": {
+      "q": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    },
+    "filters": {
+      "q": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "category": null,
+      "condition": null,
+      "availability": "listed",
+      "minPrice": null,
+      "maxPrice": null,
+      "sort": "recent",
+      "page": 1
+    },
+    "entries": [
+      [
+        "q",
+        "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      ]
+    ],
+    "href": "/store/nosso-desapego?q=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "searchHidden": [],
+    "filterHidden": [
+      [
+        "q",
+        "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      ]
+    ],
+    "allChipHref": "/store/nosso-desapego?q=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "chipHrefs": [
+      "/store/nosso-desapego?q=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx&categoria=cozinha",
+      "/store/nosso-desapego?q=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx&categoria=moveis",
+      "/store/nosso-desapego?q=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx&categoria=sala-de-estar"
+    ],
+    "listingCategoryHref": "/store/nosso-desapego?categoria=cozinha"
+  },
+  {
+    "params": {
+      "q": ["a", "b"]
+    },
+    "filters": {
+      "q": "a",
+      "category": null,
+      "condition": null,
+      "availability": "listed",
+      "minPrice": null,
+      "maxPrice": null,
+      "sort": "recent",
+      "page": 1
+    },
+    "entries": [["q", "a"]],
+    "href": "/store/nosso-desapego?q=a",
+    "searchHidden": [],
+    "filterHidden": [["q", "a"]],
+    "allChipHref": "/store/nosso-desapego?q=a",
+    "chipHrefs": [
+      "/store/nosso-desapego?q=a&categoria=cozinha",
+      "/store/nosso-desapego?q=a&categoria=moveis",
+      "/store/nosso-desapego?q=a&categoria=sala-de-estar"
+    ],
+    "listingCategoryHref": "/store/nosso-desapego?categoria=cozinha"
+  },
+  {
+    "params": {
+      "categoria": "moveis"
+    },
+    "filters": {
+      "q": "",
+      "category": "moveis",
+      "condition": null,
+      "availability": "listed",
+      "minPrice": null,
+      "maxPrice": null,
+      "sort": "recent",
+      "page": 1
+    },
+    "entries": [["categoria", "moveis"]],
+    "href": "/store/nosso-desapego?categoria=moveis",
+    "searchHidden": [["categoria", "moveis"]],
+    "filterHidden": [["categoria", "moveis"]],
+    "allChipHref": "/store/nosso-desapego",
+    "chipHrefs": [
+      "/store/nosso-desapego?categoria=cozinha",
+      "/store/nosso-desapego?categoria=moveis",
+      "/store/nosso-desapego?categoria=sala-de-estar"
+    ],
+    "listingCategoryHref": "/store/nosso-desapego?categoria=cozinha"
+  },
+  {
+    "params": {
+      "categoria": "Bad Slug"
+    },
+    "filters": {
+      "q": "",
+      "category": null,
+      "condition": null,
+      "availability": "listed",
+      "minPrice": null,
+      "maxPrice": null,
+      "sort": "recent",
+      "page": 1
+    },
+    "entries": [],
+    "href": "/store/nosso-desapego",
+    "searchHidden": [],
+    "filterHidden": [],
+    "allChipHref": "/store/nosso-desapego",
+    "chipHrefs": [
+      "/store/nosso-desapego?categoria=cozinha",
+      "/store/nosso-desapego?categoria=moveis",
+      "/store/nosso-desapego?categoria=sala-de-estar"
+    ],
+    "listingCategoryHref": "/store/nosso-desapego?categoria=cozinha"
+  },
+  {
+    "params": {
+      "categoria": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    "filters": {
+      "q": "",
+      "category": null,
+      "condition": null,
+      "availability": "listed",
+      "minPrice": null,
+      "maxPrice": null,
+      "sort": "recent",
+      "page": 1
+    },
+    "entries": [],
+    "href": "/store/nosso-desapego",
+    "searchHidden": [],
+    "filterHidden": [],
+    "allChipHref": "/store/nosso-desapego",
+    "chipHrefs": [
+      "/store/nosso-desapego?categoria=cozinha",
+      "/store/nosso-desapego?categoria=moveis",
+      "/store/nosso-desapego?categoria=sala-de-estar"
+    ],
+    "listingCategoryHref": "/store/nosso-desapego?categoria=cozinha"
+  },
+  {
+    "params": {
+      "estado": "novo"
+    },
+    "filters": {
+      "q": "",
+      "category": null,
+      "condition": "new",
+      "availability": "listed",
+      "minPrice": null,
+      "maxPrice": null,
+      "sort": "recent",
+      "page": 1
+    },
+    "entries": [["estado", "novo"]],
+    "href": "/store/nosso-desapego?estado=novo",
+    "searchHidden": [["estado", "novo"]],
+    "filterHidden": [],
+    "allChipHref": "/store/nosso-desapego?estado=novo",
+    "chipHrefs": [
+      "/store/nosso-desapego?categoria=cozinha&estado=novo",
+      "/store/nosso-desapego?categoria=moveis&estado=novo",
+      "/store/nosso-desapego?categoria=sala-de-estar&estado=novo"
+    ],
+    "listingCategoryHref": "/store/nosso-desapego?categoria=cozinha"
+  },
+  {
+    "params": {
+      "estado": "como-novo"
+    },
+    "filters": {
+      "q": "",
+      "category": null,
+      "condition": "like_new",
+      "availability": "listed",
+      "minPrice": null,
+      "maxPrice": null,
+      "sort": "recent",
+      "page": 1
+    },
+    "entries": [["estado", "como-novo"]],
+    "href": "/store/nosso-desapego?estado=como-novo",
+    "searchHidden": [["estado", "como-novo"]],
+    "filterHidden": [],
+    "allChipHref": "/store/nosso-desapego?estado=como-novo",
+    "chipHrefs": [
+      "/store/nosso-desapego?categoria=cozinha&estado=como-novo",
+      "/store/nosso-desapego?categoria=moveis&estado=como-novo",
+      "/store/nosso-desapego?categoria=sala-de-estar&estado=como-novo"
+    ],
+    "listingCategoryHref": "/store/nosso-desapego?categoria=cozinha"
+  },
+  {
+    "params": {
+      "estado": "bom"
+    },
+    "filters": {
+      "q": "",
+      "category": null,
+      "condition": "good",
+      "availability": "listed",
+      "minPrice": null,
+      "maxPrice": null,
+      "sort": "recent",
+      "page": 1
+    },
+    "entries": [["estado", "bom"]],
+    "href": "/store/nosso-desapego?estado=bom",
+    "searchHidden": [["estado", "bom"]],
+    "filterHidden": [],
+    "allChipHref": "/store/nosso-desapego?estado=bom",
+    "chipHrefs": [
+      "/store/nosso-desapego?categoria=cozinha&estado=bom",
+      "/store/nosso-desapego?categoria=moveis&estado=bom",
+      "/store/nosso-desapego?categoria=sala-de-estar&estado=bom"
+    ],
+    "listingCategoryHref": "/store/nosso-desapego?categoria=cozinha"
+  },
+  {
+    "params": {
+      "estado": "marcas-de-uso"
+    },
+    "filters": {
+      "q": "",
+      "category": null,
+      "condition": "fair",
+      "availability": "listed",
+      "minPrice": null,
+      "maxPrice": null,
+      "sort": "recent",
+      "page": 1
+    },
+    "entries": [["estado", "marcas-de-uso"]],
+    "href": "/store/nosso-desapego?estado=marcas-de-uso",
+    "searchHidden": [["estado", "marcas-de-uso"]],
+    "filterHidden": [],
+    "allChipHref": "/store/nosso-desapego?estado=marcas-de-uso",
+    "chipHrefs": [
+      "/store/nosso-desapego?categoria=cozinha&estado=marcas-de-uso",
+      "/store/nosso-desapego?categoria=moveis&estado=marcas-de-uso",
+      "/store/nosso-desapego?categoria=sala-de-estar&estado=marcas-de-uso"
+    ],
+    "listingCategoryHref": "/store/nosso-desapego?categoria=cozinha"
+  },
+  {
+    "params": {
+      "estado": "conserto"
+    },
+    "filters": {
+      "q": "",
+      "category": null,
+      "condition": "for_parts",
+      "availability": "listed",
+      "minPrice": null,
+      "maxPrice": null,
+      "sort": "recent",
+      "page": 1
+    },
+    "entries": [["estado", "conserto"]],
+    "href": "/store/nosso-desapego?estado=conserto",
+    "searchHidden": [["estado", "conserto"]],
+    "filterHidden": [],
+    "allChipHref": "/store/nosso-desapego?estado=conserto",
+    "chipHrefs": [
+      "/store/nosso-desapego?categoria=cozinha&estado=conserto",
+      "/store/nosso-desapego?categoria=moveis&estado=conserto",
+      "/store/nosso-desapego?categoria=sala-de-estar&estado=conserto"
+    ],
+    "listingCategoryHref": "/store/nosso-desapego?categoria=cozinha"
+  },
+  {
+    "params": {
+      "estado": "invalido"
+    },
+    "filters": {
+      "q": "",
+      "category": null,
+      "condition": null,
+      "availability": "listed",
+      "minPrice": null,
+      "maxPrice": null,
+      "sort": "recent",
+      "page": 1
+    },
+    "entries": [],
+    "href": "/store/nosso-desapego",
+    "searchHidden": [],
+    "filterHidden": [],
+    "allChipHref": "/store/nosso-desapego",
+    "chipHrefs": [
+      "/store/nosso-desapego?categoria=cozinha",
+      "/store/nosso-desapego?categoria=moveis",
+      "/store/nosso-desapego?categoria=sala-de-estar"
+    ],
+    "listingCategoryHref": "/store/nosso-desapego?categoria=cozinha"
+  },
+  {
+    "params": {
+      "disponibilidade": "disponivel"
+    },
+    "filters": {
+      "q": "",
+      "category": null,
+      "condition": null,
+      "availability": "available",
+      "minPrice": null,
+      "maxPrice": null,
+      "sort": "recent",
+      "page": 1
+    },
+    "entries": [["disponibilidade", "disponivel"]],
+    "href": "/store/nosso-desapego?disponibilidade=disponivel",
+    "searchHidden": [["disponibilidade", "disponivel"]],
+    "filterHidden": [],
+    "allChipHref": "/store/nosso-desapego?disponibilidade=disponivel",
+    "chipHrefs": [
+      "/store/nosso-desapego?categoria=cozinha&disponibilidade=disponivel",
+      "/store/nosso-desapego?categoria=moveis&disponibilidade=disponivel",
+      "/store/nosso-desapego?categoria=sala-de-estar&disponibilidade=disponivel"
+    ],
+    "listingCategoryHref": "/store/nosso-desapego?categoria=cozinha"
+  },
+  {
+    "params": {
+      "disponibilidade": "reservado"
+    },
+    "filters": {
+      "q": "",
+      "category": null,
+      "condition": null,
+      "availability": "reserved",
+      "minPrice": null,
+      "maxPrice": null,
+      "sort": "recent",
+      "page": 1
+    },
+    "entries": [["disponibilidade", "reservado"]],
+    "href": "/store/nosso-desapego?disponibilidade=reservado",
+    "searchHidden": [["disponibilidade", "reservado"]],
+    "filterHidden": [],
+    "allChipHref": "/store/nosso-desapego?disponibilidade=reservado",
+    "chipHrefs": [
+      "/store/nosso-desapego?categoria=cozinha&disponibilidade=reservado",
+      "/store/nosso-desapego?categoria=moveis&disponibilidade=reservado",
+      "/store/nosso-desapego?categoria=sala-de-estar&disponibilidade=reservado"
+    ],
+    "listingCategoryHref": "/store/nosso-desapego?categoria=cozinha"
+  },
+  {
+    "params": {
+      "disponibilidade": "vendido"
+    },
+    "filters": {
+      "q": "",
+      "category": null,
+      "condition": null,
+      "availability": "sold",
+      "minPrice": null,
+      "maxPrice": null,
+      "sort": "recent",
+      "page": 1
+    },
+    "entries": [["disponibilidade", "vendido"]],
+    "href": "/store/nosso-desapego?disponibilidade=vendido",
+    "searchHidden": [["disponibilidade", "vendido"]],
+    "filterHidden": [],
+    "allChipHref": "/store/nosso-desapego?disponibilidade=vendido",
+    "chipHrefs": [
+      "/store/nosso-desapego?categoria=cozinha&disponibilidade=vendido",
+      "/store/nosso-desapego?categoria=moveis&disponibilidade=vendido",
+      "/store/nosso-desapego?categoria=sala-de-estar&disponibilidade=vendido"
+    ],
+    "listingCategoryHref": "/store/nosso-desapego?categoria=cozinha"
+  },
+  {
+    "params": {
+      "disponibilidade": "todos"
+    },
+    "filters": {
+      "q": "",
+      "category": null,
+      "condition": null,
+      "availability": "all",
+      "minPrice": null,
+      "maxPrice": null,
+      "sort": "recent",
+      "page": 1
+    },
+    "entries": [["disponibilidade", "todos"]],
+    "href": "/store/nosso-desapego?disponibilidade=todos",
+    "searchHidden": [["disponibilidade", "todos"]],
+    "filterHidden": [],
+    "allChipHref": "/store/nosso-desapego?disponibilidade=todos",
+    "chipHrefs": [
+      "/store/nosso-desapego?categoria=cozinha&disponibilidade=todos",
+      "/store/nosso-desapego?categoria=moveis&disponibilidade=todos",
+      "/store/nosso-desapego?categoria=sala-de-estar&disponibilidade=todos"
+    ],
+    "listingCategoryHref": "/store/nosso-desapego?categoria=cozinha"
+  },
+  {
+    "params": {
+      "disponibilidade": "invalido"
+    },
+    "filters": {
+      "q": "",
+      "category": null,
+      "condition": null,
+      "availability": "listed",
+      "minPrice": null,
+      "maxPrice": null,
+      "sort": "recent",
+      "page": 1
+    },
+    "entries": [],
+    "href": "/store/nosso-desapego",
+    "searchHidden": [],
+    "filterHidden": [],
+    "allChipHref": "/store/nosso-desapego",
+    "chipHrefs": [
+      "/store/nosso-desapego?categoria=cozinha",
+      "/store/nosso-desapego?categoria=moveis",
+      "/store/nosso-desapego?categoria=sala-de-estar"
+    ],
+    "listingCategoryHref": "/store/nosso-desapego?categoria=cozinha"
+  },
+  {
+    "params": {
+      "ordem": "recentes"
+    },
+    "filters": {
+      "q": "",
+      "category": null,
+      "condition": null,
+      "availability": "listed",
+      "minPrice": null,
+      "maxPrice": null,
+      "sort": "recent",
+      "page": 1
+    },
+    "entries": [],
+    "href": "/store/nosso-desapego",
+    "searchHidden": [],
+    "filterHidden": [],
+    "allChipHref": "/store/nosso-desapego",
+    "chipHrefs": [
+      "/store/nosso-desapego?categoria=cozinha",
+      "/store/nosso-desapego?categoria=moveis",
+      "/store/nosso-desapego?categoria=sala-de-estar"
+    ],
+    "listingCategoryHref": "/store/nosso-desapego?categoria=cozinha"
+  },
+  {
+    "params": {
+      "ordem": "menor-preco"
+    },
+    "filters": {
+      "q": "",
+      "category": null,
+      "condition": null,
+      "availability": "listed",
+      "minPrice": null,
+      "maxPrice": null,
+      "sort": "price_asc",
+      "page": 1
+    },
+    "entries": [["ordem", "menor-preco"]],
+    "href": "/store/nosso-desapego?ordem=menor-preco",
+    "searchHidden": [["ordem", "menor-preco"]],
+    "filterHidden": [],
+    "allChipHref": "/store/nosso-desapego?ordem=menor-preco",
+    "chipHrefs": [
+      "/store/nosso-desapego?categoria=cozinha&ordem=menor-preco",
+      "/store/nosso-desapego?categoria=moveis&ordem=menor-preco",
+      "/store/nosso-desapego?categoria=sala-de-estar&ordem=menor-preco"
+    ],
+    "listingCategoryHref": "/store/nosso-desapego?categoria=cozinha"
+  },
+  {
+    "params": {
+      "ordem": "maior-preco"
+    },
+    "filters": {
+      "q": "",
+      "category": null,
+      "condition": null,
+      "availability": "listed",
+      "minPrice": null,
+      "maxPrice": null,
+      "sort": "price_desc",
+      "page": 1
+    },
+    "entries": [["ordem", "maior-preco"]],
+    "href": "/store/nosso-desapego?ordem=maior-preco",
+    "searchHidden": [["ordem", "maior-preco"]],
+    "filterHidden": [],
+    "allChipHref": "/store/nosso-desapego?ordem=maior-preco",
+    "chipHrefs": [
+      "/store/nosso-desapego?categoria=cozinha&ordem=maior-preco",
+      "/store/nosso-desapego?categoria=moveis&ordem=maior-preco",
+      "/store/nosso-desapego?categoria=sala-de-estar&ordem=maior-preco"
+    ],
+    "listingCategoryHref": "/store/nosso-desapego?categoria=cozinha"
+  },
+  {
+    "params": {
+      "ordem": "invalido"
+    },
+    "filters": {
+      "q": "",
+      "category": null,
+      "condition": null,
+      "availability": "listed",
+      "minPrice": null,
+      "maxPrice": null,
+      "sort": "recent",
+      "page": 1
+    },
+    "entries": [],
+    "href": "/store/nosso-desapego",
+    "searchHidden": [],
+    "filterHidden": [],
+    "allChipHref": "/store/nosso-desapego",
+    "chipHrefs": [
+      "/store/nosso-desapego?categoria=cozinha",
+      "/store/nosso-desapego?categoria=moveis",
+      "/store/nosso-desapego?categoria=sala-de-estar"
+    ],
+    "listingCategoryHref": "/store/nosso-desapego?categoria=cozinha"
+  },
+  {
+    "params": {
+      "min": "10",
+      "max": "50"
+    },
+    "filters": {
+      "q": "",
+      "category": null,
+      "condition": null,
+      "availability": "listed",
+      "minPrice": 10,
+      "maxPrice": 50,
+      "sort": "recent",
+      "page": 1
+    },
+    "entries": [["min", "10"], ["max", "50"]],
+    "href": "/store/nosso-desapego?min=10&max=50",
+    "searchHidden": [["min", "10"], ["max", "50"]],
+    "filterHidden": [],
+    "allChipHref": "/store/nosso-desapego?min=10&max=50",
+    "chipHrefs": [
+      "/store/nosso-desapego?categoria=cozinha&min=10&max=50",
+      "/store/nosso-desapego?categoria=moveis&min=10&max=50",
+      "/store/nosso-desapego?categoria=sala-de-estar&min=10&max=50"
+    ],
+    "listingCategoryHref": "/store/nosso-desapego?categoria=cozinha"
+  },
+  {
+    "params": {
+      "min": "50",
+      "max": "10"
+    },
+    "filters": {
+      "q": "",
+      "category": null,
+      "condition": null,
+      "availability": "listed",
+      "minPrice": 10,
+      "maxPrice": 50,
+      "sort": "recent",
+      "page": 1
+    },
+    "entries": [["min", "10"], ["max", "50"]],
+    "href": "/store/nosso-desapego?min=10&max=50",
+    "searchHidden": [["min", "10"], ["max", "50"]],
+    "filterHidden": [],
+    "allChipHref": "/store/nosso-desapego?min=10&max=50",
+    "chipHrefs": [
+      "/store/nosso-desapego?categoria=cozinha&min=10&max=50",
+      "/store/nosso-desapego?categoria=moveis&min=10&max=50",
+      "/store/nosso-desapego?categoria=sala-de-estar&min=10&max=50"
+    ],
+    "listingCategoryHref": "/store/nosso-desapego?categoria=cozinha"
+  },
+  {
+    "params": {
+      "min": "0"
+    },
+    "filters": {
+      "q": "",
+      "category": null,
+      "condition": null,
+      "availability": "listed",
+      "minPrice": 0,
+      "maxPrice": null,
+      "sort": "recent",
+      "page": 1
+    },
+    "entries": [["min", "0"]],
+    "href": "/store/nosso-desapego?min=0",
+    "searchHidden": [["min", "0"]],
+    "filterHidden": [],
+    "allChipHref": "/store/nosso-desapego?min=0",
+    "chipHrefs": [
+      "/store/nosso-desapego?categoria=cozinha&min=0",
+      "/store/nosso-desapego?categoria=moveis&min=0",
+      "/store/nosso-desapego?categoria=sala-de-estar&min=0"
+    ],
+    "listingCategoryHref": "/store/nosso-desapego?categoria=cozinha"
+  },
+  {
+    "params": {
+      "max": "0"
+    },
+    "filters": {
+      "q": "",
+      "category": null,
+      "condition": null,
+      "availability": "listed",
+      "minPrice": null,
+      "maxPrice": 0,
+      "sort": "recent",
+      "page": 1
+    },
+    "entries": [["max", "0"]],
+    "href": "/store/nosso-desapego?max=0",
+    "searchHidden": [["max", "0"]],
+    "filterHidden": [],
+    "allChipHref": "/store/nosso-desapego?max=0",
+    "chipHrefs": [
+      "/store/nosso-desapego?categoria=cozinha&max=0",
+      "/store/nosso-desapego?categoria=moveis&max=0",
+      "/store/nosso-desapego?categoria=sala-de-estar&max=0"
+    ],
+    "listingCategoryHref": "/store/nosso-desapego?categoria=cozinha"
+  },
+  {
+    "params": {
+      "min": "1000000",
+      "max": "1000001"
+    },
+    "filters": {
+      "q": "",
+      "category": null,
+      "condition": null,
+      "availability": "listed",
+      "minPrice": 1000000,
+      "maxPrice": null,
+      "sort": "recent",
+      "page": 1
+    },
+    "entries": [["min", "1000000"]],
+    "href": "/store/nosso-desapego?min=1000000",
+    "searchHidden": [["min", "1000000"]],
+    "filterHidden": [],
+    "allChipHref": "/store/nosso-desapego?min=1000000",
+    "chipHrefs": [
+      "/store/nosso-desapego?categoria=cozinha&min=1000000",
+      "/store/nosso-desapego?categoria=moveis&min=1000000",
+      "/store/nosso-desapego?categoria=sala-de-estar&min=1000000"
+    ],
+    "listingCategoryHref": "/store/nosso-desapego?categoria=cozinha"
+  },
+  {
+    "params": {
+      "min": "-5",
+      "max": "abc"
+    },
+    "filters": {
+      "q": "",
+      "category": null,
+      "condition": null,
+      "availability": "listed",
+      "minPrice": null,
+      "maxPrice": null,
+      "sort": "recent",
+      "page": 1
+    },
+    "entries": [],
+    "href": "/store/nosso-desapego",
+    "searchHidden": [],
+    "filterHidden": [],
+    "allChipHref": "/store/nosso-desapego",
+    "chipHrefs": [
+      "/store/nosso-desapego?categoria=cozinha",
+      "/store/nosso-desapego?categoria=moveis",
+      "/store/nosso-desapego?categoria=sala-de-estar"
+    ],
+    "listingCategoryHref": "/store/nosso-desapego?categoria=cozinha"
+  },
+  {
+    "params": {
+      "min": "1.5"
+    },
+    "filters": {
+      "q": "",
+      "category": null,
+      "condition": null,
+      "availability": "listed",
+      "minPrice": null,
+      "maxPrice": null,
+      "sort": "recent",
+      "page": 1
+    },
+    "entries": [],
+    "href": "/store/nosso-desapego",
+    "searchHidden": [],
+    "filterHidden": [],
+    "allChipHref": "/store/nosso-desapego",
+    "chipHrefs": [
+      "/store/nosso-desapego?categoria=cozinha",
+      "/store/nosso-desapego?categoria=moveis",
+      "/store/nosso-desapego?categoria=sala-de-estar"
+    ],
+    "listingCategoryHref": "/store/nosso-desapego?categoria=cozinha"
+  },
+  {
+    "params": {
+      "min": "1234567890"
+    },
+    "filters": {
+      "q": "",
+      "category": null,
+      "condition": null,
+      "availability": "listed",
+      "minPrice": null,
+      "maxPrice": null,
+      "sort": "recent",
+      "page": 1
+    },
+    "entries": [],
+    "href": "/store/nosso-desapego",
+    "searchHidden": [],
+    "filterHidden": [],
+    "allChipHref": "/store/nosso-desapego",
+    "chipHrefs": [
+      "/store/nosso-desapego?categoria=cozinha",
+      "/store/nosso-desapego?categoria=moveis",
+      "/store/nosso-desapego?categoria=sala-de-estar"
+    ],
+    "listingCategoryHref": "/store/nosso-desapego?categoria=cozinha"
+  },
+  {
+    "params": {
+      "pagina": "2"
+    },
+    "filters": {
+      "q": "",
+      "category": null,
+      "condition": null,
+      "availability": "listed",
+      "minPrice": null,
+      "maxPrice": null,
+      "sort": "recent",
+      "page": 2
+    },
+    "entries": [["pagina", "2"]],
+    "href": "/store/nosso-desapego?pagina=2",
+    "searchHidden": [],
+    "filterHidden": [],
+    "allChipHref": "/store/nosso-desapego",
+    "chipHrefs": [
+      "/store/nosso-desapego?categoria=cozinha",
+      "/store/nosso-desapego?categoria=moveis",
+      "/store/nosso-desapego?categoria=sala-de-estar"
+    ],
+    "listingCategoryHref": "/store/nosso-desapego?categoria=cozinha"
+  },
+  {
+    "params": {
+      "pagina": "1000"
+    },
+    "filters": {
+      "q": "",
+      "category": null,
+      "condition": null,
+      "availability": "listed",
+      "minPrice": null,
+      "maxPrice": null,
+      "sort": "recent",
+      "page": 1000
+    },
+    "entries": [["pagina", "1000"]],
+    "href": "/store/nosso-desapego?pagina=1000",
+    "searchHidden": [],
+    "filterHidden": [],
+    "allChipHref": "/store/nosso-desapego",
+    "chipHrefs": [
+      "/store/nosso-desapego?categoria=cozinha",
+      "/store/nosso-desapego?categoria=moveis",
+      "/store/nosso-desapego?categoria=sala-de-estar"
+    ],
+    "listingCategoryHref": "/store/nosso-desapego?categoria=cozinha"
+  },
+  {
+    "params": {
+      "pagina": "1001"
+    },
+    "filters": {
+      "q": "",
+      "category": null,
+      "condition": null,
+      "availability": "listed",
+      "minPrice": null,
+      "maxPrice": null,
+      "sort": "recent",
+      "page": 1
+    },
+    "entries": [],
+    "href": "/store/nosso-desapego",
+    "searchHidden": [],
+    "filterHidden": [],
+    "allChipHref": "/store/nosso-desapego",
+    "chipHrefs": [
+      "/store/nosso-desapego?categoria=cozinha",
+      "/store/nosso-desapego?categoria=moveis",
+      "/store/nosso-desapego?categoria=sala-de-estar"
+    ],
+    "listingCategoryHref": "/store/nosso-desapego?categoria=cozinha"
+  },
+  {
+    "params": {
+      "pagina": "0"
+    },
+    "filters": {
+      "q": "",
+      "category": null,
+      "condition": null,
+      "availability": "listed",
+      "minPrice": null,
+      "maxPrice": null,
+      "sort": "recent",
+      "page": 1
+    },
+    "entries": [],
+    "href": "/store/nosso-desapego",
+    "searchHidden": [],
+    "filterHidden": [],
+    "allChipHref": "/store/nosso-desapego",
+    "chipHrefs": [
+      "/store/nosso-desapego?categoria=cozinha",
+      "/store/nosso-desapego?categoria=moveis",
+      "/store/nosso-desapego?categoria=sala-de-estar"
+    ],
+    "listingCategoryHref": "/store/nosso-desapego?categoria=cozinha"
+  },
+  {
+    "params": {
+      "pagina": "abc"
+    },
+    "filters": {
+      "q": "",
+      "category": null,
+      "condition": null,
+      "availability": "listed",
+      "minPrice": null,
+      "maxPrice": null,
+      "sort": "recent",
+      "page": 1
+    },
+    "entries": [],
+    "href": "/store/nosso-desapego",
+    "searchHidden": [],
+    "filterHidden": [],
+    "allChipHref": "/store/nosso-desapego",
+    "chipHrefs": [
+      "/store/nosso-desapego?categoria=cozinha",
+      "/store/nosso-desapego?categoria=moveis",
+      "/store/nosso-desapego?categoria=sala-de-estar"
+    ],
+    "listingCategoryHref": "/store/nosso-desapego?categoria=cozinha"
+  },
+  {
+    "params": {
+      "pagina": "-3"
+    },
+    "filters": {
+      "q": "",
+      "category": null,
+      "condition": null,
+      "availability": "listed",
+      "minPrice": null,
+      "maxPrice": null,
+      "sort": "recent",
+      "page": 1
+    },
+    "entries": [],
+    "href": "/store/nosso-desapego",
+    "searchHidden": [],
+    "filterHidden": [],
+    "allChipHref": "/store/nosso-desapego",
+    "chipHrefs": [
+      "/store/nosso-desapego?categoria=cozinha",
+      "/store/nosso-desapego?categoria=moveis",
+      "/store/nosso-desapego?categoria=sala-de-estar"
+    ],
+    "listingCategoryHref": "/store/nosso-desapego?categoria=cozinha"
+  },
+  {
+    "params": {
+      "q": "tênis",
+      "categoria": "calcados",
+      "estado": "bom",
+      "disponibilidade": "todos",
+      "min": "80",
+      "max": "20",
+      "ordem": "maior-preco",
+      "pagina": "7"
+    },
+    "filters": {
+      "q": "tênis",
+      "category": "calcados",
+      "condition": "good",
+      "availability": "all",
+      "minPrice": 20,
+      "maxPrice": 80,
+      "sort": "price_desc",
+      "page": 7
+    },
+    "entries": [
+      ["q", "tênis"],
+      ["categoria", "calcados"],
+      ["estado", "bom"],
+      ["disponibilidade", "todos"],
+      ["min", "20"],
+      ["max", "80"],
+      ["ordem", "maior-preco"],
+      ["pagina", "7"]
+    ],
+    "href": "/store/nosso-desapego?q=t%C3%AAnis&categoria=calcados&estado=bom&disponibilidade=todos&min=20&max=80&ordem=maior-preco&pagina=7",
+    "searchHidden": [
+      ["categoria", "calcados"],
+      ["estado", "bom"],
+      ["disponibilidade", "todos"],
+      ["min", "20"],
+      ["max", "80"],
+      ["ordem", "maior-preco"]
+    ],
+    "filterHidden": [["q", "tênis"], ["categoria", "calcados"]],
+    "allChipHref": "/store/nosso-desapego?q=t%C3%AAnis&estado=bom&disponibilidade=todos&min=20&max=80&ordem=maior-preco",
+    "chipHrefs": [
+      "/store/nosso-desapego?q=t%C3%AAnis&categoria=cozinha&estado=bom&disponibilidade=todos&min=20&max=80&ordem=maior-preco",
+      "/store/nosso-desapego?q=t%C3%AAnis&categoria=moveis&estado=bom&disponibilidade=todos&min=20&max=80&ordem=maior-preco",
+      "/store/nosso-desapego?q=t%C3%AAnis&categoria=sala-de-estar&estado=bom&disponibilidade=todos&min=20&max=80&ordem=maior-preco"
+    ],
+    "listingCategoryHref": "/store/nosso-desapego?categoria=cozinha"
+  }
+]

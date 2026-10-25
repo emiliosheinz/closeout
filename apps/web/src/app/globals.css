@@ -37,6 +37,10 @@
   --color-primary-foreground: var(--surface);
   --color-muted-foreground: var(--muted);
   --color-destructive: var(--stamp);
+  --color-popover: var(--surface);
+  --color-popover-foreground: var(--ink);
+  --color-accent: var(--paper);
+  --color-accent-foreground: var(--ink);
 
   --radius-sm: 6px;
   --radius-md: 10px;

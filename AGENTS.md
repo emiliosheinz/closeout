@@ -1,7 +1,7 @@
 # Project overview
 
 closeout is a personal storefront for selling pre-owned items through WhatsApp. It is
-a Docker-first pnpm/Turborepo monorepo with two apps and a shared config package. The
+a Docker-first pnpm/Turborepo monorepo with two apps and two shared packages (config, contracts). The
 API (NestJS + TypeORM + PostgreSQL) owns all persistence, authentication, store
 membership and roles, invites, the catalog and image storage. The web app (Next.js App
 Router + React + Tailwind) renders every store's storefront at `/store/<slug>`, a
@@ -44,20 +44,23 @@ apps/api/src/
   database/    data source, entity list, migrations (generated)
 apps/api/test/ integration suites (*.integration-spec.ts)
 apps/web/src/
-  app/page.tsx        landing page at the site root
-  app/store/[slug]/   public catalog and item pages of each store
-  app/invite/         invite acceptance page
-  app/admin/          admin UI; (panel) layout requires a session
-  app/api/auth/       login/logout/invite route handlers (own the session cookie)
-  components/         storefront/, admin/, ui/ (shadcn-style primitives)
-  lib/                catalog/ (URL state, API client), admin/, format.ts, whatsapp.ts
+  app/         Next routing tree: route files only re-export from _pages / _app; robots, sitemap (proxy.ts sits beside it)
+  _app/        admin panel layout and nav, root/store layouts and error pages, api route handlers (auth, revalidate, health)
+  _pages/      one slice per page (admin-listings, admin-team, store-catalog, invite, ...) with its own ui/model
+  widgets/     listing-view, the one block shared by the item page and the admin preview
+  features/    user actions: listing-form, listing-actions, manage-photos, edit-store, member-actions, invite-actions, catalog-filter
+  entities/    listing, member, invite, session: types, API reads, display pieces; index.server.ts holds server-only code
+  shared/      api (http client, server fetcher), ui (shadcn primitives, dialogs), lib (format, money, site, whatsapp), config
 apps/web/e2e-tests/   Playwright journeys
+packages/contracts/   enums entry (no imports; used by api and web) and zod schemas entry (web, api tests)
 ```
 
 # Conventions
 
 - Biome is the formatter and linter; run `check:fix` before committing.
-- Only `apps/api` touches the database. The web app never imports from the API.
+- Only `apps/api` touches the database. The web app never imports from the API. Shared
+  enums and wire schemas live in `packages/contracts`; the API imports only its `enums`
+  entry, and the schemas only in tests.
 - Entities use `declare field: T`. Migrations are generated from the entity diff and
   reviewed; extensions are the only hand-written SQL.
 - Every admin route lives under `/stores/:storeId/*` behind `SessionGuard` and
@@ -69,7 +72,16 @@ apps/web/e2e-tests/   Playwright journeys
 - Domain rules (visibility, contactability, publishing) live in
   `catalog/listing-rules.ts`.
 - All user-facing copy is Brazilian Portuguese; code, comments and docs are English.
-  Labels and number formats live in `apps/web/src/lib/format.ts`.
+  Labels and number formats live in `apps/web/src/shared/lib/format.ts`.
+- Web code follows Feature-Sliced Design: layers import only downward
+  (`_app` > `_pages` > `widgets` > `features` > `entities` > `shared`), slices never import
+  each other within a layer, and a slice is imported through its `index.ts` (or
+  `index.server.ts` for server-only code). `shared` and `_app` have no slices, so their
+  modules are imported directly; `app/` route files only re-export.
+- An API response-shape change and the web change that consumes it ship in a separate PR
+  each (or the new field stays optional on the web for one release). Both services deploy
+  from one commit and the API waits on its migration, so for a moment the web runs against
+  the old API. A new field ships API first; a new enum value ships web first.
 - Use `Logger` in the API and `console.error` on the web side for diagnostics.
 - Tests assert behavior: API integration tests hit a real database, no mocks of the
   app's own collaborators.

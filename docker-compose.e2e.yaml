@@ -37,7 +37,7 @@ services:
       dockerfile: docker/Dockerfile.cli
     environment:
       CI: "true"
-    command: sh -lc "pnpm install --frozen-lockfile && pnpm turbo build --filter=@closeout/config"
+    command: sh -lc "pnpm install --frozen-lockfile && pnpm turbo build --filter=@closeout/config --filter=@closeout/contracts"
     volumes:
       - .:/closeout
 

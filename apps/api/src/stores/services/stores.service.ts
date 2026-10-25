@@ -1,3 +1,4 @@
+import type { StoreRole } from "@closeout/contracts/enums";
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import type { EntityManager, Repository } from "typeorm";
@@ -6,7 +7,7 @@ import { Seller } from "@/sellers/entities/seller.entity";
 import { DEFAULT_CATEGORIES } from "../default-categories";
 import { Category } from "../entities/category.entity";
 import { Store } from "../entities/store.entity";
-import { StoreMember, type StoreRole } from "../entities/store-member.entity";
+import { StoreMember } from "../entities/store-member.entity";
 
 export interface StoreSettings {
   id: string;

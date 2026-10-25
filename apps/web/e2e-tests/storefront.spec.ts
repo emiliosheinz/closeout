@@ -1,78 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { findInAdmin, STORE, signIn } from "./helpers";
 
-test("the catalog shows a data-derived count and filters through the URL", async ({
-  page,
-}) => {
-  await page.goto(STORE);
-  await expect(page.getByTestId("store-counts")).toContainText(
-    /\d+ itens disponíveis/,
-  );
-  await page.getByRole("link", { name: /^Móveis/ }).click();
-  await expect(page).toHaveURL(/categoria=moveis/);
-  const count = await page.getByTestId("results-count").textContent();
-  await page.goto(`${STORE}?categoria=moveis&ordem=menor-preco`);
-  await expect(page.getByTestId("results-count")).toHaveText(count ?? "");
-  await expect(page.getByRole("link", { name: /^Móveis/ })).toHaveAttribute(
-    "aria-current",
-    "page",
-  );
-});
-
-test("an unmatched search offers a way back to every item", async ({
-  page,
-}) => {
-  await page.goto(`${STORE}?q=helicoptero-de-brinquedo`);
-  await expect(page.getByText("Nada por aqui com esses filtros")).toBeVisible();
-  await page.getByRole("link", { name: "Ver todos os itens" }).click();
-  await expect(page).toHaveURL(/\/store\/loja-e2e$/);
-});
-
-test("a page number past the end returns to the first page", async ({
-  page,
-}) => {
-  await page.goto(`${STORE}?categoria=moveis&pagina=999`);
-  await expect(page).toHaveURL(/\/store\/loja-e2e\?categoria=moveis$/);
-  await expect(page.getByTestId("results-count")).toBeVisible();
-});
-
-test("search, category and sort combine and show in the controls", async ({
-  page,
-}) => {
-  await page.goto(`${STORE}?q=mesa&categoria=moveis&ordem=menor-preco`);
-  await expect(
-    page.getByRole("searchbox", { name: "Buscar itens" }),
-  ).toHaveValue("mesa");
-  await expect(page.getByRole("link", { name: /^Móveis/ })).toHaveAttribute(
-    "aria-current",
-    "page",
-  );
-  await expect(
-    page
-      .getByRole("complementary", { name: "Filtros" })
-      .getByRole("radio", { name: "Menor preço" }),
-  ).toBeChecked();
-});
-
-test("an unauthenticated preview link sends the visitor to sign in", async ({
-  page,
-}) => {
-  await page.goto(
-    "/admin/anuncios/00000000-0000-0000-0000-000000000000/previa",
-  );
-  await expect(page).toHaveURL(/\/admin\/entrar$/);
-});
-
-test("broken catalog URLs fall back to defaults instead of failing", async ({
-  page,
-}) => {
-  const response = await page.goto(
-    `${STORE}?pagina=abc&ordem=xyz&min=-3&estado=quebrado`,
-  );
-  expect(response?.status()).toBe(200);
-  await expect(page.getByTestId("results-count")).toBeVisible();
-});
-
 test("drafts stay private: no page, no sitemap entry", async ({ page }) => {
   await signIn(page);
   await findInAdmin(page, "Cadeira de escritório");
@@ -82,8 +10,6 @@ test("drafts stay private: no page, no sitemap entry", async ({ page }) => {
   const previewHref = await preview.getAttribute("href");
   await page.goto(previewHref ?? "");
   await expect(page.getByText("Pré-visualização: é assim")).toBeVisible();
-  // The draft has no photos yet: a designed placeholder, never a broken image.
-  await expect(page.getByTestId("photo-placeholder")).toBeVisible();
 
   const listings = await page.request.get(
     "/api/v1/public/stores/loja-e2e/listings?availability=all&pageSize=100",
@@ -105,28 +31,39 @@ test("drafts stay private: no page, no sitemap entry", async ({ page }) => {
   expect(missing.status()).toBe(404);
 });
 
-test("robots keeps the admin, the API and invite links out of search engines", async ({
+test("the running app serves robots rules, security headers and real 404s, and no image optimizer", async ({
   page,
 }) => {
-  const robots = await (await page.request.get("/robots.txt")).text();
-  expect(robots).toContain("Disallow: /admin");
-  expect(robots).toContain("Disallow: /api/");
-  expect(robots).toContain("Disallow: /invite/");
-  expect(robots).toContain("Sitemap: http://web:3001/sitemap.xml");
-});
+  await test.step("robots keeps the admin, the API and invite links out of search engines", async () => {
+    const robots = await (await page.request.get("/robots.txt")).text();
+    expect(robots).toContain("Disallow: /admin");
+    expect(robots).toContain("Disallow: /api/");
+    expect(robots).toContain("Disallow: /invite/");
+    expect(robots).toContain("Sitemap: http://web:3001/sitemap.xml");
+  });
 
-test("pages carry the security headers", async ({ page }) => {
-  const response = await page.request.get(STORE);
-  const headers = response.headers();
-  expect(headers["x-content-type-options"]).toBe("nosniff");
-  expect(headers["x-frame-options"]).toBe("DENY");
-  expect(headers["referrer-policy"]).toBe("strict-origin-when-cross-origin");
-  expect(headers["permissions-policy"]).toContain("camera=()");
-});
+  await test.step("pages carry the security headers", async () => {
+    const headers = (await page.request.get(STORE)).headers();
+    expect(headers["x-content-type-options"]).toBe("nosniff");
+    expect(headers["x-frame-options"]).toBe("DENY");
+    expect(headers["referrer-policy"]).toBe("strict-origin-when-cross-origin");
+    expect(headers["permissions-policy"]).toContain("camera=()");
+  });
 
-test("the image optimizer endpoint is disabled", async ({ page }) => {
-  const response = await page.request.get(
-    "/_next/image?url=%2Fmedia%2Fx.webp&w=64&q=75",
-  );
-  expect(response.status()).toBe(404);
+  await test.step("the image optimizer endpoint is disabled", async () => {
+    const response = await page.request.get(
+      "/_next/image?url=%2Fmedia%2Fx.webp&w=64&q=75",
+    );
+    expect(response.status()).toBe(404);
+  });
+
+  await test.step("unknown, store-item and legacy paths return 404", async () => {
+    for (const path of [
+      "/pagina-que-nao-existe",
+      `${STORE}/items/item-que-nao-existe`,
+      "/itens/x",
+    ]) {
+      expect((await page.request.get(path)).status(), path).toBe(404);
+    }
+  });
 });

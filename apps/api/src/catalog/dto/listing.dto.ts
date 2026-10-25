@@ -1,3 +1,11 @@
+import {
+  AVAILABILITIES,
+  type Availability,
+  CONDITIONS,
+  type Condition,
+  PUBLICATIONS,
+  type Publication,
+} from "@closeout/contracts/enums";
 import { Transform, Type } from "class-transformer";
 import {
   ArrayMaxSize,
@@ -15,14 +23,6 @@ import {
   ValidateIf,
   ValidateNested,
 } from "class-validator";
-import {
-  AVAILABILITIES,
-  type Availability,
-  CONDITIONS,
-  type Condition,
-  PUBLICATIONS,
-  type Publication,
-} from "../listing-types";
 
 const TRIM = ({ value }: { value: unknown }) =>
   typeof value === "string" ? value.trim() : value;

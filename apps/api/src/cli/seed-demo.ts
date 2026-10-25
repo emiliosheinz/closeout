@@ -1,14 +1,14 @@
+import type {
+  Availability,
+  Condition,
+  Publication,
+} from "@closeout/contracts/enums";
 import sharp from "sharp";
 import type { DataSource } from "typeorm";
 import { User } from "@/auth/entities/user.entity";
 import { hashPassword } from "@/auth/services/passwords";
 import { Listing } from "@/catalog/entities/listing.entity";
-import type {
-  Availability,
-  Condition,
-  ListingAttribute,
-  Publication,
-} from "@/catalog/listing-types";
+import type { ListingAttribute } from "@/catalog/listing-types";
 import type { ListingImagesService } from "@/catalog/services/listing-images.service";
 import type {
   ListingActor,

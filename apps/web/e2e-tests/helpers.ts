@@ -1,4 +1,4 @@
-import { expect, type Page } from "@playwright/test";
+import { type APIRequestContext, expect, type Page } from "@playwright/test";
 
 export const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? "admin@e2e.test";
 export const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? "";
@@ -39,6 +39,19 @@ export async function signIn(
   await hydrated(page);
 }
 
+/**
+ * The admin listing table's item rows. Hidden rows count too, because an open
+ * modal dialog marks the table aria-hidden while it is still on screen.
+ */
+export function listingRows(page: Page) {
+  return page.getByRole("row", { includeHidden: true }).filter({
+    has: page.getByRole("combobox", {
+      name: /^Publicação de /,
+      includeHidden: true,
+    }),
+  });
+}
+
 /** Search the admin listing table and wait for the filtered, interactive page. */
 export async function findInAdmin(page: Page, title: string): Promise<void> {
   await page
@@ -50,7 +63,9 @@ export async function findInAdmin(page: Page, title: string): Promise<void> {
 }
 
 /** A real JPEG to upload: the demo seed's link-preview variant of a cover. */
-export async function samplePhoto(page: Page): Promise<Buffer> {
+export async function samplePhoto(page: {
+  request: APIRequestContext;
+}): Promise<Buffer> {
   const html = await (await page.request.get(STORE)).text();
   const match = html.match(/\/media\/[0-9a-f-]{36}-sm\.webp/);
   if (!match) throw new Error("No seeded photo found on the storefront");

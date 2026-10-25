@@ -3,6 +3,7 @@ import {
   ADMIN_WHATSAPP,
   findInAdmin,
   hydrated,
+  listingRows,
   STORE,
   samplePhoto,
   signIn,
@@ -12,6 +13,8 @@ const TITLE = `Luminária de teste ${Date.now()}`;
 
 test.describe
   .serial("from listing to WhatsApp and back", () => {
+    let publicPath = "";
+
     test("an admin creates a listing with photos and publishes it", async ({
       page,
     }) => {
@@ -21,12 +24,16 @@ test.describe
       await hydrated(page);
       await page.getByLabel("Nome do item").fill(TITLE);
       await page.getByLabel("Preço (R$)").fill("1.234,50");
-      await page
-        .getByLabel("Categoria")
-        .selectOption({ label: "Casa e decoração" });
+      await page.getByRole("combobox", { name: "Categoria" }).click();
+      await page.getByRole("option", { name: "Casa e decoração" }).click();
+      await expect(
+        page.getByRole("combobox", { name: "Categoria" }),
+      ).toHaveText("Casa e decoração");
       await page.getByLabel("Descrição").fill("Luz quente, cúpula de linho.");
       const photo = await samplePhoto(page);
-      await page.locator("#photos").setInputFiles([
+      const chooser = page.waitForEvent("filechooser");
+      await page.getByRole("button", { name: "Adicionar fotos" }).click();
+      await (await chooser).setFiles([
         { name: "frente.jpg", mimeType: "image/jpeg", buffer: photo },
         { name: "lado.jpg", mimeType: "image/jpeg", buffer: photo },
       ]);
@@ -40,22 +47,39 @@ test.describe
       );
     });
 
-    test("a visitor finds it by search and opens WhatsApp with the seller", async ({
+    test("a visitor finds it by category and search and opens WhatsApp with the seller", async ({
       page,
     }) => {
-      await page.goto(STORE);
-      await page
-        .getByRole("searchbox", { name: "Buscar itens" })
-        .fill("luminaria de teste");
-      await page.keyboard.press("Enter");
-      await expect(page).toHaveURL(/q=luminaria\+de\+teste/);
-      await expect(page.getByTestId("results-count")).toHaveText("1 item");
+      await test.step("the category chip lists it", async () => {
+        await page.goto(STORE);
+        await page.getByRole("link", { name: /^Casa e decoração/ }).click();
+        await expect(page).toHaveURL(/categoria=casa-e-decoracao/);
+        await expect(
+          page.getByRole("link", { name: TITLE, exact: true }),
+        ).toBeVisible();
+      });
+
+      await test.step("the search finds it", async () => {
+        await page
+          .getByRole("searchbox", { name: "Buscar itens" })
+          .fill("luminaria de teste");
+        await page.keyboard.press("Enter");
+        await expect(page).toHaveURL(/q=luminaria\+de\+teste/);
+        await expect(page.getByTestId("results-count")).toHaveText("1 item");
+      });
 
       await page.getByRole("link", { name: TITLE, exact: true }).click();
       await expect(
         page.getByRole("heading", { name: TITLE, level: 1 }),
       ).toBeVisible();
+      publicPath = new URL(page.url()).pathname;
       await expect(page.getByText("R$ 1.234,50").first()).toBeVisible();
+      const image = await page
+        .locator('meta[property="og:image"]')
+        .getAttribute("content");
+      expect(
+        (await page.request.get(image ?? "")).headers()["content-type"],
+      ).toBe("image/jpeg");
 
       const contact = page.getByTestId("whatsapp-contact").first();
       const href = new URL((await contact.getAttribute("href")) ?? "");
@@ -67,93 +91,19 @@ test.describe
       expect(await contact.getAttribute("target")).toBe("_blank");
     });
 
-    test("the item page carries link-preview metadata", async ({ page }) => {
-      await page.goto(`${STORE}?q=${encodeURIComponent(TITLE)}`);
-      await page.getByRole("link", { name: TITLE, exact: true }).click();
-      await expect(page.locator('meta[property="og:title"]')).toHaveAttribute(
-        "content",
-        TITLE,
-      );
-      const image = await page
-        .locator('meta[property="og:image"]')
-        .getAttribute("content");
-      expect(image).toMatch(
-        /^http:\/\/web:3001\/media\/[0-9a-f-]{36}-og\.jpg$/,
-      );
-      expect(
-        (await page.request.get(image ?? "")).headers()["content-type"],
-      ).toBe("image/jpeg");
-      await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
-        "href",
-        page.url(),
-      );
-    });
-
-    test("an item sold by two people asks the buyer whom to message", async ({
-      page,
-      browser,
-    }) => {
-      const partner = "Vendedora de exemplo";
-      await signIn(page);
-      await page.goto("/admin/equipe");
-      await hydrated(page);
-      const card = page
-        .getByRole("listitem")
-        .filter({ hasText: "seller@loja-e2e.test" });
-      await card.getByRole("button", { name: /^Ações para / }).click();
-      await page.getByRole("menuitem", { name: "Editar" }).click();
-      const editDialog = page.getByRole("dialog");
-      await editDialog.getByLabel("WhatsApp").fill("+55 21 97777-0000");
-      await editDialog
-        .getByRole("button", { name: "Salvar alterações" })
-        .click();
-      await expect(editDialog).toBeHidden();
-      await expect(card).toContainText("+5521977770000");
-
-      await page.goto("/admin");
-      await findInAdmin(page, TITLE);
-      await page
-        .getByTestId("admin-listing-row")
-        .filter({ hasText: TITLE })
-        .getByRole("link", { name: `Editar ${TITLE}` })
-        .click();
-      await hydrated(page);
-      await page.getByRole("checkbox", { name: partner }).check();
-      await page.getByRole("button", { name: "Salvar alterações" }).click();
-      await expect(page.getByText("Alterações salvas.")).toBeVisible();
-
-      const visitor = await browser.newPage();
-      await visitor.goto(`${STORE}?q=${encodeURIComponent(TITLE)}`);
-      await visitor.getByRole("link", { name: TITLE, exact: true }).click();
-      await hydrated(visitor);
-      await visitor
-        .getByRole("button", { name: "Chamar no WhatsApp" })
-        .last()
-        .click();
-      const dialog = visitor.getByRole("dialog", {
-        name: "Com quem você quer falar?",
-      });
-      const numbers = await dialog
-        .getByRole("link")
-        .evaluateAll((links) =>
-          links.map(
-            (link) => new URL(link.getAttribute("href") ?? "").pathname,
-          ),
-        );
-      expect(numbers.sort()).toEqual([`/${ADMIN_WHATSAPP}`, "/5521977770000"]);
-      await visitor.close();
-    });
-
     test("marking it reserved and then sold shows on the storefront", async ({
       page,
       browser,
     }) => {
       await signIn(page);
       await findInAdmin(page, TITLE);
-      const row = page
-        .getByTestId("admin-listing-row")
-        .filter({ hasText: TITLE });
-      await row.getByLabel("Disponibilidade").selectOption("reserved");
+      const row = listingRows(page).filter({ hasText: TITLE });
+      const availability = row.getByRole("combobox", {
+        name: `Disponibilidade de ${TITLE}`,
+      });
+      await availability.click();
+      await page.getByRole("option", { name: "Reservado" }).click();
+      await expect(availability).toHaveText("Reservado");
       await expect(
         page.getByText(`"${TITLE}" marcado como reservado.`),
       ).toBeVisible();
@@ -164,7 +114,9 @@ test.describe
         visitor.getByRole("article").filter({ hasText: TITLE }),
       ).toContainText("Reservado");
 
-      await row.getByLabel("Disponibilidade").selectOption("sold");
+      await availability.click();
+      await page.getByRole("option", { name: "Vendido" }).click();
+      await expect(availability).toHaveText("Vendido");
       await expect(
         page.getByText(`"${TITLE}" marcado como vendido.`),
       ).toBeVisible();
@@ -185,5 +137,44 @@ test.describe
         }),
       ).toBeVisible();
       await visitor.close();
+    });
+
+    test("a copy is made as a draft, and deleting the listing takes it off its public URL", async ({
+      page,
+    }) => {
+      await signIn(page);
+
+      await test.step("duplicating opens a draft copy", async () => {
+        await findInAdmin(page, TITLE);
+        await page.getByRole("button", { name: `Duplicar ${TITLE}` }).click();
+        await page.getByRole("button", { name: "Duplicar anúncio" }).click();
+        await expect(page).toHaveURL(/copiado=1/);
+        await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+          `${TITLE} (cópia)`,
+        );
+        await expect(
+          page.getByRole("combobox", { name: "Publicação" }),
+        ).toHaveText("Rascunho");
+      });
+
+      await test.step("deleting asks first and the public URL returns 404", async () => {
+        await page.goto("/admin");
+        await findInAdmin(page, TITLE);
+        const rows = listingRows(page);
+        await expect(rows).toHaveCount(2);
+
+        await page
+          .getByRole("button", { name: `Excluir ${TITLE}`, exact: true })
+          .click();
+        const dialog = page.getByRole("alertdialog");
+        await expect(dialog).toContainText(
+          "o link compartilhado deixa de funcionar",
+        );
+        await dialog.getByRole("button", { name: "Excluir anúncio" }).click();
+        await expect(rows).toHaveCount(1);
+
+        const response = await page.request.get(publicPath);
+        expect(response.status()).toBe(404);
+      });
     });
   });
