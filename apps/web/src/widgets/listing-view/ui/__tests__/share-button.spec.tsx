@@ -56,4 +56,32 @@ describe("ShareButton", () => {
       url: "https://loja.example/store/loja/items/mesa-abc123",
     });
   });
+
+  it("asks the person to copy the link by hand when the clipboard is blocked", async () => {
+    const prompt = vi.spyOn(window, "prompt").mockReturnValue(null);
+    Object.defineProperty(navigator, "share", {
+      value: undefined,
+      configurable: true,
+    });
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText: vi.fn().mockRejectedValue(new Error("denied")) },
+      configurable: true,
+    });
+
+    render(
+      <ShareButton
+        url="https://loja.example/store/loja/items/mesa-abc123"
+        title="Mesa"
+      />,
+    );
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Compartilhar" }));
+    });
+
+    expect(prompt).toHaveBeenCalledWith(
+      "Copie o link do item:",
+      "https://loja.example/store/loja/items/mesa-abc123",
+    );
+    prompt.mockRestore();
+  });
 });

@@ -1,6 +1,6 @@
 /** @vitest-environment node */
 import { getListings, getStore } from "@/entities/listing/index.server";
-import { CatalogPage } from "../store-catalog-page";
+import { CatalogPage, generateMetadata } from "../store-catalog-page";
 
 vi.mock("@/entities/listing/index.server", () => ({
   PAGE_SIZE: 24,
@@ -75,5 +75,26 @@ describe("catalog page past the last page", () => {
         searchParams: Promise.resolve({}),
       }),
     ).resolves.toBeTruthy();
+  });
+});
+
+describe("catalog page link preview", () => {
+  it("points the canonical and preview URL of the unfiltered catalog at the store", async () => {
+    vi.mocked(getStore).mockResolvedValue(store);
+    vi.mocked(getListings).mockResolvedValue({
+      items: [],
+      received: 0,
+      total: 0,
+      page: 1,
+      pageSize: 24,
+    });
+
+    const metadata = await generateMetadata({
+      params: Promise.resolve({ slug: "loja" }),
+      searchParams: Promise.resolve({}),
+    });
+
+    expect(metadata.alternates?.canonical).toBe("/store/loja");
+    expect(metadata.openGraph?.url).toBe("/store/loja");
   });
 });

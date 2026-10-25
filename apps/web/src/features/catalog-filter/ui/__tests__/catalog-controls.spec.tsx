@@ -86,4 +86,40 @@ describe("catalog controls", () => {
       screen.getByRole("link", { name: "Limpar filtros" }),
     ).toHaveAttribute("href", path);
   });
+
+  it("reflects the search, category and sort of the URL in the controls", () => {
+    const filters = parseCatalogParams({
+      q: "mesa",
+      categoria: "moveis",
+      ordem: "menor-preco",
+    });
+    render(
+      <>
+        <SearchForm storeSlug="loja" filters={filters} />
+        <CategoryChips
+          storeSlug="loja"
+          categories={categories}
+          filters={filters}
+        />
+        <FilterForm storeSlug="loja" filters={filters} />
+      </>,
+    );
+    expect(screen.getByRole("searchbox", { name: "Buscar itens" })).toHaveValue(
+      "mesa",
+    );
+    expect(screen.getByRole("link", { name: /^Móveis\s*2$/ })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    expect(screen.getByRole("link", { name: "Tudo" })).not.toHaveAttribute(
+      "aria-current",
+    );
+    expect(
+      screen.getByRole("link", { name: /^Cozinha\s*1$/ }),
+    ).not.toHaveAttribute("aria-current");
+    expect(screen.getByRole("radio", { name: "Menor preço" })).toBeChecked();
+    expect(
+      screen.getByRole("radio", { name: "Mais recentes" }),
+    ).not.toBeChecked();
+  });
 });

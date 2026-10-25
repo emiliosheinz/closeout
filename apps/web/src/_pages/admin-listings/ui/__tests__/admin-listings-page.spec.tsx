@@ -818,3 +818,28 @@ describe("pinned rows and the view", () => {
     expect(titles()).not.toContain("Vendido 00");
   });
 });
+
+describe("a seller's view", () => {
+  it("shows the search, the sort headers and the count of the rows loaded", async () => {
+    stubAdminApi({
+      "/me": meResponse("seller"),
+      "/stores/store-1/listings": {
+        items: [item("Cadeira"), item("Banco"), item("Abajur")],
+      },
+      "/stores/store-1/sellers": { items: [] },
+    });
+    await show();
+
+    expect(
+      screen.getByRole("searchbox", { name: "Buscar anúncios pelo título" }),
+    ).toBeInTheDocument();
+    for (const name of [/Título/, /Preço/, /Atualizado/]) {
+      expect(within(header(name)).getByRole("button")).toBeInTheDocument();
+    }
+    expect(tab(/Todos/)).toHaveTextContent("3");
+
+    sortBy(/Título/);
+
+    expect(titles()).toEqual(["Abajur", "Banco", "Cadeira"]);
+  });
+});
