@@ -1,9 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { requireEnv } from "@/lib/env";
+import { canonicalCatalogSearch } from "@/features/catalog-filter";
+import { requireEnv } from "@/shared/config/env";
 import {
   CLIENT_IP_HEADER,
   INTERNAL_SECRET_HEADER,
-} from "@/lib/internal-headers";
+} from "@/shared/config/internal-headers";
 
 /** Headers only trusted server-to-server; a browser must never supply them. */
 const STRIPPED_HEADERS = [INTERNAL_SECRET_HEADER, CLIENT_IP_HEADER];
@@ -32,8 +33,13 @@ function upstreamUrl(
  * - `/api/v1/*` → API with the prefix stripped (admin calls)
  * - `/media/*`  → API `/media/*` (images, same-origin and cacheable)
  * Reads `API_BASE_URL` per request so one built image works everywhere.
+ *
+ * Also sends a store catalog URL that is not in its clean form to the clean
+ * one. The page streams behind a loading state, so a redirect from the page
+ * itself would arrive as a 200 with a meta refresh instead of a 307.
  */
 export function proxy(req: NextRequest): NextResponse {
+  if (req.nextUrl.pathname.startsWith("/store/")) return catalogRedirect(req);
   const headers = new Headers(req.headers);
   for (const name of STRIPPED_HEADERS) headers.delete(name);
   return NextResponse.rewrite(
@@ -46,6 +52,15 @@ export function proxy(req: NextRequest): NextResponse {
   );
 }
 
+function catalogRedirect(req: NextRequest): NextResponse {
+  const search = canonicalCatalogSearch(req.nextUrl.searchParams);
+  if (search === null) return NextResponse.next();
+  const url = req.nextUrl.clone();
+  url.search = search;
+  return NextResponse.redirect(url);
+}
+
 export const config = {
-  matcher: ["/api/v1/:path*", "/media/:path*"],
+  // `:slug` is one segment: the catalog, not its item pages.
+  matcher: ["/api/v1/:path*", "/media/:path*", "/store/:slug"],
 };

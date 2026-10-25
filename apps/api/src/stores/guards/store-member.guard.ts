@@ -1,3 +1,4 @@
+import type { StoreRole } from "@closeout/contracts/enums";
 import {
   type CanActivate,
   type ExecutionContext,
@@ -12,7 +13,6 @@ import {
   type RequestWithPrincipal,
   requirePrincipal,
 } from "@/auth/guards/session.guard";
-import type { StoreRole } from "../entities/store-member.entity";
 import { forbidden, type RequestWithMembership, Roles } from "../membership";
 
 /**

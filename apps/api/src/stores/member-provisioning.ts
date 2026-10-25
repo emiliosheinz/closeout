@@ -1,7 +1,8 @@
+import type { StoreRole } from "@closeout/contracts/enums";
 import type { EntityManager } from "typeorm";
 import { User } from "@/auth/entities/user.entity";
 import { Seller } from "@/sellers/entities/seller.entity";
-import { StoreMember, type StoreRole } from "./entities/store-member.entity";
+import { StoreMember } from "./entities/store-member.entity";
 
 export interface NewMember {
   storeId: string;

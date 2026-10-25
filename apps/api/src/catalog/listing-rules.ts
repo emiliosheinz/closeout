@@ -1,5 +1,9 @@
-import { isManager, type StoreRole } from "@/stores/roles";
-import type { Availability, Publication } from "./listing-types";
+import type {
+  Availability,
+  Publication,
+  StoreRole,
+} from "@closeout/contracts/enums";
+import { isManager } from "@/stores/roles";
 
 /** Published listings are the only ones a visitor can open by URL. */
 export function isPubliclyVisible(listing: { publication: Publication }) {

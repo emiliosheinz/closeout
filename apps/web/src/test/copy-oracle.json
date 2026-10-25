@@ -1,0 +1,27 @@
+{
+  "inviteNameRequired": "Informe seu nome.",
+  "invitePasswordTooShort": "A senha precisa ter pelo menos 10 caracteres.",
+  "inviteAcceptFallback": "Não foi possível aceitar o convite agora.",
+  "networkFailure": "Sem conexão. Verifique a internet e tente de novo.",
+  "loginFallback": "Não foi possível entrar agora.",
+  "deleteListing": {
+    "title": "Excluir \"<title>\"?",
+    "description": "O anúncio e as fotos são apagados de vez, e o link compartilhado deixa de funcionar. Para só tirar da loja, mude a publicação para Arquivado.",
+    "confirmLabel": "Excluir anúncio",
+    "pendingLabel": "Excluindo..."
+  },
+  "removeMember": {
+    "title": "Remover <displayName> da equipe?",
+    "description": "A conta é apagada e a pessoa perde o acesso na hora. Nos anúncios divididos com outra pessoa, fica quem continua na equipe.",
+    "confirmLabel": "Remover da equipe",
+    "pendingLabel": "Removendo..."
+  },
+  "revokeInvite": {
+    "title": "Revogar o convite de <email>?",
+    "description": "O link para de funcionar na hora. Dá para convidar de novo quando quiser.",
+    "confirmLabel": "Revogar convite",
+    "pendingLabel": "Revogando..."
+  },
+  "adminGenericError": "Não foi possível salvar. Tente de novo.",
+  "adminInvalidFields": "Alguns campos estão inválidos. Confira e tente de novo."
+}

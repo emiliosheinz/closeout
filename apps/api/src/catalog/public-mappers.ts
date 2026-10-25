@@ -1,13 +1,10 @@
+import type { Availability, Condition } from "@closeout/contracts/enums";
 import { type ImageUrls, mediaUrls } from "@/media/media-urls";
 import type { Seller } from "@/sellers/entities/seller.entity";
 import type { Listing } from "./entities/listing.entity";
 import type { ListingImage } from "./entities/listing-image.entity";
 import { canContact } from "./listing-rules";
-import type {
-  Availability,
-  Condition,
-  ListingAttribute,
-} from "./listing-types";
+import type { ListingAttribute } from "./listing-types";
 
 /*
  * Public payloads are assembled field by field from an allow-list. Entities

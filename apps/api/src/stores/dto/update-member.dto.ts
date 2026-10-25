@@ -1,8 +1,8 @@
-import { IsIn } from "class-validator";
 import {
   ASSIGNABLE_ROLES,
   type AssignableRole,
-} from "../entities/store-member.entity";
+} from "@closeout/contracts/enums";
+import { IsIn } from "class-validator";
 
 export class UpdateMemberDto {
   @IsIn(ASSIGNABLE_ROLES)

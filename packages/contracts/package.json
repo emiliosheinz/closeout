@@ -1,0 +1,39 @@
+{
+  "name": "@closeout/contracts",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Wire contracts shared by the closeout API and web app",
+  "license": "MIT",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "check": "biome check .",
+    "typecheck": "tsc --noEmit",
+    "check:fix": "biome check . --fix",
+    "test": "vitest run"
+  },
+  "exports": {
+    "./enums": {
+      "types": "./dist/enums.d.ts",
+      "import": "./dist/enums.mjs",
+      "require": "./dist/enums.js"
+    },
+    "./schemas": {
+      "types": "./dist/schemas.d.ts",
+      "import": "./dist/schemas.mjs",
+      "require": "./dist/schemas.js"
+    }
+  },
+  "devDependencies": {
+    "@biomejs/biome": "catalog:",
+    "@closeout/config": "workspace:*",
+    "tsup": "9.0.0",
+    "typescript": "catalog:",
+    "vitest": "5.0.5"
+  },
+  "dependencies": {
+    "zod": "4.6.7"
+  }
+}

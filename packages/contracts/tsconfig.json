@@ -1,0 +1,9 @@
+{
+  "extends": "@closeout/config/typescript",
+  "compilerOptions": {
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "noEmit": true
+  },
+  "include": ["src", "tsup.config.ts"]
+}

@@ -1,10 +1,10 @@
+import type { StoreRole } from "@closeout/contracts/enums";
 import {
   createParamDecorator,
   type ExecutionContext,
   ForbiddenException,
 } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
-import type { StoreRole } from "./roles";
 
 export { ANY_MEMBER, isManager, MANAGERS } from "./roles";
 

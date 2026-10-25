@@ -43,6 +43,7 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  reactCompiler: true,
   poweredByHeader: false,
   // No next/image usage; this also disables the /_next/image endpoint.
   images: { unoptimized: true },

@@ -19,7 +19,7 @@
   },
   "overrides": [
     {
-      "includes": ["src/components/ui/**", "src/hooks/use-mobile.tsx"],
+      "includes": ["src/shared/ui/**"],
       "linter": {
         "rules": {
           "security": {

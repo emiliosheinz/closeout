@@ -1,12 +1,7 @@
-// Store roles as plain values, free of framework imports so domain rules
+// Store role rules as plain values, free of framework imports so domain rules
 // (catalog/listing-rules.ts) can depend on them.
 
-export const STORE_ROLES = ["owner", "admin", "seller"] as const;
-export type StoreRole = (typeof STORE_ROLES)[number];
-
-/** Roles a manager can give: the owner is set only by the operator CLI. */
-export const ASSIGNABLE_ROLES = ["admin", "seller"] as const;
-export type AssignableRole = (typeof ASSIGNABLE_ROLES)[number];
+import { STORE_ROLES, type StoreRole } from "@closeout/contracts/enums";
 
 export const ANY_MEMBER: readonly StoreRole[] = STORE_ROLES;
 export const MANAGERS: readonly StoreRole[] = ["owner", "admin"];

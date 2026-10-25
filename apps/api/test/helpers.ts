@@ -1,3 +1,4 @@
+import type { StoreRole } from "@closeout/contracts/enums";
 import type { INestApplication, Type } from "@nestjs/common";
 import {
   GUARDS_METADATA,
@@ -12,7 +13,6 @@ import { DataSource } from "typeorm";
 import { AppModule } from "@/app.module";
 import { createAdmin } from "@/cli/admin-commands";
 import { configureApp } from "@/configure-app";
-import type { StoreRole } from "@/stores/entities/store-member.entity";
 import { Roles } from "@/stores/membership";
 import { StoresService } from "@/stores/services/stores.service";
 

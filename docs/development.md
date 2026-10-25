@@ -87,7 +87,7 @@ shows "contato indisponível" instead of a WhatsApp button.
 
 | Command | What runs |
 | --- | --- |
-| `bin/closeout pnpm test` | Unit tests (Jest) for api and web |
+| `bin/closeout pnpm test` | Unit tests for api (Jest) and web (Vitest) |
 | `bin/closeout pnpm --filter api test:integration` | API integration suites. Each run creates a throwaway `closeout_test_*` database on the compose Postgres, applies the real migrations and drops it at the end. |
 | `bin/closeout e2e` | Playwright against an isolated `closeout-e2e` Compose project with its own database, media and two fixture stores with their members; torn down afterwards. |
 | `bin/closeout pnpm check && bin/closeout pnpm typecheck` | Biome lint + format over the whole repo (warnings fail) and `tsc --noEmit` per package |
