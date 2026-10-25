@@ -30,6 +30,10 @@ const detail = {
 };
 
 describe("listing preview page", () => {
+  // The page reads the deployment's public URL, which CI does not set.
+  beforeEach(() => vi.stubEnv("PUBLIC_BASE_URL", "https://closeout.example"));
+  afterEach(() => vi.unstubAllEnvs());
+
   it("renders the listing title from the first load", async () => {
     stubAdminApi({ "/me": meResponse(), [path]: detail });
     renderPage(await PreviewPage(props));

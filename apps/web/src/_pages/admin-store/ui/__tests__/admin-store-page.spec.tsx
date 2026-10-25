@@ -13,6 +13,10 @@ vi.mock("next/headers", () => ({
 }));
 
 describe("store settings page", () => {
+  // The page reads the deployment's public URL, which CI does not set.
+  beforeEach(() => vi.stubEnv("PUBLIC_BASE_URL", "https://closeout.example"));
+  afterEach(() => vi.unstubAllEnvs());
+
   it("renders the store name value from the first load", async () => {
     stubAdminApi({
       "/me": meResponse("owner"),
