@@ -6,6 +6,7 @@ import {
 } from "@closeout/contracts/schemas";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
+import { Pencil, UserMinus } from "lucide-react";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
@@ -60,7 +61,10 @@ export function MemberActions({
   });
   const menuLabel = `Ações para ${member.displayName}`;
   const editItem = (
-    <ActionsMenuItem onSelect={() => setEditing(true)}>Editar</ActionsMenuItem>
+    <ActionsMenuItem onSelect={() => setEditing(true)}>
+      <Pencil aria-hidden="true" />
+      Editar
+    </ActionsMenuItem>
   );
 
   return (
@@ -80,6 +84,7 @@ export function MemberActions({
                 onSelect={confirmRemoval}
                 className="text-stamp focus:bg-stamp/10 focus:text-stamp"
               >
+                <UserMinus aria-hidden="true" />
                 Remover
               </ActionsMenuItem>
             </ActionsMenu>

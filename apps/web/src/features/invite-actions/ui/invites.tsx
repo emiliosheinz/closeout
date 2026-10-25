@@ -6,7 +6,7 @@ import {
 } from "@closeout/contracts/schemas";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
-import { Plus } from "lucide-react";
+import { Ban, Plus, RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import type { z } from "zod";
@@ -225,12 +225,14 @@ export function InviteActions({
                 })
               }
             >
+              <RefreshCw aria-hidden="true" />
               Gerar novo link
             </ActionsMenuItem>
             <ActionsMenuItem
               onSelect={confirmRevoke}
               className="text-stamp focus:bg-stamp/10 focus:text-stamp"
             >
+              <Ban aria-hidden="true" />
               Revogar
             </ActionsMenuItem>
           </ActionsMenu>
