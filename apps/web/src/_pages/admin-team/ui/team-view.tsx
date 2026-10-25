@@ -339,11 +339,9 @@ function TeamSections({
   return (
     <div className="flex flex-col gap-10">
       <section aria-labelledby="team-members">
-        <h2
-          id="team-members"
-          tabIndex={-1}
-          className={canManage ? sectionHeading : "sr-only"}
-        >
+        {/* The search box and table already say what this is; the heading
+            names the region and takes focus after a removal. */}
+        <h2 id="team-members" tabIndex={-1} className="sr-only">
           {canManage ? "Membros" : "Seu contato"}
         </h2>
         {(canManage || members.length > 0) && (
