@@ -321,8 +321,6 @@ function InvitesTable({
   );
 }
 
-const sectionHeading = "mb-3 text-sm font-semibold text-muted outline-none";
-
 function TeamSections({
   storeId,
   viewerId,
@@ -354,7 +352,11 @@ function TeamSections({
       </section>
       {invites && (
         <section aria-labelledby="team-invites">
-          <h2 id="team-invites" tabIndex={-1} className={sectionHeading}>
+          <h2
+            id="team-invites"
+            tabIndex={-1}
+            className="mb-3 text-sm font-semibold text-muted outline-none"
+          >
             Convites pendentes{" "}
             {invites.length > 0 && (
               <span className="font-medium">({invites.length})</span>
