@@ -549,7 +549,9 @@ describe("rows", () => {
     expect(copies()).toEqual([false, false]);
 
     fireEvent.click(
-      screen.getAllByRole("button", { name: "Duplicar Mesa" })[1],
+      screen.getAllByRole("button", {
+        name: "Duplicar Mesa",
+      })[1] as HTMLElement,
     );
     await waitFor(() => expect(copies()).toEqual([false, true]));
 
