@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -47,6 +47,13 @@ export function ConfirmDialog({
   const [pending, setPending] = useState(false);
   const succeeded = useRef(false);
   const [opener, setOpener] = useState<Element | null>(null);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
 
   async function confirm(event: React.MouseEvent) {
     event.preventDefault();
@@ -57,6 +64,9 @@ export function ConfirmDialog({
     );
     setPending(false);
     if (failed) return;
+    // The action can remove the caller (and this dialog) before it resolves;
+    // with no dialog left to close, nothing else would place focus.
+    if (!mounted.current) return onSuccess?.();
     succeeded.current = true;
     setOpen(false);
   }

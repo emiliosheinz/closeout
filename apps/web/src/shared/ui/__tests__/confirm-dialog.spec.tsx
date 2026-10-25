@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import oracle from "@/test/copy-oracle.json";
 import { ConfirmDialog } from "../confirm-dialog";
 
@@ -126,5 +132,48 @@ describe("ConfirmDialog", () => {
     await waitFor(() =>
       expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument(),
     );
+  });
+
+  it("still places focus when the caller unmounts the dialog while the action runs", async () => {
+    let finish: () => void = () => undefined;
+    const onSuccess = vi.fn(() => document.getElementById("target")?.focus());
+    function Page({ shown }: { shown: boolean }) {
+      return (
+        <>
+          <h1 id="target" tabIndex={-1}>
+            Anúncios
+          </h1>
+          {shown && (
+            <ConfirmDialog
+              title={copy.title}
+              description={copy.description}
+              confirmLabel={copy.confirmLabel}
+              pendingLabel={copy.pendingLabel}
+              onConfirm={() =>
+                new Promise<void>((resolve) => (finish = resolve))
+              }
+              onSuccess={onSuccess}
+              trigger={(open) => (
+                <button type="button" onClick={open}>
+                  Abrir
+                </button>
+              )}
+            />
+          )}
+        </>
+      );
+    }
+    const { rerender } = render(<Page shown />);
+    fireEvent.click(screen.getByRole("button", { name: "Abrir" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: copy.confirmLabel }),
+    );
+    await screen.findByRole("button", { name: copy.pendingLabel });
+
+    rerender(<Page shown={false} />);
+    await act(async () => finish());
+
+    await waitFor(() => expect(onSuccess).toHaveBeenCalledTimes(1));
+    expect(screen.getByRole("heading", { name: "Anúncios" })).toHaveFocus();
   });
 });

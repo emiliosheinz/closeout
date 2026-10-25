@@ -105,18 +105,18 @@ describe("failures", () => {
     );
   });
 
-  it("reports a 401 as status 401 and sends the browser to login", async () => {
+  it("reports a 401 as status 401 without navigating", async () => {
     const assign = vi.fn();
     vi.stubGlobal("window", { location: { assign } });
     respondWith(401, { message: "Unauthorized" });
     await expect(api("PATCH", "/x", {})).rejects.toMatchObject({
       status: 401,
     });
-    expect(assign).toHaveBeenCalledWith("/admin/entrar?erro=sessao-expirada");
+    expect(assign).not.toHaveBeenCalled();
     vi.unstubAllGlobals();
   });
 
-  it("leaves a 401 on a read to the caller without navigating", async () => {
+  it("reports a 401 on a read without navigating", async () => {
     const assign = vi.fn();
     vi.stubGlobal("window", { location: { assign } });
     respondWith(401, { message: "Unauthorized" });

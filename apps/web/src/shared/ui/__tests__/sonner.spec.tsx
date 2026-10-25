@@ -1,7 +1,6 @@
 import { act, render, screen, waitFor } from "@testing-library/react";
 import { toast } from "sonner";
-import { ApiError } from "@/shared/api";
-import { notify, notifyFailure, Toaster } from "../sonner";
+import { notify, Toaster } from "../sonner";
 
 describe("Toaster", () => {
   beforeEach(() => {
@@ -48,14 +47,6 @@ describe("Toaster", () => {
 
     await act(() => vi.advanceTimersByTimeAsync(2000));
     expect(screen.queryByText("Ordem atualizada.")).not.toBeInTheDocument();
-  });
-
-  it("toasts an API error's message and rethrows it", async () => {
-    const error = new ApiError(409, "Este e-mail já está na equipe.");
-    expect(() => notifyFailure(error)).toThrow(error);
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Este e-mail já está na equipe.",
-    );
   });
 
   it("shows the generic copy for a failure that is not an ApiError", async () => {

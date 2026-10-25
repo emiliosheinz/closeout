@@ -26,12 +26,6 @@ export const notify = {
     notify.error(error instanceof ApiError ? error.message : GENERIC_ERROR),
 };
 
-/** Toasts a failed action's message, then rethrows so the caller still sees the failure. */
-export function notifyFailure(error: unknown): never {
-  notify.failure(error);
-  throw error;
-}
-
 export function Toaster(props: ToasterProps) {
   return (
     <Sonner
