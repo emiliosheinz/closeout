@@ -2,7 +2,7 @@ import { Plus } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { findStatusFilter, listingReads } from "@/entities/listing";
+import { listingReads } from "@/entities/listing";
 import {
   redirectToSessionExpired,
   requireMember,
@@ -12,15 +12,8 @@ import { ListingBoard } from "./listing-board";
 
 export const metadata: Metadata = { title: "Anúncios" };
 
-export async function DashboardPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ q?: string; status?: string }>;
-}) {
+export async function DashboardPage() {
   const { store } = await requireMember();
-  const query = await searchParams;
-  const q = (query.q ?? "").trim().slice(0, 100);
-  const status = findStatusFilter(query.status);
   const [listings, sellers] = await Promise.all([
     loadRead(listingReads.list(store.id), redirectToSessionExpired),
     loadRead(listingReads.sellers(store.id), redirectToSessionExpired),
@@ -46,13 +39,7 @@ export async function DashboardPage({
         </Link>
       </div>
 
-      <ListingBoard
-        key={`${status?.slug}|${q}`}
-        storeId={store.id}
-        storeSlug={store.slug}
-        statusSlug={status?.slug}
-        q={q}
-      />
+      <ListingBoard storeId={store.id} storeSlug={store.slug} />
     </Hydrated>
   );
 }

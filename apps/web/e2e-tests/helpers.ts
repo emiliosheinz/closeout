@@ -39,6 +39,19 @@ export async function signIn(
   await hydrated(page);
 }
 
+/**
+ * The admin listing table's item rows. Hidden rows count too, because an open
+ * modal dialog marks the table aria-hidden while it is still on screen.
+ */
+export function listingRows(page: Page) {
+  return page.getByRole("row", { includeHidden: true }).filter({
+    has: page.getByRole("combobox", {
+      name: /^Publicação de /,
+      includeHidden: true,
+    }),
+  });
+}
+
 /** Search the admin listing table and wait for the filtered, interactive page. */
 export async function findInAdmin(page: Page, title: string): Promise<void> {
   await page

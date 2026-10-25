@@ -1,4 +1,4 @@
-import { dashboardHref, findStatusFilter, tabCounts } from "../status-filter";
+import { findStatusFilter, tabCounts } from "../status-filter";
 import type { AdminListingSummary } from "../types";
 
 const listing = (
@@ -53,13 +53,6 @@ describe("dashboard status filters", () => {
   it("treats an unknown status as no filter", () => {
     expect(findStatusFilter("qualquer")).toBeNull();
     expect(findStatusFilter(undefined)).toBeNull();
-  });
-
-  it("keeps search and status together in links", () => {
-    expect(dashboardHref("vendidos", "mesa")).toBe(
-      "/admin?status=vendidos&q=mesa",
-    );
-    expect(dashboardHref(null, "")).toBe("/admin");
   });
 });
 

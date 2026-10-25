@@ -8,7 +8,11 @@ import { listingKeys, tabCounts } from "@/entities/listing";
 import { renderWithFeedback } from "@/test/feedback-harness";
 import { listingSummary } from "@/test/fixtures";
 import { useListings } from "../../model/use-listings";
-import { ListingRows } from "../listing-rows";
+import {
+  ListingRowActions,
+  ListingStatusControls,
+  ListingTitle,
+} from "../listing-rows";
 
 const push = vi.fn();
 vi.mock("next/navigation", () => ({
@@ -61,12 +65,30 @@ function Host({
         Anúncios
       </h1>
       <output data-testid="reserved">{tabCounts(listings).reserved}</output>
-      <ListingRows
-        storeId="store"
-        storeSlug={storeSlug}
-        listings={listings}
-        unreachableSellerIds={unreachableSellerIds}
-      />
+      <table>
+        <tbody>
+          {listings.map((listing) => (
+            <tr key={listing.id}>
+              <td>
+                <ListingTitle
+                  listing={listing}
+                  unreachableSellerIds={unreachableSellerIds}
+                />
+              </td>
+              <td>
+                <ListingStatusControls storeId="store" listing={listing} />
+              </td>
+              <td>
+                <ListingRowActions
+                  storeId="store"
+                  storeSlug={storeSlug}
+                  listing={listing}
+                />
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </>
   );
 }
@@ -120,7 +142,7 @@ async function pick(trigger: HTMLElement, option: string) {
   );
 }
 
-describe("ListingRows", () => {
+describe("listing row cells", () => {
   it("warns on published items whose seller cannot be reached", () => {
     renderRows(
       [
@@ -142,7 +164,7 @@ describe("ListingRows", () => {
     const warnings = screen.getAllByRole("link", { name: /sem WhatsApp/ });
     expect(warnings).toHaveLength(1);
     expect(warnings[0]).toHaveAttribute("href", "/admin/equipe");
-    expect(warnings[0]?.closest("li")).toHaveTextContent("Item a");
+    expect(warnings[0]?.closest("tr")).toHaveTextContent("Item a");
   });
 
   it.each([

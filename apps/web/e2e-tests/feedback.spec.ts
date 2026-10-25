@@ -6,7 +6,7 @@ import {
   type Route,
   test,
 } from "@playwright/test";
-import { hydrated, samplePhoto, signIn } from "./helpers";
+import { hydrated, listingRows, samplePhoto, signIn } from "./helpers";
 
 const RUN = Date.now();
 const TITLE = `Luminária do feedback ${RUN}`;
@@ -119,7 +119,7 @@ test.describe
         await page.keyboard.press("Enter");
         await expect(page).toHaveURL(/\/admin\?q=/);
         await hydrated(page);
-        const rows = page.getByTestId("admin-listing-row");
+        const rows = listingRows(page);
         while ((await rows.count()) > 0) {
           await rows
             .first()
@@ -249,7 +249,7 @@ test.describe
       await page.keyboard.press("Enter");
       await expect(page).toHaveURL(/\/admin\?q=/);
       await hydrated(page);
-      const rows = page.getByTestId("admin-listing-row");
+      const rows = listingRows(page);
       await expect(rows).toHaveCount(2);
 
       await failWith500(page, "**/api/v1/stores/*/listings/*", "DELETE");
@@ -605,7 +605,7 @@ test.describe("toasts on a phone", () => {
       .getByRole("alertdialog")
       .getByRole("button", { name: "Excluir anúncio" })
       .click();
-    await expect(page.getByTestId("admin-listing-row")).toHaveCount(0);
+    await expect(listingRows(page)).toHaveCount(0);
     await page.context().close();
   });
 

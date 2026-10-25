@@ -3,6 +3,7 @@ import {
   ADMIN_WHATSAPP,
   findInAdmin,
   hydrated,
+  listingRows,
   STORE,
   samplePhoto,
   signIn,
@@ -116,8 +117,7 @@ test.describe
 
       await page.goto("/admin");
       await findInAdmin(page, TITLE);
-      await page
-        .getByTestId("admin-listing-row")
+      await listingRows(page)
         .filter({ hasText: TITLE })
         .getByRole("link", { name: `Editar ${TITLE}` })
         .click();
@@ -154,9 +154,7 @@ test.describe
     }) => {
       await signIn(page);
       await findInAdmin(page, TITLE);
-      const row = page
-        .getByTestId("admin-listing-row")
-        .filter({ hasText: TITLE });
+      const row = listingRows(page).filter({ hasText: TITLE });
       const availability = row.getByRole("combobox", {
         name: `Disponibilidade de ${TITLE}`,
       });

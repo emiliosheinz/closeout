@@ -3,6 +3,7 @@ import {
   ADMIN_EMAIL,
   findInAdmin,
   hydrated,
+  listingRows,
   STORE,
   samplePhoto,
   signIn,
@@ -114,7 +115,7 @@ test.describe
     }) => {
       await signIn(page);
       await findInAdmin(page, "Bicicleta");
-      const rows = page.getByTestId("admin-listing-row");
+      const rows = listingRows(page);
       await expect(rows).toHaveCount(1);
       await expect(rows.first()).toContainText("Bicicleta aro 29");
       await expect(page.getByText("Geladeira frost free 375 L")).toHaveCount(0);
@@ -181,7 +182,7 @@ test.describe
     }) => {
       await signIn(page);
       await findInAdmin(page, TITLE);
-      const rows = page.getByTestId("admin-listing-row");
+      const rows = listingRows(page);
       await expect(rows).toHaveCount(2);
 
       await page

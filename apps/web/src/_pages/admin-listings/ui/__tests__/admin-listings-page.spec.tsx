@@ -1,11 +1,13 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
+  act,
   fireEvent,
   render,
   screen,
   waitFor,
   within,
 } from "@testing-library/react";
+import { NuqsTestingAdapter } from "nuqs/adapters/testing";
 import { stubAdminApi } from "@/test/admin-api";
 import { renderWithFeedback } from "@/test/feedback-harness";
 import { listingSummary, meResponse, seller } from "@/test/fixtures";
@@ -34,10 +36,37 @@ const listings = [
   }),
 ];
 
-const show = async (searchParams: { q?: string; status?: string } = {}) =>
-  renderPage(
-    await DashboardPage({ searchParams: Promise.resolve(searchParams) }),
+/** The page under a URL with `search`, which the table reads and writes. */
+const atUrl = async (search: string) => (
+  <NuqsTestingAdapter searchParams={search} hasMemory>
+    {await DashboardPage()}
+  </NuqsTestingAdapter>
+);
+
+const show = async (search = "") => renderPage(await atUrl(search));
+
+/** Row titles in display order (the first link of each row is its title). */
+const titles = () =>
+  screen
+    .getAllByRole("row")
+    .slice(1)
+    .map((row) => within(row).queryAllByRole("link")[0]?.textContent);
+
+const tab = (name: RegExp) =>
+  within(screen.getByRole("group", { name: "Filtrar por situação" })).getByRole(
+    "button",
+    { name },
   );
+
+const search = (value: string) =>
+  fireEvent.change(
+    screen.getByRole("searchbox", { name: "Buscar anúncios pelo título" }),
+    { target: { value } },
+  );
+
+const header = (name: RegExp) => screen.getByRole("columnheader", { name });
+const sortBy = (name: RegExp) =>
+  fireEvent.click(within(header(name)).getByRole("button"));
 
 describe("admin listings page", () => {
   it("loads the listings and sellers and shows every listing", async () => {
@@ -66,27 +95,35 @@ describe("admin listings page", () => {
     });
     await show();
     const tabs = within(
-      screen.getByRole("navigation", { name: "Filtrar por situação" }),
+      screen.getByRole("group", { name: "Filtrar por situação" }),
     );
-    expect(tabs.getByRole("link", { name: /Todos/ })).toHaveTextContent("3");
-    expect(tabs.getByRole("link", { name: /Publicados/ })).toHaveTextContent(
+    expect(tabs.getByRole("button", { name: /Todos/ })).toHaveTextContent("3");
+    expect(tabs.getByRole("button", { name: /Publicados/ })).toHaveTextContent(
       "2",
     );
-    expect(tabs.getByRole("link", { name: /Rascunhos/ })).toHaveTextContent(
+    expect(tabs.getByRole("button", { name: /Rascunhos/ })).toHaveTextContent(
       "1",
     );
-    expect(tabs.getByRole("link", { name: /Vendidos/ })).toHaveTextContent("1");
+    expect(tabs.getByRole("button", { name: /Vendidos/ })).toHaveTextContent(
+      "1",
+    );
   });
 
-  it("filters by status and by title", async () => {
+  it("filters by status and by title from an existing /admin?status&q link", async () => {
     stubAdminApi({
       "/me": meResponse(),
       "/stores/store-1/listings": { items: listings },
       "/stores/store-1/sellers": { items: [] },
     });
-    await show({ status: "rascunhos", q: "mesa" });
-    expect(screen.getByText("Mesa de jantar")).toBeInTheDocument();
-    expect(screen.queryByText("Sofá azul")).toBeNull();
+    await show("?status=rascunhos&q=mesa");
+    expect(titles()).toEqual(["Mesa de jantar"]);
+    expect(screen.getByRole("button", { name: /Rascunhos/ })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(
+      screen.getByRole("searchbox", { name: "Buscar anúncios pelo título" }),
+    ).toHaveValue("mesa");
   });
 
   it("rejects when a listing is missing a required field", async () => {
@@ -97,9 +134,7 @@ describe("admin listings page", () => {
       "/stores/store-1/listings": { items: [broken] },
       "/stores/store-1/sellers": { items: [] },
     });
-    await expect(
-      DashboardPage({ searchParams: Promise.resolve({}) }),
-    ).rejects.toThrow();
+    await expect(DashboardPage()).rejects.toThrow();
     expect(logged).toHaveBeenCalled();
   });
 
@@ -109,9 +144,7 @@ describe("admin listings page", () => {
       "/stores/store-1/listings": 401,
       "/stores/store-1/sellers": 401,
     });
-    await expect(
-      DashboardPage({ searchParams: Promise.resolve({}) }),
-    ).rejects.toMatchObject({
+    await expect(DashboardPage()).rejects.toMatchObject({
       digest: expect.stringContaining("/admin/entrar?erro=sessao-expirada"),
     });
   });
@@ -122,9 +155,9 @@ describe("admin listings page", () => {
       "/stores/store-1/listings": 404,
       "/stores/store-1/sellers": 404,
     });
-    await expect(
-      DashboardPage({ searchParams: Promise.resolve({}) }),
-    ).rejects.toMatchObject({ digest: expect.stringContaining("404") });
+    await expect(DashboardPage()).rejects.toMatchObject({
+      digest: expect.stringContaining("404"),
+    });
   });
 
   it("keeps a row under the filtered tab after its status change and moves the counts", async () => {
@@ -133,7 +166,7 @@ describe("admin listings page", () => {
       "/stores/store-1/listings": { items: listings },
       "/stores/store-1/sellers": { items: [] },
     });
-    await show({ status: "vendidos" });
+    await show("?status=vendidos");
     vi.stubGlobal(
       "fetch",
       vi.fn(() => new Promise<Response>(() => {})),
@@ -176,28 +209,21 @@ describe("admin listings page", () => {
   }
 
   it("drops the kept row once the filter or the search changes", async () => {
-    const routes = {
+    stubAdminApi({
       "/me": meResponse(),
       "/stores/store-1/listings": { items: listings },
       "/stores/store-1/sellers": { items: [] },
-    };
-    stubAdminApi(routes);
-    const client = new QueryClient();
-    const page = async (searchParams: { q?: string; status?: string }) => (
-      <QueryClientProvider client={client}>
-        {await DashboardPage({ searchParams: Promise.resolve(searchParams) })}
-      </QueryClientProvider>
-    );
-    const view = render(await page({ status: "vendidos" }));
+    });
+    await show("?status=vendidos");
     await changeCadeiraToAvailable(new Promise<Response>(() => {}));
     await waitFor(() =>
       expect(screen.getByTestId("count-sold")).toHaveTextContent("0"),
     );
     expect(screen.getByText("Cadeira")).toBeInTheDocument();
 
-    view.rerender(await page({ status: "disponiveis" }));
+    fireEvent.click(tab(/Disponíveis/));
     expect(screen.getByText("Cadeira")).toBeInTheDocument();
-    view.rerender(await page({ status: "vendidos" }));
+    fireEvent.click(tab(/Vendidos/));
     expect(screen.queryByText("Cadeira")).toBeNull();
     expect(screen.getByText("Nenhum anúncio em Vendidos.")).toBeInTheDocument();
   });
@@ -208,20 +234,14 @@ describe("admin listings page", () => {
       "/stores/store-1/listings": { items: listings },
       "/stores/store-1/sellers": { items: [] },
     });
-    const client = new QueryClient();
-    const page = async (searchParams: { q?: string; status?: string }) => (
-      <QueryClientProvider client={client}>
-        {await DashboardPage({ searchParams: Promise.resolve(searchParams) })}
-      </QueryClientProvider>
-    );
-    const view = render(await page({ status: "vendidos" }));
+    await show("?status=vendidos");
     await changeCadeiraToAvailable(new Promise<Response>(() => {}));
     await waitFor(() =>
       expect(screen.getByTestId("count-sold")).toHaveTextContent("0"),
     );
     expect(screen.getByText("Cadeira")).toBeInTheDocument();
 
-    view.rerender(await page({ status: "vendidos", q: "cadeira" }));
+    search("cadeira");
 
     expect(screen.queryByText("Cadeira")).toBeNull();
     expect(
@@ -236,9 +256,7 @@ describe("admin listings page", () => {
       "/stores/store-1/sellers": { items: [] },
     });
     // Invalidation after the delete comes from the admin providers' handlers.
-    renderWithFeedback(
-      await DashboardPage({ searchParams: Promise.resolve({}) }),
-    );
+    renderWithFeedback(await atUrl(""));
     let deleted = false;
     vi.stubGlobal(
       "fetch",
@@ -261,7 +279,7 @@ describe("admin listings page", () => {
         ),
       );
     const before = counts();
-    const all = screen.getByRole("link", { name: /Todos/ });
+    const all = tab(/Todos/);
     expect(all).toHaveTextContent("3");
 
     fireEvent.click(screen.getByRole("button", { name: "Excluir Sofá azul" }));
@@ -300,5 +318,317 @@ describe("admin listings page", () => {
       expect(screen.getByTestId("count-sold")).toHaveTextContent("1"),
     );
     expect(screen.getByTestId("count-available")).toHaveTextContent("1");
+  });
+});
+
+const serve = (items: ReturnType<typeof listingSummary>[]) =>
+  stubAdminApi({
+    "/me": meResponse(),
+    "/stores/store-1/listings": { items },
+    "/stores/store-1/sellers": { items: [] },
+  });
+
+const item = (
+  title: string,
+  overrides: Partial<ReturnType<typeof listingSummary>> = {},
+) => listingSummary({ id: title, slug: title, title, ...overrides });
+
+describe("sorting", () => {
+  it("orders by last update, newest first, when no sort is set", async () => {
+    serve([
+      item("Meio", { updatedAt: "2026-10-15T12:00:00.000Z" }),
+      item("Novo", { updatedAt: "2026-10-20T12:00:00.000Z" }),
+      item("Velho", { updatedAt: "2026-10-01T12:00:00.000Z" }),
+    ]);
+    await show();
+    expect(titles()).toEqual(["Novo", "Meio", "Velho"]);
+    expect(header(/Atualizado/)).toHaveAttribute("aria-sort", "descending");
+    expect(header(/Título/)).toHaveAttribute("aria-sort", "none");
+    expect(header(/Preço/)).toHaveAttribute("aria-sort", "none");
+
+    sortBy(/Atualizado/);
+    expect(titles()).toEqual(["Velho", "Meio", "Novo"]);
+    expect(header(/Atualizado/)).toHaveAttribute("aria-sort", "ascending");
+  });
+
+  it("orders titles in Portuguese alphabetical order, toggling on repeat", async () => {
+    serve(["Cadeira", "Banco", "Árvore", "abajur"].map((title) => item(title)));
+    await show();
+
+    sortBy(/Título/);
+    expect(titles()).toEqual(["abajur", "Árvore", "Banco", "Cadeira"]);
+    expect(header(/Título/)).toHaveAttribute("aria-sort", "ascending");
+
+    sortBy(/Título/);
+    expect(titles()).toEqual(["Cadeira", "Banco", "Árvore", "abajur"]);
+    expect(header(/Título/)).toHaveAttribute("aria-sort", "descending");
+  });
+
+  it("orders by price with negotiable prices last in both directions", async () => {
+    serve([
+      item("Caro", { priceCents: 500000 }),
+      item("A combinar", { priceCents: null }),
+      item("Barato", { priceCents: 1000 }),
+      item("De graça", { priceCents: 0 }),
+    ]);
+    await show();
+
+    sortBy(/Preço/);
+    expect(titles()).toEqual(["De graça", "Barato", "Caro", "A combinar"]);
+    sortBy(/Preço/);
+    expect(titles()).toEqual(["Caro", "Barato", "De graça", "A combinar"]);
+    expect(header(/Preço/)).toHaveAttribute("aria-sort", "descending");
+  });
+
+  it("reads the sort from the URL", async () => {
+    serve(["Banco", "Árvore"].map((title) => item(title)));
+    await show("?ordem=titulo-desc");
+    expect(titles()).toEqual(["Banco", "Árvore"]);
+  });
+});
+
+describe("status filters", () => {
+  const everyStatus = [
+    item("publicado disponível"),
+    item("publicado reservado", { availability: "reserved" }),
+    item("publicado vendido", { availability: "sold" }),
+    item("rascunho disponível", { publication: "draft" }),
+    item("rascunho vendido", { publication: "draft", availability: "sold" }),
+    item("arquivado reservado", {
+      publication: "archived",
+      availability: "reserved",
+    }),
+  ];
+  const all = everyStatus.map((listing) => listing.title);
+
+  it.each([
+    [
+      "publicados",
+      ["publicado disponível", "publicado reservado", "publicado vendido"],
+    ],
+    ["disponiveis", ["publicado disponível"]],
+    ["reservados", ["publicado reservado"]],
+    ["vendidos", ["publicado vendido"]],
+    ["rascunhos", ["rascunho disponível", "rascunho vendido"]],
+    ["arquivados", ["arquivado reservado"]],
+    ["qualquer-coisa", all],
+  ])("?status=%s shows exactly its listings", async (slug, expected) => {
+    serve(everyStatus);
+    await show(`?status=${slug}`);
+    expect(titles()).toEqual(expected);
+  });
+
+  it("shows every listing without a status", async () => {
+    serve(everyStatus);
+    await show();
+    expect(titles()).toEqual(all);
+  });
+
+  it("keeps the store-wide counts while a search and a filter are active", async () => {
+    serve(everyStatus);
+    await show("?status=vendidos&q=publicado");
+    expect(titles()).toEqual(["publicado vendido"]);
+    expect(tab(/Todos/)).toHaveTextContent("6");
+    const counts = Object.fromEntries(
+      ["published", "available", "reserved", "sold", "draft", "archived"].map(
+        (name) => [name, screen.getByTestId(`count-${name}`).textContent],
+      ),
+    );
+    expect(counts).toEqual({
+      published: "3",
+      available: "1",
+      reserved: "1",
+      sold: "1",
+      draft: "2",
+      archived: "1",
+    });
+  });
+});
+
+describe("search", () => {
+  it("matches titles ignoring case and accents", async () => {
+    serve([item("Café expresso"), item("Chaleira")]);
+    await show();
+    search("CAFE");
+    expect(titles()).toEqual(["Café expresso"]);
+  });
+
+  it("says nothing matched the search", async () => {
+    serve([item("Sofá")]);
+    await show("?q=mesa");
+    expect(
+      screen.getByText('Nenhum anúncio com "mesa" no título.'),
+    ).toBeInTheDocument();
+  });
+
+  it("names the active tab when nothing matched under it", async () => {
+    serve([item("Mesa")]);
+    await show("?status=vendidos&q=mesa");
+    expect(
+      screen.getByText('Nenhum anúncio em Vendidos com "mesa" no título.'),
+    ).toBeInTheDocument();
+  });
+
+  it("invites creating the first listing when there are none", async () => {
+    serve([]);
+    await show();
+    expect(
+      screen.getByText("Nenhum anúncio ainda. Comece pelo botão Novo anúncio."),
+    ).toBeInTheDocument();
+  });
+});
+
+describe("pages", () => {
+  const many = Array.from({ length: 25 }, (_, i) =>
+    item(`Item ${String(i).padStart(2, "0")}`),
+  );
+
+  it("shows the last page for a page past the end", async () => {
+    serve(many);
+    await show("?pagina=9");
+    expect(screen.getByText("Página 2 de 2")).toBeInTheDocument();
+    expect(titles()).toHaveLength(5);
+  });
+
+  it("goes back to page 1 when the filter, the search or the sort changes", async () => {
+    serve(many);
+    await show("?pagina=2");
+    expect(screen.getByText("Página 2 de 2")).toBeInTheDocument();
+
+    fireEvent.click(tab(/Publicados/));
+    expect(screen.getByText("Página 1 de 2")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Próxima página" }));
+    expect(screen.getByText("Página 2 de 2")).toBeInTheDocument();
+    search("item");
+    expect(screen.getByText("Página 1 de 2")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Próxima página" }));
+    sortBy(/Título/);
+    expect(screen.getByText("Página 1 de 2")).toBeInTheDocument();
+  });
+});
+
+describe("a row whose status changed under a filter", () => {
+  it("keeps its place through the refetch that follows, and goes once deleted elsewhere", async () => {
+    const sold = [
+      item("Abajur", {
+        availability: "sold",
+        updatedAt: "2026-10-16T12:00:00.000Z",
+      }),
+      item("Cadeira", {
+        availability: "sold",
+        updatedAt: "2026-10-15T12:00:00.000Z",
+      }),
+    ];
+    serve(sold);
+    const { client } = renderWithFeedback(await atUrl("?status=vendidos"));
+    // The server bumps the update time, which would put Cadeira first.
+    let server = [
+      sold[0],
+      {
+        ...sold[1],
+        availability: "available",
+        updatedAt: "2026-10-20T12:00:00.000Z",
+      },
+    ];
+    let listFetches = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init: RequestInit = {}) => {
+        if (init.method === "GET" && String(url).endsWith("/listings")) {
+          listFetches++;
+          return Response.json({ items: server });
+        }
+        if (init.method === "GET") return Response.json({ items: [] });
+        return new Response(null, { status: 204 });
+      }),
+    );
+    expect(titles()).toEqual(["Abajur", "Cadeira"]);
+
+    const trigger = screen.getByRole("combobox", {
+      name: "Disponibilidade de Cadeira",
+    });
+    trigger.focus();
+    fireEvent.keyDown(trigger, { key: "Enter" });
+    fireEvent.keyDown(
+      await screen.findByRole("option", { name: "Disponível" }),
+      { key: "Enter" },
+    );
+    await waitFor(() => expect(listFetches).toBe(1));
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+
+    expect(titles()).toEqual(["Abajur", "Cadeira"]);
+    expect(
+      within(screen.getAllByRole("row")[2] as HTMLElement).getByText(
+        "20 de outubro de 2026",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("combobox", { name: "Disponibilidade de Cadeira" }),
+    ).toHaveTextContent("Disponível");
+    expect(screen.getByTestId("count-sold")).toHaveTextContent("1");
+
+    server = [sold[0]];
+    await act(() => client.refetchQueries({ queryKey: ["listings"] }));
+    await waitFor(() => expect(titles()).toEqual(["Abajur"]));
+  });
+});
+
+describe("pinned rows and the view", () => {
+  const sold = [
+    item("Abajur", { availability: "sold" }),
+    item("Cadeira", { availability: "sold" }),
+  ];
+
+  async function pinCadeira() {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => new Promise<Response>(() => {})),
+    );
+    const trigger = screen.getByRole("combobox", {
+      name: "Disponibilidade de Cadeira",
+    });
+    trigger.focus();
+    fireEvent.keyDown(trigger, { key: "Enter" });
+    fireEvent.keyDown(
+      await screen.findByRole("option", { name: "Disponível" }),
+      { key: "Enter" },
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId("count-sold")).toHaveTextContent("1"),
+    );
+    expect(titles()).toEqual(["Abajur", "Cadeira"]);
+  }
+
+  it("drops a pinned row once the sort changes", async () => {
+    serve(sold);
+    await show("?status=vendidos");
+    await pinCadeira();
+
+    sortBy(/Título/);
+
+    expect(titles()).toEqual(["Abajur"]);
+  });
+
+  it("drops a pinned row once the URL changes from elsewhere", async () => {
+    serve(sold);
+    const client = new QueryClient();
+    const page = await DashboardPage();
+    const at = (search: string) => (
+      <QueryClientProvider client={client}>
+        <NuqsTestingAdapter searchParams={search} hasMemory>
+          {page}
+        </NuqsTestingAdapter>
+      </QueryClientProvider>
+    );
+    const view = render(at("?status=vendidos&ordem=titulo-asc"));
+    await pinCadeira();
+
+    view.rerender(at("?status=vendidos"));
+
+    await waitFor(() => expect(titles()).toEqual(["Abajur"]));
   });
 });

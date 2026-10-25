@@ -74,12 +74,3 @@ export function tabCounts(listings: AdminListingSummary[]): DashboardCounts {
 export function findStatusFilter(slug: string | undefined) {
   return STATUS_FILTERS.find((filter) => filter.slug === slug) ?? null;
 }
-
-/** Dashboard URL keeping both the status and the title search. */
-export function dashboardHref(status: string | null, q: string): string {
-  const params = new URLSearchParams();
-  if (status) params.set("status", status);
-  if (q) params.set("q", q);
-  const query = params.toString();
-  return query ? `/admin?${query}` : "/admin";
-}
