@@ -92,7 +92,8 @@ services:
              node dist/cli/main.js admin:create --store loja-e2e --store-name 'Loja E2E' --email admin@e2e.test --name 'Ana Teste' --whatsapp '+55 11 98888-7777' &&
              node dist/cli/main.js seed:demo --store loja-e2e --whatsapp '+55 11 97777-6666' &&
              node dist/cli/main.js admin:create --store outra-loja --store-name 'Outra Loja' --email dono@outra-loja.test --name 'Otávio Outra' --whatsapp '+55 31 96666-5555' &&
-             node dist/cli/main.js admin:create --store loja-tabelas --store-name 'Loja Tabelas' --email dona@loja-tabelas.test --name 'Tânia Tabelas' --whatsapp '+55 21 95555-4444'"
+             node dist/cli/main.js admin:create --store loja-tabelas --store-name 'Loja Tabelas' --email dona@loja-tabelas.test --name 'Tânia Tabelas' --whatsapp '+55 21 95555-4444' &&
+             node dist/cli/main.js admin:create --store loja-paginas --store-name 'Loja Páginas' --email dono@loja-paginas.test --name 'Paulo Páginas' --whatsapp '+55 41 94444-3333'"
     depends_on:
       api:
         condition: service_healthy

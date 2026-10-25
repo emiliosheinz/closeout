@@ -388,3 +388,73 @@ async function seed(): Promise<string> {
   await owner.dispose();
   return storeId;
 }
+
+/** The store dedicated to the storefront pagination journey. */
+export const PAGES_STORE = "/store/loja-paginas";
+const PAGES_OWNER_EMAIL = "dono@loja-paginas.test";
+/** More than one storefront page of 24. */
+const PAGES_LISTING_COUNT = 30;
+
+let seedingPages: Promise<void> | undefined;
+
+/**
+ * Publish enough listings in loja-paginas to span two storefront pages. Seeds
+ * once per provisioned database: a store already holding the full set is taken
+ * as seeded, anything else but an empty store throws (recreate the stack).
+ */
+export function seedPagesStore(): Promise<void> {
+  seedingPages ??= seedPages();
+  return seedingPages;
+}
+
+async function seedPages(): Promise<void> {
+  const owner = await apiAs(PAGES_OWNER_EMAIL, ADMIN_PASSWORD);
+  const { memberships } = await ok<{
+    memberships: { sellerId: string; store: { id: string } }[];
+  }>(await owner.get("/api/v1/me"));
+  const membership = memberships[0];
+  if (!membership) throw new Error("loja-paginas has no store");
+  const base = `/api/v1/stores/${membership.store.id}`;
+  const existing = await list(owner, `${base}/listings`);
+  if (existing === PAGES_LISTING_COUNT) {
+    await owner.dispose();
+    return;
+  }
+  if (existing !== 0) {
+    throw new Error(
+      "seeded store not in its initial state: recreate the e2e stack (bin/closeout e2e down -v)",
+    );
+  }
+  const { items: categories } = await ok<{ items: { id: string }[] }>(
+    await owner.get(`${base}/categories`),
+  );
+  const categoryId = categories[0]?.id;
+  if (!categoryId) throw new Error("No category to list under");
+  const photo = await samplePhoto({ request: owner });
+  for (let n = 1; n <= PAGES_LISTING_COUNT; n++) {
+    const { id } = await ok<{ id: string }>(
+      await owner.post(`${base}/listings`, {
+        data: {
+          title: `Peça ${String(n).padStart(2, "0")}`,
+          categoryId,
+          sellerIds: [membership.sellerId],
+          priceCents: 1000 * n,
+          condition: "good",
+        },
+      }),
+    );
+    await ok(
+      await owner.post(`${base}/listings/${id}/images`, {
+        multipart: {
+          files: { name: "foto.jpg", mimeType: "image/jpeg", buffer: photo },
+        },
+      }),
+    );
+    await ok(
+      await owner.patch(`${base}/listings/${id}/status`, {
+        data: { publication: "published", availability: "available" },
+      }),
+    );
+  }
+  await owner.dispose();
+}
