@@ -17,7 +17,6 @@ import { MemberActions } from "@/features/member-actions";
 import { readQuery } from "@/shared/api";
 import { formatDate, pluralize, ROLE_LABELS } from "@/shared/lib/format";
 import {
-  clampPage,
   createTableUrlState,
   useTableUrlState,
 } from "@/shared/lib/table-url-state";
@@ -134,6 +133,71 @@ function SearchInput({
   );
 }
 
+type MemberRow = {
+  member: TeamMember;
+  storeId: string;
+  viewerId: string;
+  canManage: boolean;
+};
+
+// Cells render as components, so the columns live at module level: a new cell
+// function on every render would remount the row's actions (open menus,
+// dialogs, pending guards). Sorting is a column option, hence one set per mode.
+function memberColumns(canManage: boolean): DataTableColumns<MemberRow> {
+  return [
+    {
+      id: "nome",
+      header: "Nome",
+      accessorFn: (row) => row.member.displayName,
+      enableSorting: canManage,
+      sortFn: (a, b) =>
+        compareText(
+          a.original.member.displayName,
+          b.original.member.displayName,
+        ),
+      cell: ({ row: { original } }) => (
+        <MemberIdentity
+          member={original.member}
+          showSelfBadge={
+            original.canManage && original.member.userId === original.viewerId
+          }
+        />
+      ),
+    },
+    {
+      id: "papel",
+      header: "Papel",
+      accessorFn: (row) => row.member.role,
+      enableSorting: canManage,
+      sortFn: (a, b) =>
+        ROLE_ORDER[a.original.member.role] - ROLE_ORDER[b.original.member.role],
+      cell: ({ row }) => <RoleCell role={row.original.member.role} />,
+    },
+    {
+      id: "contato",
+      header: () => <span className="sr-only sm:not-sr-only">Contato</span>,
+      enableSorting: false,
+      cell: ({ row }) => <MemberContact member={row.original.member} />,
+    },
+    {
+      id: "acoes",
+      header: () => <span className="sr-only">Ações</span>,
+      enableSorting: false,
+      cell: ({ row: { original } }) => (
+        <MemberActions
+          storeId={original.storeId}
+          member={original.member}
+          isSelf={original.member.userId === original.viewerId}
+          canManageTeam={original.canManage}
+        />
+      ),
+    },
+  ];
+}
+
+const managerMemberColumns = memberColumns(true);
+const sellerMemberColumns = memberColumns(false);
+
 function MembersTable({
   storeId,
   viewerId,
@@ -146,66 +210,22 @@ function MembersTable({
   /** Managers get search and sort; a seller's single row gets neither. */
   canManage: boolean;
 }) {
-  const [{ query, sort, page }, set] = useTableUrlState(
-    membersUrlState,
-    members.length,
-  );
-  const shown = members.filter(
-    (member) =>
-      !query ||
-      matchesSearch(member.displayName, query) ||
-      matchesSearch(member.email, query),
-  );
-  const columns: DataTableColumns<TeamMember> = [
-    {
-      id: "nome",
-      header: "Nome",
-      accessorFn: (member) => member.displayName,
-      enableSorting: canManage,
-      sortFn: (a, b) =>
-        compareText(a.original.displayName, b.original.displayName),
-      cell: ({ row }) => (
-        <MemberIdentity
-          member={row.original}
-          showSelfBadge={canManage && row.original.userId === viewerId}
-        />
-      ),
-    },
-    {
-      id: "papel",
-      header: "Papel",
-      accessorFn: (member) => member.role,
-      enableSorting: canManage,
-      sortFn: (a, b) =>
-        ROLE_ORDER[a.original.role] - ROLE_ORDER[b.original.role],
-      cell: ({ row }) => <RoleCell role={row.original.role} />,
-    },
-    {
-      id: "contato",
-      header: () => <span className="sr-only sm:not-sr-only">Contato</span>,
-      enableSorting: false,
-      cell: ({ row }) => <MemberContact member={row.original} />,
-    },
-    {
-      id: "acoes",
-      header: () => <span className="sr-only">Ações</span>,
-      enableSorting: false,
-      cell: ({ row }) => (
-        <MemberActions
-          storeId={storeId}
-          member={row.original}
-          isSelf={row.original.userId === viewerId}
-          canManageTeam={canManage}
-        />
-      ),
-    },
-  ];
+  const [{ query, sort, page }, set] = useTableUrlState(membersUrlState);
+  const rows: MemberRow[] = members
+    .filter(
+      (member) =>
+        !query ||
+        matchesSearch(member.displayName, query) ||
+        matchesSearch(member.email, query),
+    )
+    .map((member) => ({ member, storeId, viewerId, canManage }));
   const table = useDataTable({
-    data: shown,
-    columns,
+    data: rows,
+    columns: canManage ? managerMemberColumns : sellerMemberColumns,
+    getRowId: (row) => row.member.userId,
     sort,
     onSortChange: (next) => set({ sort: next }),
-    page: clampPage(page, shown.length),
+    page,
     onPageChange: (next) => set({ page: next }),
   });
   return (
@@ -230,6 +250,47 @@ function MembersTable({
   );
 }
 
+type InviteRow = { invite: PendingInvite; storeId: string };
+
+const inviteColumns: DataTableColumns<InviteRow> = [
+  {
+    id: "email",
+    header: "E-mail",
+    enableSorting: false,
+    cell: ({ row }) => <InviteIdentity invite={row.original.invite} />,
+  },
+  {
+    id: "papel",
+    header: "Papel",
+    enableSorting: false,
+    cell: ({ row }) => <RoleCell role={row.original.invite.role} />,
+  },
+  {
+    id: "validade",
+    header: "Validade",
+    accessorFn: (row) => row.invite.expiresAt,
+    sortFn: (a, b) =>
+      Date.parse(a.original.invite.expiresAt) -
+      Date.parse(b.original.invite.expiresAt),
+    cell: ({ row }) => (
+      <span className="hidden text-sm text-muted sm:inline">
+        Vale até {formatDate(row.original.invite.expiresAt)}
+      </span>
+    ),
+  },
+  {
+    id: "acoes",
+    header: () => <span className="sr-only">Ações</span>,
+    enableSorting: false,
+    cell: ({ row }) => (
+      <InviteActions
+        storeId={row.original.storeId}
+        invite={row.original.invite}
+      />
+    ),
+  },
+];
+
 function InvitesTable({
   storeId,
   invites,
@@ -237,53 +298,17 @@ function InvitesTable({
   storeId: string;
   invites: PendingInvite[];
 }) {
-  const [{ query, sort, page }, set] = useTableUrlState(
-    invitesUrlState,
-    invites.length,
-  );
-  const shown = invites.filter(
-    (invite) => !query || matchesSearch(invite.email, query),
-  );
-  const columns: DataTableColumns<PendingInvite> = [
-    {
-      id: "email",
-      header: "E-mail",
-      enableSorting: false,
-      cell: ({ row }) => <InviteIdentity invite={row.original} />,
-    },
-    {
-      id: "papel",
-      header: "Papel",
-      enableSorting: false,
-      cell: ({ row }) => <RoleCell role={row.original.role} />,
-    },
-    {
-      id: "validade",
-      header: "Validade",
-      accessorFn: (invite) => invite.expiresAt,
-      sortFn: (a, b) =>
-        Date.parse(a.original.expiresAt) - Date.parse(b.original.expiresAt),
-      cell: ({ row }) => (
-        <span className="hidden text-sm text-muted sm:inline">
-          Vale até {formatDate(row.original.expiresAt)}
-        </span>
-      ),
-    },
-    {
-      id: "acoes",
-      header: () => <span className="sr-only">Ações</span>,
-      enableSorting: false,
-      cell: ({ row }) => (
-        <InviteActions storeId={storeId} invite={row.original} />
-      ),
-    },
-  ];
+  const [{ query, sort, page }, set] = useTableUrlState(invitesUrlState);
+  const rows: InviteRow[] = invites
+    .filter((invite) => !query || matchesSearch(invite.email, query))
+    .map((invite) => ({ invite, storeId }));
   const table = useDataTable({
-    data: shown,
-    columns,
+    data: rows,
+    columns: inviteColumns,
+    getRowId: (row) => row.invite.id,
     sort,
     onSortChange: (next) => set({ sort: next }),
-    page: clampPage(page, shown.length),
+    page,
     onPageChange: (next) => set({ page: next }),
   });
   return (

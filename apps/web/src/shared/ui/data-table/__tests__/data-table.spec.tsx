@@ -25,6 +25,7 @@ function Harness({
   const table = useDataTable({
     data,
     columns,
+    getRowId: (row) => row.name,
     sort,
     onSortChange: setSort,
     page,
@@ -165,9 +166,67 @@ describe("pagination", () => {
     }
   });
 
+  it("shows the last page for a page past the end", () => {
+    render(<Harness data={many(45)} initialPage={9} />);
+    expect(screen.getByText("Página 3 de 3")).toBeInTheDocument();
+    expect(names()).toHaveLength(5);
+  });
+
   it("keeps the controlled page when the data changes", () => {
     const { rerender } = render(<Harness data={many(45)} initialPage={2} />);
     rerender(<Harness data={many(44)} initialPage={2} />);
     expect(screen.getByText("Página 2 de 3")).toBeInTheDocument();
   });
+});
+
+it("keeps each row's cell state when the rows reorder", () => {
+  function Toggle({ name }: { name: string }) {
+    const [on, setOn] = useState(false);
+    return (
+      <button
+        type="button"
+        aria-pressed={on}
+        onClick={() => setOn(true)}
+      >{`Marcar ${name}`}</button>
+    );
+  }
+  const stateful: DataTableColumns<Row> = [
+    { accessorKey: "name", header: "Nome" },
+    {
+      id: "toggle",
+      header: "Marca",
+      enableSorting: false,
+      cell: ({ row }) => <Toggle name={row.original.name} />,
+    },
+  ];
+  function Sorted() {
+    const [sort, setSort] = useState<TableSort | null>({
+      column: "name",
+      direction: "asc",
+    });
+    const table = useDataTable({
+      data: people,
+      columns: stateful,
+      getRowId: (row) => row.name,
+      sort,
+      onSortChange: setSort,
+      page: 1,
+      onPageChange: () => {},
+    });
+    return <DataTable table={table} empty={null} />;
+  }
+  render(<Sorted />);
+  fireEvent.click(screen.getByRole("button", { name: "Marcar Ana" }));
+
+  fireEvent.click(screen.getByRole("button", { name: /Nome/ }));
+
+  expect(names()).toEqual(["Carla", "Bruno", "Ana"]);
+  expect(screen.getByRole("button", { name: "Marcar Ana" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  expect(screen.getByRole("button", { name: "Marcar Carla" })).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  );
 });

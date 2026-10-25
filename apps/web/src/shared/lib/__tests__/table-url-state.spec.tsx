@@ -2,8 +2,8 @@ import { act, renderHook } from "@testing-library/react";
 import { parseAsString } from "nuqs";
 import { withNuqsTestingAdapter } from "nuqs/adapters/testing";
 import {
-  clampPage,
   createTableUrlState,
+  lastPage,
   useTableUrlState,
 } from "../table-url-state";
 
@@ -18,9 +18,9 @@ const listings = createTableUrlState({
   defaultSort: { column: "atualizado", direction: "desc" },
 });
 
-function setup(search: string, rowCount = 100) {
+function setup(search: string) {
   const onUrlUpdate = vi.fn();
-  const hook = renderHook(() => useTableUrlState(members, rowCount), {
+  const hook = renderHook(() => useTableUrlState(members), {
     wrapper: withNuqsTestingAdapter({
       searchParams: search,
       onUrlUpdate,
@@ -60,7 +60,7 @@ describe("reading the URL", () => {
         setup(`?membros-ordem=${ordem}`).result.current[0].sort,
       ).toBeNull();
     }
-    const { result } = renderHook(() => useTableUrlState(listings, 0), {
+    const { result } = renderHook(() => useTableUrlState(listings), {
       wrapper: withNuqsTestingAdapter({ searchParams: "?ordem=nome-asc" }),
     });
     expect(result.current[0].sort).toEqual({
@@ -75,11 +75,10 @@ describe("reading the URL", () => {
     }
   });
 
-  it("clamps pages past the last page without rewriting the URL", () => {
-    const { result, lastUrl } = setup("?membros-pagina=9", 45);
-    expect(result.current[0].page).toBe(3);
+  it("reads pages past the last page as written, without rewriting the URL", () => {
+    const { result, lastUrl } = setup("?membros-pagina=9");
+    expect(result.current[0].page).toBe(9);
     expect(lastUrl()).toBeUndefined();
-    expect(setup("?membros-pagina=9", 0).result.current[0].page).toBe(1);
   });
 
   it("ignores the keys of other tables", () => {
@@ -88,10 +87,11 @@ describe("reading the URL", () => {
   });
 });
 
-describe("clampPage", () => {
+describe("lastPage", () => {
   it("allows a full last page and nothing past it", () => {
-    expect(clampPage(4, 61)).toBe(4);
-    expect(clampPage(4, 60)).toBe(3);
+    expect(lastPage(61)).toBe(4);
+    expect(lastPage(60)).toBe(3);
+    expect(lastPage(0)).toBe(1);
   });
 });
 
@@ -137,7 +137,7 @@ describe("extra filters", () => {
     const onUrlUpdate = vi.fn();
     const { result } = renderHook(
       () =>
-        useTableUrlState(listings, 100, {
+        useTableUrlState(listings, {
           status: parseAsString.withDefault(""),
         }),
       {

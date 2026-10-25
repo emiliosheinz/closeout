@@ -30,10 +30,6 @@ export function lastPage(rowCount: number): number {
   return Math.max(1, Math.ceil(rowCount / PAGE_SIZE));
 }
 
-export function clampPage(page: number, rowCount: number): number {
-  return Math.min(page, lastPage(rowCount));
-}
-
 /**
  * URL keys and parsers for one admin table. `prefix` keeps tables on the same
  * page from sharing keys (`membros-` gives `membros-q`, `membros-ordem`,
@@ -79,27 +75,20 @@ export function createTableUrlState<Column extends string>({
 }
 
 /**
- * A table's URL state. The page comes back clamped to `rowCount` (derived, the
- * URL is not rewritten). `set` resets the page unless the update names one, so
- * a new search, sort or `extra` filter never leaves the user on a stale page.
+ * A table's URL state. The page is as read from the URL; the table clamps it
+ * to its rows. `set` resets the page unless the update names one, so a new
+ * search, sort or `extra` filter never leaves the user on a stale page.
  * `extra` adds table-specific parsers (the listings status) to the same state.
  */
 export function useTableUrlState<
   Column extends string,
   Extra extends ParserMap = Record<never, never>,
->(
-  table: ReturnType<typeof createTableUrlState<Column>>,
-  rowCount: number,
-  extra?: Extra,
-) {
+>(table: ReturnType<typeof createTableUrlState<Column>>, extra?: Extra) {
   const [state, setState] = useQueryStates(
     { ...table.parsers, ...extra },
     { urlKeys: table.urlKeys },
   );
-  const values = {
-    ...state,
-    page: clampPage(state.page, rowCount),
-  } as TableState<Column> & inferParserType<Extra>;
+  const values = state as TableState<Column> & inferParserType<Extra>;
 
   function set(update: Partial<typeof values>) {
     return setState({ page: null, ...update } as never);

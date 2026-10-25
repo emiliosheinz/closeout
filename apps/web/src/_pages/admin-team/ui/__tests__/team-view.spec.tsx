@@ -1,5 +1,11 @@
 import { dehydrate, QueryClient } from "@tanstack/react-query";
-import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { withNuqsTestingAdapter } from "nuqs/adapters/testing";
 import { inviteKeys, type PendingInvite } from "@/entities/invite";
 import { memberKeys, type TeamMember } from "@/entities/member";
@@ -169,6 +175,28 @@ describe("TeamView for a manager", () => {
         within(menu).getByRole("menuitem", { name: "Editar" }),
       ).toBeInTheDocument();
     }
+  });
+
+  it("keeps an open actions menu open when the member list refetches", async () => {
+    const { client } = renderManager();
+    await openMenu("Ações para Caio");
+    members = members.map((m) =>
+      m.userId === "ana" ? { ...m, listingCount: 5 } : m,
+    );
+
+    await act(() =>
+      client.refetchQueries({ queryKey: memberKeys.list("store") }),
+    );
+
+    await waitFor(() =>
+      expect(
+        client.getQueryData<{ items: TeamMember[] }>(memberKeys.list("store"))
+          ?.items[0]?.listingCount,
+      ).toBe(5),
+    );
+    expect(
+      screen.getByRole("menu", { name: "Ações para Caio" }),
+    ).toBeInTheDocument();
   });
 
   it("removes a member after confirming and drops the heading count by one", async () => {

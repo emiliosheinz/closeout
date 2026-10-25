@@ -12,7 +12,11 @@ import {
   tableFeatures,
   useTable,
 } from "@tanstack/react-table";
-import { PAGE_SIZE, type TableSort } from "@/shared/lib/table-url-state";
+import {
+  lastPage,
+  PAGE_SIZE,
+  type TableSort,
+} from "@/shared/lib/table-url-state";
 import { Button } from "@/shared/ui/button";
 import {
   Table,
@@ -46,7 +50,9 @@ export type DataTableColumns<TData extends RowData> = ColumnDef<
  * A table instance with client-side sorting and pagination over `data`.
  * Sort and page are controlled, so callers can keep them in the URL. Sort
  * headers only toggle between ascending and descending (`sort: null` shows no
- * column as sorted), and changing the data never moves the page.
+ * column as sorted), and changing the data never moves the page. A page past
+ * the end shows the last page. `getRowId` keys each row, so a row keeps its
+ * DOM and state when the rows reorder.
  */
 export function useDataTable<
   TData extends RowData,
@@ -54,6 +60,7 @@ export function useDataTable<
 >({
   data,
   columns,
+  getRowId,
   sort,
   onSortChange,
   page,
@@ -61,21 +68,26 @@ export function useDataTable<
 }: {
   data: TData[];
   columns: DataTableColumns<TData>;
+  getRowId: (row: TData) => string;
   sort: TableSort<Column> | null;
   onSortChange: (sort: TableSort<Column> | null) => void;
-  /** 1-based. */
+  /** 1-based; clamped to the pages there are. */
   page: number;
   onPageChange: (page: number) => void;
 }): DataTableInstance<TData> {
   const sorting = sort
     ? [{ id: sort.column, desc: sort.direction === "desc" }]
     : [];
-  const pagination = { pageIndex: page - 1, pageSize: PAGE_SIZE };
+  const pagination = {
+    pageIndex: Math.max(1, Math.min(page, lastPage(data.length))) - 1,
+    pageSize: PAGE_SIZE,
+  };
 
   return useTable({
     features,
     data,
     columns,
+    getRowId,
     state: { sorting, pagination },
     onSortingChange: (updater) => {
       const next = functionalUpdate(updater, sorting)[0];
