@@ -28,7 +28,9 @@ test.describe
       ).toHaveText("Casa e decoração");
       await page.getByLabel("Descrição").fill("Luz quente, cúpula de linho.");
       const photo = await samplePhoto(page);
-      await page.locator("#photos").setInputFiles([
+      const chooser = page.waitForEvent("filechooser");
+      await page.getByRole("button", { name: "Adicionar fotos" }).click();
+      await (await chooser).setFiles([
         { name: "frente.jpg", mimeType: "image/jpeg", buffer: photo },
         { name: "lado.jpg", mimeType: "image/jpeg", buffer: photo },
       ]);

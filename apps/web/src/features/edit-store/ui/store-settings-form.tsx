@@ -25,17 +25,18 @@ export function StoreSettingsForm({
   storeUrl: string;
 }) {
   const [copied, setCopied] = useState(false);
+  const defaults = {
+    name: store.name,
+    headline: store.headline,
+    intro: store.intro,
+  };
   const {
     register,
     handleSubmit,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: store.name,
-      headline: store.headline,
-      intro: store.intro,
-    },
+    defaultValues: defaults,
   });
   const save = useMutation({
     mutationFn: (values: FormValues) =>
@@ -100,6 +101,7 @@ export function StoreSettingsForm({
             aria-invalid={Boolean(errors.name)}
             aria-describedby={errors.name ? "store-name-error" : undefined}
             className={inputClass}
+            defaultValue={defaults.name}
             {...register("name")}
           />
         </Field>
@@ -112,6 +114,7 @@ export function StoreSettingsForm({
             id="store-headline"
             maxLength={160}
             className={inputClass}
+            defaultValue={defaults.headline}
             {...register("headline")}
           />
         </Field>
@@ -125,6 +128,7 @@ export function StoreSettingsForm({
             maxLength={1200}
             rows={5}
             className={cn(inputClass, "h-auto py-2 leading-relaxed")}
+            defaultValue={defaults.intro}
             {...register("intro")}
           />
         </Field>

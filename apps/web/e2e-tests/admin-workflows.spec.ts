@@ -72,7 +72,9 @@ test.describe
       await page.goto(editUrl);
       await hydrated(page);
       const photo = await samplePhoto(page);
-      await page.getByLabel("Adicionar fotos").setInputFiles([
+      const chooser = page.waitForEvent("filechooser");
+      await page.getByRole("button", { name: "Adicionar fotos" }).click();
+      await (await chooser).setFiles([
         { name: "a.jpg", mimeType: "image/jpeg", buffer: photo },
         { name: "b.jpg", mimeType: "image/jpeg", buffer: photo },
       ]);

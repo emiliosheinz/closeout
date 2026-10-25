@@ -126,11 +126,11 @@ test.describe
       await page.getByLabel("Nome do item").fill(TITLE);
       await page.getByLabel("Preço (R$)").fill("80");
       const photo = await samplePhoto(page);
-      await page
-        .locator("#photos")
-        .setInputFiles([
-          { name: "abajur.jpg", mimeType: "image/jpeg", buffer: photo },
-        ]);
+      const chooser = page.waitForEvent("filechooser");
+      await page.getByRole("button", { name: "Adicionar fotos" }).click();
+      await (await chooser).setFiles([
+        { name: "abajur.jpg", mimeType: "image/jpeg", buffer: photo },
+      ]);
       await page.getByRole("button", { name: "Salvar e publicar" }).click();
       await expect(
         page.getByText("Anúncio publicado. Já aparece na loja."),

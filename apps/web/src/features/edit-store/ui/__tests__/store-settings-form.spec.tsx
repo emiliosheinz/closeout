@@ -1,4 +1,6 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react";
+import { renderToString } from "react-dom/server";
 import { sessionKeys } from "@/entities/session";
 import { renderWithFeedback } from "@/test/feedback-harness";
 import { StoreSettingsForm } from "../store-settings-form";
@@ -117,5 +119,22 @@ describe("StoreSettingsForm", () => {
       await screen.findByText("Não foi possível salvar agora."),
     ).toBeVisible();
     expect(screen.queryByText("Loja atualizada.")).not.toBeInTheDocument();
+  });
+});
+
+describe("StoreSettingsForm server render", () => {
+  it("carries the saved values in the HTML before hydration", () => {
+    const html = renderToString(
+      <QueryClientProvider client={new QueryClient()}>
+        <StoreSettingsForm
+          store={store}
+          storeUrl="https://closeout.test/loja"
+        />
+      </QueryClientProvider>,
+    );
+
+    expect(html).toContain('value="Casa da Ana"');
+    expect(html).toContain('value="Tudo precisa sair"');
+    expect(html).toContain("Estamos de mudança.");
   });
 });

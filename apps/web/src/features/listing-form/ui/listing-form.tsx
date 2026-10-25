@@ -139,6 +139,21 @@ export function ListingForm({
     : sellers
         .filter((seller) => seller.id === ownSellerId)
         .map((seller) => seller.displayName);
+  // Uncontrolled inputs also take these as HTML defaults so the server render carries them.
+  const defaults: FormInput = {
+    title: listing?.title ?? "",
+    description: listing?.description ?? "",
+    categoryId: listing?.category.id ?? categories[0]?.id ?? "",
+    sellerIds: listing
+      ? listing.sellers.map((seller) => seller.id)
+      : [ownSellerId],
+    price: centsToInput(listing?.priceCents ?? null),
+    noPrice: editing ? listing.priceCents === null : false,
+    condition: listing?.condition ?? "good",
+    attributes: listing?.attributes ?? [],
+    availability: listing?.availability ?? "available",
+    publication: listing?.publication ?? "draft",
+  };
   const {
     register,
     handleSubmit,
@@ -146,20 +161,7 @@ export function ListingForm({
     formState: { errors },
   } = useForm<FormInput, unknown, FormValues>({
     resolver: zodResolver(canAssignSellers ? managerSchema : sellerSchema),
-    defaultValues: {
-      title: listing?.title ?? "",
-      description: listing?.description ?? "",
-      categoryId: listing?.category.id ?? categories[0]?.id ?? "",
-      sellerIds: listing
-        ? listing.sellers.map((seller) => seller.id)
-        : [ownSellerId],
-      price: centsToInput(listing?.priceCents ?? null),
-      noPrice: editing ? listing.priceCents === null : false,
-      condition: listing?.condition ?? "good",
-      attributes: listing?.attributes ?? [],
-      availability: listing?.availability ?? "available",
-      publication: listing?.publication ?? "draft",
-    },
+    defaultValues: defaults,
   });
   const {
     fields: attributes,
@@ -306,6 +308,7 @@ export function ListingForm({
           aria-invalid={Boolean(errors.title)}
           aria-describedby={errors.title ? "title-error" : undefined}
           className={inputClass}
+          defaultValue={defaults.title}
           {...register("title")}
         />
       </Field>
@@ -325,12 +328,14 @@ export function ListingForm({
             aria-invalid={Boolean(errors.price)}
             aria-describedby={errors.price ? "price-error" : undefined}
             className={inputClass}
+            defaultValue={defaults.price}
             {...register("price")}
           />
           <label className="mt-1 inline-flex items-center gap-2 text-sm">
             <input
               type="checkbox"
               className="size-4 accent-ink"
+              defaultChecked={defaults.noPrice}
               {...register("noPrice")}
             />
             Preço a combinar
@@ -370,6 +375,7 @@ export function ListingForm({
                 type="radio"
                 value={value}
                 className="sr-only"
+                defaultChecked={defaults.condition === value}
                 {...register("condition")}
               />
               {CONDITION_LABELS[value]}
@@ -388,6 +394,7 @@ export function ListingForm({
           rows={5}
           maxLength={5000}
           className={cn(inputClass, "h-auto py-2 leading-relaxed")}
+          defaultValue={defaults.description}
           {...register("description")}
         />
       </Field>
@@ -467,6 +474,7 @@ export function ListingForm({
                 placeholder="Ex.: Voltagem"
                 maxLength={40}
                 className={cn(inputClass, "w-2/5")}
+                defaultValue={attribute.label}
                 {...register(`attributes.${index}.label`)}
               />
               <input
@@ -474,6 +482,7 @@ export function ListingForm({
                 placeholder="Ex.: 220 V"
                 maxLength={120}
                 className={cn(inputClass, "flex-1")}
+                defaultValue={attribute.value}
                 {...register(`attributes.${index}.value`)}
               />
               <button

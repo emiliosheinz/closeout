@@ -1,4 +1,6 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { renderToString } from "react-dom/server";
 import { toast } from "sonner";
 import type { AdminListingDetail } from "@/entities/listing";
 import { renderWithFeedback } from "@/test/feedback-harness";
@@ -769,5 +771,25 @@ describe("ListingForm", () => {
       publication: "published",
       availability: "reserved",
     });
+  });
+});
+
+describe("ListingForm server render", () => {
+  it("carries the listing values in the HTML before hydration", () => {
+    const html = renderToString(
+      <QueryClientProvider client={new QueryClient()}>
+        <ListingForm
+          storeId="store"
+          categories={categories}
+          sellers={sellers}
+          ownSellerId="bia"
+          canAssignSellers
+          listing={{ ...listing, description: "Mesa de jantar" }}
+        />
+      </QueryClientProvider>,
+    );
+
+    expect(html).toContain('value="Mesa"');
+    expect(html).toContain("Mesa de jantar");
   });
 });

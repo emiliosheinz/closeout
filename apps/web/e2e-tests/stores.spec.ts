@@ -44,11 +44,11 @@ test.describe
       await page.getByLabel("Nome do item").fill(OTHER_TITLE);
       await page.getByLabel("Preço (R$)").fill("300");
       const photo = await samplePhoto(page);
-      await page
-        .locator("#photos")
-        .setInputFiles([
-          { name: "vitrola.jpg", mimeType: "image/jpeg", buffer: photo },
-        ]);
+      const chooser = page.waitForEvent("filechooser");
+      await page.getByRole("button", { name: "Adicionar fotos" }).click();
+      await (await chooser).setFiles([
+        { name: "vitrola.jpg", mimeType: "image/jpeg", buffer: photo },
+      ]);
       await page.getByRole("button", { name: "Salvar e publicar" }).click();
       await expect(
         page.getByText("Anúncio publicado. Já aparece na loja."),
