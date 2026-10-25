@@ -293,9 +293,7 @@ test.describe
       cleanUp(browser, async (page) => {
         await page.goto("/admin/equipe");
         await hydrated(page);
-        const member = page
-          .getByRole("listitem")
-          .filter({ hasText: MEMBER.email });
+        const member = page.getByRole("row").filter({ hasText: MEMBER.email });
         if (await member.count()) {
           await member
             .getByRole("button", { name: `Ações para ${MEMBER.name}` })
@@ -307,9 +305,7 @@ test.describe
             .click();
           await expect(member).toHaveCount(0);
         }
-        const invite = page
-          .getByRole("listitem")
-          .filter({ hasText: REVOKED_EMAIL });
+        const invite = page.getByRole("row").filter({ hasText: REVOKED_EMAIL });
         if (await invite.count()) {
           await invite
             .getByRole("button", {
@@ -353,7 +349,7 @@ test.describe
       await page.goto("/admin/equipe");
       await hydrated(page);
       const url = page.url();
-      const row = page.getByRole("listitem").filter({ hasText: MEMBER.email });
+      const row = page.getByRole("row").filter({ hasText: MEMBER.email });
       const people = page.locator("#team-members");
       const before = await people.innerText();
 
@@ -411,7 +407,7 @@ test.describe
         .click();
 
       const url = page.url();
-      const row = page.getByRole("listitem").filter({ hasText: REVOKED_EMAIL });
+      const row = page.getByRole("row").filter({ hasText: REVOKED_EMAIL });
       const heading = page.locator("#team-invites");
       await expect(row).toBeVisible();
       const before = await heading.innerText();

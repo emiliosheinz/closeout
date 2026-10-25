@@ -1,1 +1,1 @@
-export { InviteButton, PendingInvites } from "./ui/invites";
+export { InviteActions, InviteButton } from "./ui/invites";

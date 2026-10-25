@@ -2,7 +2,7 @@ import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { listingKeys } from "@/entities/listing";
 import { memberKeys, type TeamMember } from "@/entities/member";
 import { renderWithFeedback } from "@/test/feedback-harness";
-import { MemberRow } from "../member-row";
+import { MemberActions } from "../member-row";
 
 let fetchMock: ReturnType<typeof vi.fn>;
 beforeEach(() => {
@@ -38,14 +38,20 @@ function renderRow(overrides: {
   role?: TeamMember["role"];
 }) {
   const view = renderWithFeedback(
-    <ul>
-      <MemberRow
-        storeId="store"
-        member={{ ...member, role: overrides.role ?? member.role }}
-        isSelf={overrides.isSelf ?? false}
-        canManageTeam={overrides.canManageTeam ?? true}
-      />
-    </ul>,
+    <table>
+      <tbody>
+        <tr>
+          <td>
+            <MemberActions
+              storeId="store"
+              member={{ ...member, role: overrides.role ?? member.role }}
+              isSelf={overrides.isSelf ?? false}
+              canManageTeam={overrides.canManageTeam ?? true}
+            />
+          </td>
+        </tr>
+      </tbody>
+    </table>,
   );
   const trigger = screen.getByRole("button", { name: "Ações para Ana" });
   return Object.assign(trigger, { client: view.client });
@@ -60,7 +66,7 @@ async function openMenu(trigger: HTMLElement) {
   await waitFor(() => expect(firstItem()).toHaveFocus());
 }
 
-describe("MemberRow actions menu", () => {
+describe("MemberActions actions menu", () => {
   it("names the trigger after the member and lists Editar and Remover", async () => {
     const trigger = renderRow({});
     await openMenu(trigger);
@@ -142,14 +148,20 @@ describe("MemberRow actions menu", () => {
         <h2 id="team-members" tabIndex={-1}>
           Pessoas
         </h2>
-        <ul>
-          <MemberRow
-            storeId="store"
-            member={member}
-            isSelf={false}
-            canManageTeam
-          />
-        </ul>
+        <table>
+          <tbody>
+            <tr>
+              <td>
+                <MemberActions
+                  storeId="store"
+                  member={member}
+                  isSelf={false}
+                  canManageTeam
+                />
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </>,
     );
     await openMenu(screen.getByRole("button", { name: "Ações para Ana" }));
@@ -171,14 +183,20 @@ describe("MemberRow actions menu", () => {
       ),
     );
     renderWithFeedback(
-      <ul>
-        <MemberRow
-          storeId="store"
-          member={member}
-          isSelf={false}
-          canManageTeam
-        />
-      </ul>,
+      <table>
+        <tbody>
+          <tr>
+            <td>
+              <MemberActions
+                storeId="store"
+                member={member}
+                isSelf={false}
+                canManageTeam
+              />
+            </td>
+          </tr>
+        </tbody>
+      </table>,
     );
     await openMenu(screen.getByRole("button", { name: "Ações para Ana" }));
     fireEvent.click(screen.getByRole("menuitem", { name: "Remover" }));

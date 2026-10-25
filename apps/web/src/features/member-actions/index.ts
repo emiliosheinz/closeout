@@ -1,1 +1,1 @@
-export { MemberRow } from "./ui/member-row";
+export { MemberActions } from "./ui/member-row";

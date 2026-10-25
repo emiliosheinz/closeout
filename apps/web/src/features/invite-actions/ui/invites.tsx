@@ -6,7 +6,7 @@ import {
 } from "@closeout/contracts/schemas";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
-import { Mail, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import type { z } from "zod";
@@ -17,11 +17,7 @@ import {
 } from "@/entities/invite";
 import { RoleToggle } from "@/entities/member";
 import { ApiError, api, apiParsed } from "@/shared/api";
-import {
-  formatDate,
-  ROLE_DESCRIPTIONS,
-  ROLE_LABELS,
-} from "@/shared/lib/format";
+import { ROLE_DESCRIPTIONS } from "@/shared/lib/format";
 import { ActionsMenu, ActionsMenuItem } from "@/shared/ui/actions-menu";
 import { Button } from "@/shared/ui/button";
 import { ConfirmDialog } from "@/shared/ui/confirm-dialog";
@@ -188,7 +184,8 @@ function InviteDialog({
   );
 }
 
-function InviteRow({
+/** The actions menu of one pending invite, and the dialog for a new link. */
+export function InviteActions({
   storeId,
   invite,
 }: {
@@ -209,83 +206,37 @@ function InviteRow({
   });
 
   return (
-    <li className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 px-4 py-3 sm:grid-cols-[minmax(0,1.4fr)_minmax(0,0.8fr)_minmax(0,1.2fr)_auto] sm:px-5">
-      <div className="flex min-w-0 items-center gap-3">
-        <span
-          aria-hidden="true"
-          className="flex size-9 shrink-0 items-center justify-center rounded-full border border-dashed border-line-strong text-muted"
-        >
-          <Mail className="size-4" />
-        </span>
-        <div className="min-w-0">
-          <p className="truncate font-semibold">{invite.email}</p>
-          <p className="truncate text-sm text-muted sm:hidden">
-            {ROLE_LABELS[invite.role]}, vale até {formatDate(invite.expiresAt)}
-          </p>
-        </div>
-      </div>
-      <span className="hidden truncate text-sm text-ink-soft sm:block">
-        {ROLE_LABELS[invite.role]}
-      </span>
-      <span className="hidden truncate text-sm text-muted sm:block">
-        Vale até {formatDate(invite.expiresAt)}
-      </span>
-      <div>
-        <ConfirmDialog
-          title={`Revogar o convite de ${invite.email}?`}
-          description="O link para de funcionar na hora. Dá para convidar de novo quando quiser."
-          confirmLabel="Revogar convite"
-          pendingLabel="Revogando..."
-          onSuccess={() => document.getElementById("team-invites")?.focus()}
-          onConfirm={() => revoke.mutateAsync()}
-          trigger={(confirmRevoke) => (
-            <ActionsMenu label={`Ações para o convite de ${invite.email}`}>
-              <ActionsMenuItem
-                onSelect={() =>
-                  regenerate.mutate(undefined, {
-                    onSuccess: (issued) => {
-                      if (issued.parsed) setShown(toShown(issued.data));
-                    },
-                  })
-                }
-              >
-                Gerar novo link
-              </ActionsMenuItem>
-              <ActionsMenuItem
-                onSelect={confirmRevoke}
-                className="text-stamp focus:bg-stamp/10 focus:text-stamp"
-              >
-                Revogar
-              </ActionsMenuItem>
-            </ActionsMenu>
-          )}
-        />
-      </div>
+    <>
+      <ConfirmDialog
+        title={`Revogar o convite de ${invite.email}?`}
+        description="O link para de funcionar na hora. Dá para convidar de novo quando quiser."
+        confirmLabel="Revogar convite"
+        pendingLabel="Revogando..."
+        onSuccess={() => document.getElementById("team-invites")?.focus()}
+        onConfirm={() => revoke.mutateAsync()}
+        trigger={(confirmRevoke) => (
+          <ActionsMenu label={`Ações para o convite de ${invite.email}`}>
+            <ActionsMenuItem
+              onSelect={() =>
+                regenerate.mutate(undefined, {
+                  onSuccess: (issued) => {
+                    if (issued.parsed) setShown(toShown(issued.data));
+                  },
+                })
+              }
+            >
+              Gerar novo link
+            </ActionsMenuItem>
+            <ActionsMenuItem
+              onSelect={confirmRevoke}
+              className="text-stamp focus:bg-stamp/10 focus:text-stamp"
+            >
+              Revogar
+            </ActionsMenuItem>
+          </ActionsMenu>
+        )}
+      />
       <InviteLinkDialog invite={shown} onClose={() => setShown(null)} />
-    </li>
-  );
-}
-
-/** Pending invites as rows, or a one-line note when there are none. */
-export function PendingInvites({
-  storeId,
-  invites,
-}: {
-  storeId: string;
-  invites: PendingInvite[];
-}) {
-  if (invites.length === 0) {
-    return (
-      <p className="rounded-xl border border-line bg-surface px-5 py-4 text-sm text-muted">
-        Nenhum convite pendente. Quem você convidar aparece aqui até aceitar.
-      </p>
-    );
-  }
-  return (
-    <ul className="divide-y divide-line rounded-xl border border-line bg-surface">
-      {invites.map((invite) => (
-        <InviteRow key={invite.id} storeId={storeId} invite={invite} />
-      ))}
-    </ul>
+    </>
   );
 }

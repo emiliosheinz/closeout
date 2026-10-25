@@ -102,7 +102,7 @@ test.describe
       await page.goto("/admin/equipe");
       await hydrated(page);
       const card = page
-        .getByRole("listitem")
+        .getByRole("row")
         .filter({ hasText: "seller@loja-e2e.test" });
       await card.getByRole("button", { name: /^Ações para / }).click();
       await page.getByRole("menuitem", { name: "Editar" }).click();

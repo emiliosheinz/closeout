@@ -10,11 +10,15 @@ import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
 import { listingKeys } from "@/entities/listing";
-import type { TeamMember } from "@/entities/member";
-import { memberKeys, RoleToggle } from "@/entities/member";
+import {
+  displayNumber,
+  MemberAvatar,
+  memberKeys,
+  RoleToggle,
+  type TeamMember,
+} from "@/entities/member";
 import { ApiError, api } from "@/shared/api";
-import { ROLE_DESCRIPTIONS, ROLE_LABELS } from "@/shared/lib/format";
-import { cn } from "@/shared/lib/utils";
+import { ROLE_DESCRIPTIONS } from "@/shared/lib/format";
 import { ActionsMenu, ActionsMenuItem } from "@/shared/ui/actions-menu";
 import { Button } from "@/shared/ui/button";
 import { ConfirmDialog } from "@/shared/ui/confirm-dialog";
@@ -27,51 +31,12 @@ import {
 } from "@/shared/ui/dialog";
 import { Field, inputClass } from "@/shared/ui/field";
 
-/** Shows a stored digits-only number the way people type it back. */
-function displayNumber(number: string | null): string {
-  return number ? `+${number}` : "";
-}
-
-/** Up to two initials for the avatar placeholder. */
-function initials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  const letters = parts.length > 1 ? [parts[0], parts.at(-1)] : parts;
-  return letters
-    .map((part) => part?.[0] ?? "")
-    .join("")
-    .toUpperCase();
-}
-
-function Avatar({
-  member,
-  className,
-}: {
-  member: TeamMember;
-  className?: string;
-}) {
-  return (
-    <span
-      className={cn(
-        "flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-ink font-bold text-surface",
-        className,
-      )}
-    >
-      {member.avatarUrl ? (
-        // biome-ignore lint/performance/noImgElement: pre-sized avatar variant.
-        <img src={member.avatarUrl} alt="" className="size-full object-cover" />
-      ) : (
-        <span aria-hidden="true">{initials(member.displayName)}</span>
-      )}
-    </span>
-  );
-}
-
 /**
- * One team member as a list row. Everyone on the team can open their own
- * contact profile; a manager can open anyone's, and for others who are not
- * the owner also change the role or remove them.
+ * The actions menu of one team member. Everyone on the team can open their
+ * own contact profile; a manager can open anyone's, and for others who are
+ * not the owner also change the role or remove them.
  */
-export function MemberRow({
+export function MemberActions({
   storeId,
   member,
   isSelf,
@@ -99,42 +64,7 @@ export function MemberRow({
   );
 
   return (
-    <li className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 px-4 py-3 sm:grid-cols-[minmax(0,1.4fr)_minmax(0,0.8fr)_minmax(0,1.2fr)_auto] sm:px-5">
-      <div className="flex min-w-0 items-center gap-3">
-        <Avatar member={member} className="size-9 text-xs" />
-        <div className="min-w-0">
-          <p className="flex items-center gap-2">
-            <span className="truncate font-semibold">{member.displayName}</span>
-            {isSelf && canManageTeam && (
-              <span className="shrink-0 rounded-md bg-paper px-1.5 py-0.5 text-xs font-medium text-ink-soft">
-                Você
-              </span>
-            )}
-          </p>
-          <p className="truncate text-sm text-muted sm:hidden">
-            {ROLE_LABELS[member.role]} · {member.email}
-          </p>
-        </div>
-      </div>
-      <span className="hidden truncate text-sm text-ink-soft sm:block">
-        {ROLE_LABELS[member.role]}
-      </span>
-      <div className="hidden min-w-0 text-sm sm:block">
-        <p className="truncate text-ink-soft">{member.email}</p>
-        {member.whatsappNumber ? (
-          <p className="truncate text-xs text-muted">
-            {displayNumber(member.whatsappNumber)}
-          </p>
-        ) : (
-          <p className="inline-flex items-center gap-1 text-xs font-medium text-stamp">
-            <span
-              aria-hidden="true"
-              className="size-1.5 rounded-full bg-stamp"
-            />
-            Sem WhatsApp
-          </p>
-        )}
-      </div>
+    <>
       {canManage ? (
         <ConfirmDialog
           title={`Remover ${member.displayName} da equipe?`}
@@ -166,7 +96,7 @@ export function MemberRow({
           onClose={() => setEditing(false)}
         />
       )}
-    </li>
+    </>
   );
 }
 
@@ -266,7 +196,7 @@ function MemberDialog({
     <Dialog open onOpenChange={(next) => !next && onClose()}>
       <DialogContent className="max-w-lg overflow-hidden p-0">
         <div className="flex items-start gap-4 border-b border-line px-6 py-5">
-          <Avatar member={member} className="size-14 text-base" />
+          <MemberAvatar member={member} className="size-14 text-base" />
           <div className="min-w-0">
             <DialogTitle className="truncate text-lg font-bold">
               {member.displayName}

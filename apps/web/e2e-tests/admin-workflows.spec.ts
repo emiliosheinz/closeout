@@ -130,7 +130,7 @@ test.describe
         .click();
       await expect(page).toHaveURL(/\/admin\/equipe$/);
       await hydrated(page);
-      const row = page.getByRole("listitem").filter({ hasText: ADMIN_EMAIL });
+      const row = page.getByRole("row").filter({ hasText: ADMIN_EMAIL });
       const dialog = page.getByRole("dialog");
       const edit = async (value: string) => {
         await row.getByRole("button", { name: /^Ações para / }).click();

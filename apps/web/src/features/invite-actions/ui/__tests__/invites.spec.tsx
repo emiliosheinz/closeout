@@ -1,7 +1,7 @@
 import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { inviteKeys, type PendingInvite } from "@/entities/invite";
 import { renderWithFeedback } from "@/test/feedback-harness";
-import { InviteButton, PendingInvites } from "../invites";
+import { InviteActions, InviteButton } from "../invites";
 
 let fetchMock: ReturnType<typeof vi.fn>;
 beforeEach(() => {
@@ -33,7 +33,15 @@ const issued = {
 
 function renderInvites() {
   const view = renderWithFeedback(
-    <PendingInvites storeId="store" invites={[invite]} />,
+    <table>
+      <tbody>
+        <tr>
+          <td>
+            <InviteActions storeId="store" invite={invite} />
+          </td>
+        </tr>
+      </tbody>
+    </table>,
   );
   const trigger = screen.getByRole("button", {
     name: "Ações para o convite de bia@example.com",
@@ -120,7 +128,15 @@ describe("Invite row actions menu", () => {
         <h2 id="team-invites" tabIndex={-1}>
           Convites pendentes
         </h2>
-        <PendingInvites storeId="store" invites={[invite]} />
+        <table>
+          <tbody>
+            <tr>
+              <td>
+                <InviteActions storeId="store" invite={invite} />
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </>,
     );
     await openMenu(
@@ -147,7 +163,17 @@ describe("Invite row actions menu", () => {
         { status: 500 },
       ),
     );
-    renderWithFeedback(<PendingInvites storeId="store" invites={[invite]} />);
+    renderWithFeedback(
+      <table>
+        <tbody>
+          <tr>
+            <td>
+              <InviteActions storeId="store" invite={invite} />
+            </td>
+          </tr>
+        </tbody>
+      </table>,
+    );
     await openMenu(
       screen.getByRole("button", {
         name: "Ações para o convite de bia@example.com",

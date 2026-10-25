@@ -1,4 +1,5 @@
 import { screen } from "@testing-library/react";
+import { withNuqsTestingAdapter } from "nuqs/adapters/testing";
 import { stubAdminApi } from "@/test/admin-api";
 import { meResponse, seller } from "@/test/fixtures";
 import { renderPage } from "@/test/render-page";
@@ -11,6 +12,8 @@ vi.mock("next/navigation", async () => ({
 vi.mock("next/headers", () => ({
   cookies: async () => ({ get: () => ({ value: "token" }) }),
 }));
+
+const Nuqs = withNuqsTestingAdapter();
 
 const asMember = (role: "owner" | "seller") => ({
   "/me": meResponse(
@@ -28,9 +31,9 @@ describe("team page", () => {
         items: [seller("s-ana", "Ana"), seller("s-caio", "Caio Vendedor")],
       },
     });
-    renderPage(await TeamPage());
+    renderPage(<Nuqs>{await TeamPage()}</Nuqs>);
     expect(calls).toEqual(["/me", "/stores/store-1/sellers"]);
-    expect(screen.getAllByRole("listitem")).toHaveLength(1);
+    expect(screen.getAllByRole("row")).toHaveLength(2);
     expect(screen.getByText("Caio Vendedor")).toBeInTheDocument();
     expect(screen.getByText("caio@loja.test")).toBeInTheDocument();
     expect(screen.queryByText("Ana")).toBeNull();
@@ -44,8 +47,11 @@ describe("team page", () => {
       ...asMember("seller"),
       "/stores/store-1/sellers": { items: [seller("s-ana", "Ana")] },
     });
-    renderPage(await TeamPage());
-    expect(screen.queryAllByRole("listitem")).toEqual([]);
+    renderPage(<Nuqs>{await TeamPage()}</Nuqs>);
+    expect(screen.queryByText("Ana")).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Ações para/ })).toBeNull();
+    expect(screen.queryByRole("table")).toBeNull();
+    expect(screen.queryByRole("searchbox")).toBeNull();
   });
 
   it("gives a manager every member and the invites", async () => {
@@ -68,7 +74,7 @@ describe("team page", () => {
       },
       "/stores/store-1/invites": { items: [] },
     });
-    renderPage(await TeamPage());
+    renderPage(<Nuqs>{await TeamPage()}</Nuqs>);
     expect(calls).toEqual([
       "/me",
       "/stores/store-1/members",

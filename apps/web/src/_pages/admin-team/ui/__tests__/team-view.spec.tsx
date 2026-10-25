@@ -1,9 +1,19 @@
 import { dehydrate, QueryClient } from "@tanstack/react-query";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { withNuqsTestingAdapter } from "nuqs/adapters/testing";
 import { inviteKeys, type PendingInvite } from "@/entities/invite";
 import { memberKeys, type TeamMember } from "@/entities/member";
-import { renderWithFeedback } from "@/test/feedback-harness";
+import { renderWithFeedback as renderWithProviders } from "@/test/feedback-harness";
 import { TeamView } from "../team-view";
+
+const Nuqs = withNuqsTestingAdapter();
+
+function renderWithFeedback(
+  ui: React.ReactNode,
+  state?: Parameters<typeof renderWithProviders>[1],
+) {
+  return renderWithProviders(<Nuqs>{ui}</Nuqs>, state);
+}
 
 let members: TeamMember[] = [];
 let invites: PendingInvite[] = [];
@@ -71,8 +81,8 @@ const team = [
 
 const rowOf = (name: string) => {
   const row = screen
-    .getAllByRole("listitem")
-    .find((li) => within(li).queryByText(name, { exact: true }));
+    .getAllByRole("row")
+    .find((tr) => within(tr).queryByText(name, { exact: true }));
   if (!row) throw new Error(`No row for ${name}`);
   return row;
 };
@@ -118,8 +128,9 @@ describe("TeamView for a manager", () => {
     ).toBeTruthy();
     expect(
       within(people)
-        .getAllByRole("listitem")
-        .map((li) => li.querySelector("span.truncate")?.textContent),
+        .getAllByRole("row")
+        .slice(1)
+        .map((tr) => tr.querySelector("span.truncate")?.textContent),
     ).toEqual(["Ana", "Bia", "Caio"]);
     expect(within(people).getByText("caio@loja.test")).toBeInTheDocument();
     expect(within(people).getByText("Você")).toBeInTheDocument();
@@ -371,7 +382,7 @@ describe("TeamView for a seller", () => {
         ownRows={[member("caio", "Caio", "seller")]}
       />,
     );
-    expect(screen.getAllByRole("listitem")).toHaveLength(1);
+    expect(screen.getAllByRole("row").slice(1)).toHaveLength(1);
     expect(
       screen.getByRole("region", { name: "Seu contato" }),
     ).toBeInTheDocument();

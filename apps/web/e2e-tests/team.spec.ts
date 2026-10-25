@@ -94,7 +94,7 @@ test.describe
       await signIn(page);
       sellerLink = await invite(page, SELLER.email, "Vendedor(a)");
       await expect(
-        page.getByRole("listitem").filter({ hasText: SELLER.email }),
+        page.getByRole("row").filter({ hasText: SELLER.email }),
       ).toContainText(`Vendedor(a), vale até ${expiryDate()}`);
     });
 
@@ -171,7 +171,7 @@ test.describe
       ).toHaveCount(0);
       await nav.getByRole("link", { name: "Equipe", exact: true }).click();
       await expect(page).toHaveURL(/\/admin\/equipe$/);
-      const rows = page.getByRole("listitem");
+      const rows = page.locator("tbody").getByRole("row");
       await expect(rows).toHaveCount(1);
       await expect(rows).toContainText(SELLER.name);
       await expect(
@@ -219,22 +219,18 @@ test.describe
       leaverLink = await invite(page, LEAVER.email, "Admin");
 
       const members = page.getByRole("region", { name: /pessoas/ });
-      const owner = members
-        .getByRole("listitem")
-        .filter({ hasText: ADMIN_EMAIL });
+      const owner = members.getByRole("row").filter({ hasText: ADMIN_EMAIL });
       await expect(owner).toContainText("Ana Teste");
       await expect(owner).toContainText("Dono(a)");
       await expect(owner).toContainText(`+${ADMIN_WHATSAPP}`);
-      const seller = members
-        .getByRole("listitem")
-        .filter({ hasText: SELLER.email });
+      const seller = members.getByRole("row").filter({ hasText: SELLER.email });
       await expect(seller).toContainText(SELLER.name);
       await expect(seller).toContainText("Vendedor(a)");
       await expect(seller).toContainText("Sem WhatsApp");
 
       const invites = page.getByRole("region", { name: /Convites pendentes/ });
       await expect(
-        invites.getByRole("listitem").filter({ hasText: LEAVER.email }),
+        invites.getByRole("row").filter({ hasText: LEAVER.email }),
       ).toContainText(`Admin, vale até ${expiryDate()}`);
       const order = await page
         .getByRole("region")
@@ -273,7 +269,7 @@ test.describe
       await signIn(page);
       await page.goto("/admin/equipe");
       await hydrated(page);
-      const card = page.getByRole("listitem").filter({ hasText: LEAVER.email });
+      const card = page.getByRole("row").filter({ hasText: LEAVER.email });
       await card
         .getByRole("button", { name: `Ações para ${LEAVER.name}` })
         .click();
