@@ -115,3 +115,15 @@ export function formatDate(
     timeZone,
   }).format(new Date(iso));
 }
+
+/** "30/10/2026", for table cells where the long form wraps. */
+export function formatShortDate(
+  iso: string,
+  locale = DEFAULT_LOCALE,
+  timeZone = DEFAULT_TIME_ZONE,
+): string {
+  return new Intl.DateTimeFormat(locale, {
+    dateStyle: "short",
+    timeZone,
+  }).format(new Date(iso));
+}

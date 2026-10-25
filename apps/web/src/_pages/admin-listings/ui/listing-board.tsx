@@ -17,7 +17,7 @@ import {
   useListings,
 } from "@/features/listing-actions";
 import { readQuery } from "@/shared/api";
-import { formatDate, formatPrice } from "@/shared/lib/format";
+import { formatPrice, formatShortDate } from "@/shared/lib/format";
 import {
   createTableUrlState,
   useTableUrlState,
@@ -88,8 +88,8 @@ const columns: DataTableColumns<Row> = [
     sortFn: (a, b, id) =>
       Date.parse(a.getValue<string>(id)) - Date.parse(b.getValue<string>(id)),
     cell: ({ row }) => (
-      <span className="text-sm text-muted">
-        {formatDate(row.original.listing.updatedAt)}
+      <span className="text-sm whitespace-nowrap text-muted">
+        {formatShortDate(row.original.listing.updatedAt)}
       </span>
     ),
   },

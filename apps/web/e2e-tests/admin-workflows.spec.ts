@@ -170,6 +170,7 @@ test.describe
       await signIn(page);
       await findInAdmin(page, TITLE);
       await page.getByRole("button", { name: `Duplicar ${TITLE}` }).click();
+      await page.getByRole("button", { name: "Duplicar anúncio" }).click();
       await expect(page).toHaveURL(/copiado=1/);
       await expect(page.getByRole("heading", { level: 1 })).toHaveText(
         `${TITLE} (cópia)`,

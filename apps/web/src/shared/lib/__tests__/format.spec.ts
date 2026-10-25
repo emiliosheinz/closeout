@@ -2,6 +2,7 @@ import {
   CONDITION_LABELS,
   formatDate,
   formatPrice,
+  formatShortDate,
   formatStickerPrice,
   pluralize,
 } from "../format";
@@ -55,5 +56,15 @@ describe("formatDate", () => {
     expect(formatDate("2026-10-31T01:00:00.000Z")).toBe(
       "30 de outubro de 2026",
     );
+  });
+});
+
+describe("formatShortDate", () => {
+  it("writes the Brazilian calendar day as day/month/year", () => {
+    expect(formatShortDate("2026-10-30T15:00:00.000Z")).toBe("30/10/2026");
+  });
+
+  it("uses the Brazilian day even when UTC already turned the page", () => {
+    expect(formatShortDate("2026-10-31T01:00:00.000Z")).toBe("30/10/2026");
   });
 });

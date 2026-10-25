@@ -162,16 +162,13 @@ export function ListingRowActions({
     },
   });
 
-  function copy() {
-    duplicate.mutate(undefined, {
-      onSuccess: (result) => {
-        if (result.parsed) {
-          router.push(listingEditHref(result.data.id, "copied"));
-          return;
-        }
-        notify.success(LISTING_NOTICES.copied.message);
-      },
-    });
+  async function copy() {
+    const result = await duplicate.mutateAsync();
+    if (result.parsed) {
+      router.push(listingEditHref(result.data.id, "copied"));
+      return;
+    }
+    notify.success(LISTING_NOTICES.copied.message);
   }
 
   return (
@@ -200,15 +197,25 @@ export function ListingRowActions({
       >
         <Eye className="size-4" aria-hidden="true" />
       </a>
-      <button
-        type="button"
-        onClick={copy}
-        disabled={duplicate.isPending}
-        className="inline-flex size-11 items-center justify-center rounded-full hover:bg-ink/5"
-        aria-label={`Duplicar ${listing.title}`}
-      >
-        <Copy className="size-4" aria-hidden="true" />
-      </button>
+      <ConfirmDialog
+        title={`Duplicar "${listing.title}"?`}
+        description="A cópia vira um rascunho com o mesmo texto, preço e vendedores. As fotos não são copiadas."
+        confirmLabel="Duplicar anúncio"
+        pendingLabel="Duplicando..."
+        destructive={false}
+        onConfirm={copy}
+        trigger={(open) => (
+          <button
+            type="button"
+            onClick={open}
+            disabled={duplicate.isPending}
+            className="inline-flex size-11 items-center justify-center rounded-full hover:bg-ink/5"
+            aria-label={`Duplicar ${listing.title}`}
+          >
+            <Copy className="size-4" aria-hidden="true" />
+          </button>
+        )}
+      />
       <ConfirmDialog
         title={`Excluir "${listing.title}"?`}
         description="O anúncio e as fotos são apagados de vez, e o link compartilhado deixa de funcionar. Para só tirar da loja, mude a publicação para Arquivado."

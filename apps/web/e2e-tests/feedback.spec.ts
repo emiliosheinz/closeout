@@ -209,6 +209,7 @@ test.describe
       await expect(page).toHaveURL(/\/admin\?q=/);
       await hydrated(page);
       await page.getByRole("button", { name: `Duplicar ${TITLE}` }).click();
+      await page.getByRole("button", { name: "Duplicar anúncio" }).click();
 
       await expect(page).toHaveURL(/\/admin\/anuncios\/[0-9a-f-]{36}/);
       await expectOneToast(

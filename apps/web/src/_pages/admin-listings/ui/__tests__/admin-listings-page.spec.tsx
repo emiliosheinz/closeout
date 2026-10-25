@@ -542,9 +542,9 @@ describe("rows", () => {
       "fetch",
       vi.fn(() => new Promise<Response>(() => {})),
     );
-    const copies = () =>
+    const copies = (options: { hidden?: boolean } = {}) =>
       screen
-        .getAllByRole("button", { name: "Duplicar Mesa" })
+        .getAllByRole("button", { name: "Duplicar Mesa", ...options })
         .map((button) => (button as HTMLButtonElement).disabled);
     expect(copies()).toEqual([false, false]);
 
@@ -553,7 +553,18 @@ describe("rows", () => {
         name: "Duplicar Mesa",
       })[1] as HTMLElement,
     );
-    await waitFor(() => expect(copies()).toEqual([false, true]));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Duplicar anúncio" }),
+    );
+    await waitFor(() =>
+      expect(copies({ hidden: true })).toEqual([false, true]),
+    );
+    // The confirmation stays open while the copy is pending; closing it
+    // leaves the request running.
+    fireEvent.keyDown(screen.getByRole("alertdialog"), { key: "Escape" });
+    await waitFor(() =>
+      expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument(),
+    );
 
     sortBy(/Preço/);
 
@@ -646,7 +657,7 @@ describe("a row whose status changed under a filter", () => {
     expect(titles()).toEqual(["Abajur", "Cadeira"]);
     expect(
       within(screen.getAllByRole("row")[2] as HTMLElement).getByText(
-        "20 de outubro de 2026",
+        "20/10/2026",
       ),
     ).toBeInTheDocument();
     expect(

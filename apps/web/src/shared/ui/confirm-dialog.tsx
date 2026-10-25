@@ -21,7 +21,7 @@ function returnTarget(active: Element | null): Element | null {
 }
 
 /**
- * Explicit confirmation for destructive actions. The dialog stays open when
+ * Explicit confirmation before an action. The dialog stays open when
  * the action rejects; reporting the failure is the action's job (a mutation's
  * error toast). After it succeeds, `onSuccess` places focus where the user
  * continues (the trigger may be gone by then).
@@ -34,6 +34,7 @@ export function ConfirmDialog({
   pendingLabel,
   onConfirm,
   onSuccess,
+  destructive = true,
 }: {
   trigger: (open: () => void) => React.ReactNode;
   title: string;
@@ -42,6 +43,8 @@ export function ConfirmDialog({
   pendingLabel: string;
   onConfirm: () => Promise<void>;
   onSuccess?: () => void;
+  /** False for a confirmation that creates rather than destroys. */
+  destructive?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
@@ -96,7 +99,9 @@ export function ConfirmDialog({
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
-              className={buttonVariants({ variant: "destructive" })}
+              className={buttonVariants({
+                variant: destructive ? "destructive" : "default",
+              })}
               onClick={confirm}
               disabled={pending}
             >

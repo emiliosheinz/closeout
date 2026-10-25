@@ -3,7 +3,13 @@ import {
   dehydrate,
   type QueryClient,
 } from "@tanstack/react-query";
-import { act, fireEvent, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { listingKeys, tabCounts } from "@/entities/listing";
 import { renderWithFeedback } from "@/test/feedback-harness";
 import { listingSummary } from "@/test/fixtures";
@@ -394,7 +400,15 @@ describe("listing row cells", () => {
       renderRows([row("a"), row("b")]);
 
       fireEvent.click(screen.getByRole("button", { name: "Duplicar Item b" }));
+      fireEvent.click(
+        await screen.findByRole("button", { name: "Duplicar anúncio" }),
+      );
       await waitFor(() => expect(writes("POST")).toHaveLength(1));
+      // Closing the confirmation leaves the copy request running.
+      fireEvent.keyDown(screen.getByRole("alertdialog"), { key: "Escape" });
+      await waitFor(() =>
+        expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument(),
+      );
       await pick(status("Disponibilidade", "Item a"), "Reservado");
 
       await screen.findByText('"Item a" marcado como reservado.');
@@ -440,6 +454,21 @@ describe("listing row cells", () => {
   });
 
   describe("Duplicar", () => {
+    it("asks first and copies nothing when cancelled", async () => {
+      renderRows([row("a")]);
+
+      fireEvent.click(screen.getByRole("button", { name: "Duplicar Item a" }));
+      const dialog = await screen.findByRole("alertdialog", {
+        name: 'Duplicar "Item a"?',
+      });
+      fireEvent.click(within(dialog).getByRole("button", { name: "Cancelar" }));
+
+      await waitFor(() =>
+        expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument(),
+      );
+      expect(writes("POST")).toEqual([]);
+    });
+
     it("posts the copy for that row and opens it with the copied notice", async () => {
       handler = (method) =>
         method === "POST"
@@ -448,6 +477,9 @@ describe("listing row cells", () => {
       renderRows([row("a"), row("b")]);
 
       fireEvent.click(screen.getByRole("button", { name: "Duplicar Item b" }));
+      fireEvent.click(
+        await screen.findByRole("button", { name: "Duplicar anúncio" }),
+      );
 
       await waitFor(() =>
         expect(push).toHaveBeenCalledWith("/admin/anuncios/copy-1?copiado=1"),
@@ -466,6 +498,9 @@ describe("listing row cells", () => {
       renderRows([row("a")]);
 
       fireEvent.click(screen.getByRole("button", { name: "Duplicar Item a" }));
+      fireEvent.click(
+        await screen.findByRole("button", { name: "Duplicar anúncio" }),
+      );
 
       expect(
         await screen.findByText(/Cópia criada como rascunho/),
@@ -482,6 +517,9 @@ describe("listing row cells", () => {
       const button = screen.getByRole("button", { name: "Duplicar Item a" });
 
       fireEvent.click(button);
+      fireEvent.click(
+        await screen.findByRole("button", { name: "Duplicar anúncio" }),
+      );
       await waitFor(() => expect(button).toBeDisabled());
       gate.resolve(
         Response.json({ message: "Servidor indisponível." }, { status: 500 }),
