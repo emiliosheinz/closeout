@@ -58,7 +58,8 @@ jobs:
       matrix:
         include:
           - name: Integration tests
-            command: pnpm --filter api test:integration
+            # Through turbo so the workspace packages the API imports are built first.
+            command: pnpm turbo test:integration --filter=api
           - name: Migration drift
             command: pnpm --filter api migration:run && pnpm --filter api migration:check
     # Service env cannot read the job env, so the credentials appear in both.
