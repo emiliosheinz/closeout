@@ -66,6 +66,15 @@ describe("sorting", () => {
     expect(names()).toEqual(["Ana", "Bruno", "Carla"]);
   });
 
+  it("points the arrow up for ascending and down for descending", () => {
+    render(<Harness data={people} initialSort={null} />);
+    const header = screen.getByRole("button", { name: /Nome/ });
+    fireEvent.click(header);
+    expect(header).toHaveTextContent("Nome↑");
+    fireEvent.click(header);
+    expect(header).toHaveTextContent("Nome↓");
+  });
+
   it("starts a newly sorted column ascending and never leaves it unsorted", () => {
     render(<Harness data={people} />);
     fireEvent.click(screen.getByRole("button", { name: /Idade/ }));

@@ -97,6 +97,37 @@ const sortBy = (region: HTMLElement, column: string) =>
   fireEvent.click(within(region).getByRole("button", { name: column }));
 
 describe("members table", () => {
+  it("shows name, role and contact columns, each role by its label", () => {
+    renderTeam();
+    const region = membersRegion();
+    expect(
+      within(region)
+        .getAllByRole("columnheader")
+        .slice(0, 3)
+        .map((header) => header.textContent),
+    ).toEqual(["Nome", "Papel", "Contato"]);
+    const roles = within(region)
+      .getAllByRole("row")
+      .slice(1)
+      .map((row) => within(row).getAllByRole("cell")[1]?.textContent);
+    expect(roles).toEqual([
+      "Vendedor(a)",
+      "Dono(a)",
+      "Admin",
+      "Vendedor(a)",
+      "Admin",
+    ]);
+  });
+
+  it("puts only the email under the name, for phones", () => {
+    renderTeam();
+    const nameCell = within(membersRegion())
+      .getAllByRole("row")[2]
+      ?.querySelector("td") as HTMLElement;
+    expect(within(nameCell).getByText("ana@loja.test")).toBeInTheDocument();
+    expect(within(nameCell).queryByText(/Dono\(a\)/)).toBeNull();
+  });
+
   it("keeps the API order until a sort is chosen", async () => {
     renderTeam();
     expect(order(membersRegion(), teamNames)).toEqual(teamNames);
