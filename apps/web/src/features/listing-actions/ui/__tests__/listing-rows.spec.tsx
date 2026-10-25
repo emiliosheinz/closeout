@@ -3,7 +3,7 @@ import {
   dehydrate,
   type QueryClient,
 } from "@tanstack/react-query";
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { listingKeys, tabCounts } from "@/entities/listing";
 import { renderWithFeedback } from "@/test/feedback-harness";
 import { listingSummary } from "@/test/fixtures";
@@ -20,15 +20,17 @@ type Handler = (method: string, path: string) => Response | Promise<Response>;
 
 let serverRows: Row[];
 let handler: Handler;
+let listResponse: (() => Response | Promise<Response>) | undefined;
 let fetchMock: ReturnType<typeof vi.fn>;
 
 beforeEach(() => {
   push.mockReset();
+  listResponse = undefined;
   handler = () => new Response(null, { status: 204 });
   fetchMock = vi.fn((url: string, init: RequestInit = {}) => {
     const path = String(url).replace("/api/v1", "");
     if (init.method === "GET" && path === "/stores/store/listings") {
-      return Response.json({ items: serverRows });
+      return listResponse?.() ?? Response.json({ items: serverRows });
     }
     return handler(init.method ?? "GET", path);
   });
@@ -90,6 +92,12 @@ const listFetches = () =>
       String(url) === "/api/v1/stores/store/listings" &&
       (init as RequestInit | undefined)?.method === "GET",
   ).length;
+
+// The query cache notifies React on a timer, not a microtask.
+const settleRender = () =>
+  act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  });
 
 function deferred() {
   let resolve!: (response: Response) => void;
@@ -166,12 +174,15 @@ describe("ListingRows", () => {
     const trigger = status("Disponibilidade", "Item a");
     trigger.focus();
     fireEvent.keyDown(trigger, { key: "Enter" });
-    expect(
-      (await screen.findAllByRole("option")).map((o) => o.textContent),
-    ).toEqual(["Disponível", "Reservado", "Vendido"]);
-    fireEvent.keyDown(screen.getByRole("option", { name: "Reservado" }), {
-      key: "Enter",
-    });
+    const options = await screen.findAllByRole("option");
+    expect(options.map((o) => o.textContent)).toEqual([
+      "Disponível",
+      "Reservado",
+      "Vendido",
+    ]);
+    fireEvent.keyDown(options[0] as HTMLElement, { key: "ArrowDown" });
+    await waitFor(() => expect(options[1]).toHaveFocus());
+    fireEvent.keyDown(options[1] as HTMLElement, { key: "Enter" });
 
     await waitFor(() =>
       expect(writes("PATCH")).toEqual([
@@ -185,7 +196,16 @@ describe("ListingRows", () => {
 
   it("sends only the publication when it changes", async () => {
     renderRows([row("a")]);
-    await pick(status("Publicação", "Item a"), "Arquivado");
+    const trigger = status("Publicação", "Item a");
+    trigger.focus();
+    fireEvent.keyDown(trigger, { key: "Enter" });
+    const options = await screen.findAllByRole("option");
+    const published = options.findIndex(
+      (option) => option.getAttribute("aria-selected") === "true",
+    );
+    fireEvent.keyDown(options[published] as HTMLElement, { key: "ArrowDown" });
+    await waitFor(() => expect(options[published + 1]).toHaveFocus());
+    fireEvent.keyDown(options[published + 1] as HTMLElement, { key: "Enter" });
 
     await waitFor(() =>
       expect(writes("PATCH")).toEqual([
@@ -275,6 +295,61 @@ describe("ListingRows", () => {
         "Reservado",
       );
       gate.resolve(new Response(null, { status: 204 }));
+    });
+
+    it("discard a list response that was already in flight when a change starts", async () => {
+      const refetch = deferred();
+      const gate = deferred();
+      handler = (method) =>
+        method === "PATCH" ? gate.promise : new Response(null, { status: 204 });
+      const { client } = renderRows([row("a"), row("b")]);
+      listResponse = () => refetch.promise;
+      const inFlight = client.refetchQueries({
+        queryKey: listingKeys.list("store"),
+      });
+      await waitFor(() => expect(listFetches()).toBe(1));
+
+      await pick(status("Disponibilidade", "Item a"), "Reservado");
+      refetch.resolve(
+        Response.json({
+          items: [row("a"), row("b", { title: "Item b renomeado" })],
+        }),
+      );
+      await inFlight;
+      await settleRender();
+
+      expect(screen.getByText("Item b")).toBeInTheDocument();
+      expect(screen.queryByText("Item b renomeado")).toBeNull();
+      gate.resolve(new Response(null, { status: 204 }));
+    });
+
+    it("discard a list response that lands after a change succeeded while another is pending", async () => {
+      const refetch = deferred();
+      const first = deferred();
+      const second = deferred();
+      handler = (method, path) => {
+        if (method !== "PATCH") return new Response(null, { status: 204 });
+        return path.includes("/a/") ? first.promise : second.promise;
+      };
+      const { client } = renderRows([row("a"), row("b")]);
+
+      await pick(status("Disponibilidade", "Item a"), "Reservado");
+      await pick(status("Disponibilidade", "Item b"), "Vendido");
+      listResponse = () => refetch.promise;
+      const inFlight = client.refetchQueries({
+        queryKey: listingKeys.list("store"),
+      });
+      await waitFor(() => expect(listFetches()).toBe(1));
+      first.resolve(new Response(null, { status: 204 }));
+      await screen.findByText('"Item a" marcado como reservado.');
+      refetch.resolve(Response.json({ items: [row("a"), row("b")] }));
+      await inFlight;
+      await settleRender();
+
+      expect(status("Disponibilidade", "Item a")).toHaveTextContent(
+        "Reservado",
+      );
+      second.resolve(new Response(null, { status: 204 }));
     });
 
     it("refetch the list once, after the last change settles", async () => {

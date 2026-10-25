@@ -23,10 +23,19 @@ describe("photo dropzone", () => {
   it("passes dropped images to onFiles", async () => {
     const onFiles = vi.fn();
     renderWithFeedback(<PhotoDropzone existing={0} onFiles={onFiles} />);
-    const png = file("a.png", "image/png");
-    drop([png, file("b.webp", "image/webp"), file("c.jpg", "image/jpeg")]);
+    drop([
+      file("a.png", "image/png"),
+      file("b.webp", "image/webp"),
+      file("c.jpg", "image/jpeg"),
+      file("d.gif", "image/gif"),
+    ]);
     await waitFor(() => expect(onFiles).toHaveBeenCalledOnce());
-    expect(onFiles.mock.calls[0]?.[0]).toHaveLength(3);
+    expect(
+      (onFiles.mock.calls[0]?.[0] as File[]).map((added) => added.name),
+    ).toEqual(["a.png", "b.webp", "c.jpg"]);
+    expect(
+      await screen.findByText('"d.gif" não é JPEG, PNG ou WebP.'),
+    ).toBeInTheDocument();
   });
 
   it("skips a non-image and toasts its name", async () => {

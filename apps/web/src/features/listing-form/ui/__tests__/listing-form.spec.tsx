@@ -1,8 +1,13 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  dehydrate,
+  HydrationBoundary,
+  QueryClient,
+  QueryClientProvider,
+} from "@tanstack/react-query";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { renderToString } from "react-dom/server";
 import { toast } from "sonner";
-import type { AdminListingDetail } from "@/entities/listing";
+import { type AdminListingDetail, listingKeys } from "@/entities/listing";
 import { renderWithFeedback } from "@/test/feedback-harness";
 import { ListingForm } from "../listing-form";
 
@@ -22,6 +27,7 @@ let fetchMock: ReturnType<typeof vi.fn>;
 beforeEach(() => {
   push.mockReset();
   fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+    if (init?.method === "GET") return json(listing);
     if (url.endsWith("/images")) return json({ items: [] }, 201);
     if (init?.method === "POST") return json({ id: "new-listing" }, 201);
     return new Response(null, { status: 204 });
@@ -32,7 +38,11 @@ afterEach(() => vi.unstubAllGlobals());
 
 const apiCalls = () =>
   fetchMock.mock.calls
-    .filter(([url]) => String(url).startsWith("/api/v1"))
+    .filter(
+      ([url, init]) =>
+        String(url).startsWith("/api/v1") &&
+        (init as RequestInit).method !== "GET",
+    )
     .map(([url, init]) => ({
       method: (init as RequestInit).method,
       path: String(url).replace("/api/v1", ""),
@@ -75,6 +85,12 @@ const listing: AdminListingDetail = {
   images: [],
 };
 
+function cachedDetail(detail: AdminListingDetail) {
+  const client = new QueryClient();
+  client.setQueryData(listingKeys.detail("store", detail.id), detail);
+  return dehydrate(client);
+}
+
 const renderForm = (props: {
   canAssignSellers?: boolean;
   listing?: AdminListingDetail;
@@ -87,8 +103,9 @@ const renderForm = (props: {
       sellers={sellers}
       ownSellerId="bia"
       canAssignSellers={props.canAssignSellers ?? true}
-      listing={props.listing}
+      listingId={props.listing?.id}
     />,
+    props.listing && cachedDetail(props.listing),
   );
 
 const renderNew = (canAssignSellers = true) => renderForm({ canAssignSellers });
@@ -481,18 +498,20 @@ describe("ListingForm", () => {
       );
     });
 
-    it("refetches the store's listings after a save", async () => {
-      const { client } = renderForm({ listing });
-      const invalidate = vi.spyOn(client, "invalidateQueries");
+    it("refetches the listing being edited after a save", async () => {
+      renderForm({ listing });
+      const reads = () =>
+        fetchMock.mock.calls.filter(
+          ([url, init]) =>
+            String(url) === "/api/v1/stores/store/listings/listing-1" &&
+            (init as RequestInit).method === "GET",
+        );
+      expect(reads()).toHaveLength(0);
       fireEvent.click(
         screen.getByRole("button", { name: "Salvar alterações" }),
       );
 
-      await waitFor(() =>
-        expect(invalidate).toHaveBeenCalledWith({
-          queryKey: ["listings", "store"],
-        }),
-      );
+      await waitFor(() => expect(reads()).toHaveLength(1));
     });
 
     it("does not claim a plain save when the answer is unreadable and photos or publishing were pending", async () => {
@@ -778,14 +797,18 @@ describe("ListingForm server render", () => {
   it("carries the listing values in the HTML before hydration", () => {
     const html = renderToString(
       <QueryClientProvider client={new QueryClient()}>
-        <ListingForm
-          storeId="store"
-          categories={categories}
-          sellers={sellers}
-          ownSellerId="bia"
-          canAssignSellers
-          listing={{ ...listing, description: "Mesa de jantar" }}
-        />
+        <HydrationBoundary
+          state={cachedDetail({ ...listing, description: "Mesa de jantar" })}
+        >
+          <ListingForm
+            storeId="store"
+            categories={categories}
+            sellers={sellers}
+            ownSellerId="bia"
+            canAssignSellers
+            listingId={listing.id}
+          />
+        </HydrationBoundary>
       </QueryClientProvider>,
     );
 

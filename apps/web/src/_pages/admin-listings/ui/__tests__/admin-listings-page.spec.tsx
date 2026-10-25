@@ -7,6 +7,7 @@ import {
   within,
 } from "@testing-library/react";
 import { stubAdminApi } from "@/test/admin-api";
+import { renderWithFeedback } from "@/test/feedback-harness";
 import { listingSummary, meResponse, seller } from "@/test/fixtures";
 import { renderPage } from "@/test/render-page";
 import { DashboardPage } from "../admin-listings-page";
@@ -199,6 +200,79 @@ describe("admin listings page", () => {
     view.rerender(await page({ status: "vendidos" }));
     expect(screen.queryByText("Cadeira")).toBeNull();
     expect(screen.getByText("Nenhum anúncio em Vendidos.")).toBeInTheDocument();
+  });
+
+  it("drops the kept row once only the search changes", async () => {
+    stubAdminApi({
+      "/me": meResponse(),
+      "/stores/store-1/listings": { items: listings },
+      "/stores/store-1/sellers": { items: [] },
+    });
+    const client = new QueryClient();
+    const page = async (searchParams: { q?: string; status?: string }) => (
+      <QueryClientProvider client={client}>
+        {await DashboardPage({ searchParams: Promise.resolve(searchParams) })}
+      </QueryClientProvider>
+    );
+    const view = render(await page({ status: "vendidos" }));
+    await changeCadeiraToAvailable(new Promise<Response>(() => {}));
+    await waitFor(() =>
+      expect(screen.getByTestId("count-sold")).toHaveTextContent("0"),
+    );
+    expect(screen.getByText("Cadeira")).toBeInTheDocument();
+
+    view.rerender(await page({ status: "vendidos", q: "cadeira" }));
+
+    expect(screen.queryByText("Cadeira")).toBeNull();
+    expect(
+      screen.getByText('Nenhum anúncio em Vendidos com "cadeira" no título.'),
+    ).toBeInTheDocument();
+  });
+
+  it("drops the counts of the tabs the deleted listing matched by one and leaves the others", async () => {
+    stubAdminApi({
+      "/me": meResponse(),
+      "/stores/store-1/listings": { items: listings },
+      "/stores/store-1/sellers": { items: [] },
+    });
+    // Invalidation after the delete comes from the admin providers' handlers.
+    renderWithFeedback(
+      await DashboardPage({ searchParams: Promise.resolve({}) }),
+    );
+    let deleted = false;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init: RequestInit = {}) => {
+        if (init.method === "DELETE") deleted = true;
+        if (init.method === "GET" && String(url).endsWith("/listings")) {
+          return Response.json({
+            items: deleted
+              ? listings.filter((item) => item.id !== "l-1")
+              : listings,
+          });
+        }
+        return new Response(null, { status: 204 });
+      }),
+    );
+    const counts = () =>
+      Object.fromEntries(
+        ["published", "available", "reserved", "sold", "draft", "archived"].map(
+          (name) => [name, screen.getByTestId(`count-${name}`).textContent],
+        ),
+      );
+    const before = counts();
+    const all = screen.getByRole("link", { name: /Todos/ });
+    expect(all).toHaveTextContent("3");
+
+    fireEvent.click(screen.getByRole("button", { name: "Excluir Sofá azul" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Excluir anúncio" }),
+    );
+
+    await waitFor(() => expect(screen.queryByText("Sofá azul")).toBeNull());
+    expect(all).toHaveTextContent("2");
+    expect(before).toMatchObject({ published: "2", available: "1" });
+    expect(counts()).toEqual({ ...before, published: "1", available: "0" });
   });
 
   it("restores the tab count when the status change is rejected", async () => {

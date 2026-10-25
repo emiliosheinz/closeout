@@ -15,19 +15,15 @@ describe("listing notice", () => {
   ] as const)("builds a href for %s that parses back", (notice, query) => {
     const href = listingEditHref("abc", notice);
     expect(href).toBe(`/admin/anuncios/abc?${query}`);
-    expect(parse(href.split("?")[1] ?? "")).toBe(notice);
+    const search = new URLSearchParams(href.split("?")[1]);
+    expect(parseListingNotice(search)).toBe(notice);
+    // Clearing the notice from the URL must reach every param it travels in.
+    for (const name of LISTING_NOTICE_PARAMS) search.delete(name);
+    expect(parseListingNotice(search)).toBeUndefined();
   });
 
   it("lets copied win when several notice params are present", () => {
     expect(parse("copiado=1&salvo=1")).toBe("copied");
-  });
-
-  it("lists every param a notice uses", () => {
-    expect([...LISTING_NOTICE_PARAMS].sort()).toEqual([
-      "copiado",
-      "erro",
-      "salvo",
-    ]);
   });
 
   it.each([

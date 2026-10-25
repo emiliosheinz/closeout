@@ -1,7 +1,8 @@
-import { dehydrate, QueryClient } from "@tanstack/react-query";
+import { dehydrate, QueryClient, useQuery } from "@tanstack/react-query";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { toast } from "sonner";
-import { type AdminImage, listingKeys } from "@/entities/listing";
+import { type AdminImage, listingKeys, listingReads } from "@/entities/listing";
+import { readQuery } from "@/shared/api";
 import { renderWithFeedback } from "@/test/feedback-harness";
 import { PhotoManager } from "../photo-manager";
 
@@ -61,6 +62,9 @@ beforeEach(() => {
           ? init.body.getAll("files").length
           : undefined,
     });
+    if (method === "GET" && path === "/stores/s1/listings") {
+      return Response.json({ items: [] });
+    }
     if (method === "GET") {
       return failGets
         ? Response.json({ message: "fora do ar" }, { status: 500 })
@@ -160,8 +164,23 @@ describe("PhotoManager", () => {
     ).toBeVisible();
     expect(screen.queryByText(/adicionadas/)).not.toBeInTheDocument();
     expect(screen.queryByText("Imagem inválida.")).not.toBeInTheDocument();
+    expect(toast.getToasts()).toHaveLength(1);
     // The 8 stored photos show without a reload.
     await waitFor(() => expect(screen.getAllByRole("img")).toHaveLength(11));
+  });
+
+  it("counts the photos stored by the batches that went through when one of several is sent", async () => {
+    failPostsFrom = 2;
+    renderManager();
+    dropFiles(Array.from({ length: 9 }, (_, i) => file(`${i}.jpg`)));
+
+    expect(
+      await screen.findByText(
+        "8 de 9 fotos enviadas. Tente enviar as outras de novo.",
+      ),
+    ).toBeVisible();
+    expect(writes().map(({ files }) => files)).toEqual([8, 1]);
+    expect(toast.getToasts()).toHaveLength(1);
   });
 
   it("shows the server order after Usar como capa even when the response is unreadable", async () => {
@@ -239,18 +258,36 @@ describe("PhotoManager", () => {
   });
 
   it("refetches the listing list as well as the detail after a change", async () => {
-    const { client } = renderManager();
-    const invalidate = vi.spyOn(client, "invalidateQueries");
+    // Only observed queries refetch, so mount the list beside the manager.
+    function ListProbe() {
+      useQuery(readQuery(listingReads.list("s1")));
+      return null;
+    }
+    const seed = new QueryClient();
+    seed.setQueryData(listingKeys.detail("s1", "l1"), detail(server));
+    renderWithFeedback(
+      <>
+        <ListProbe />
+        <PhotoManager storeId="s1" listingId="l1" />
+      </>,
+      dehydrate(seed),
+    );
+    const reads = () => calls.filter(({ method }) => method === "GET");
+    await waitFor(() =>
+      expect(reads().map(({ url }) => url)).toEqual(["/stores/s1/listings"]),
+    );
+    calls = [];
 
     fireEvent.click(screen.getByRole("button", { name: "Remover foto 1" }));
 
     await screen.findByText("Foto removida.");
-    expect(invalidate).toHaveBeenCalledWith({
-      queryKey: listingKeys.list("s1"),
-    });
-    expect(invalidate).toHaveBeenCalledWith({
-      queryKey: listingKeys.detail("s1", "l1"),
-    });
+    await waitFor(() =>
+      expect(
+        reads()
+          .map(({ url }) => url)
+          .sort(),
+      ).toEqual(["/stores/s1/listings", "/stores/s1/listings/l1"]),
+    );
   });
 
   it("disables the controls while a change is in flight", async () => {

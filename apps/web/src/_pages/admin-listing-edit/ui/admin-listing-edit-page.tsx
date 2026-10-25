@@ -12,7 +12,7 @@ import {
 import { ListingForm } from "@/features/listing-form";
 import { PhotoManager } from "@/features/manage-photos";
 import { Hydrated, isUuid, loadRead } from "@/shared/api/index.server";
-import { itemPath } from "@/shared/lib/site";
+import { ListingHeading } from "./listing-heading";
 import { ListingNoticeToast } from "./listing-notice-toast";
 
 export const metadata: Metadata = { title: "Editar anúncio" };
@@ -43,35 +43,22 @@ export async function EditListingPage({
           <ArrowLeft className="size-4" aria-hidden="true" />
           Voltar aos anúncios
         </Link>
-        <div className="mt-1 flex flex-wrap items-end justify-between gap-3">
-          <h1 className="text-3xl font-extrabold">{listing.title}</h1>
-          <a
-            href={
-              listing.publication === "published"
-                ? itemPath(store.slug, listing.slug)
-                : `/admin/anuncios/${listing.id}/previa`
-            }
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-sm font-semibold underline decoration-ink/30 underline-offset-4"
-          >
-            {listing.publication === "published"
-              ? "Ver na loja"
-              : "Pré-visualizar"}
-          </a>
-        </div>
+        <ListingHeading
+          storeId={store.id}
+          storeSlug={store.slug}
+          listingId={id}
+        />
         <div className="mt-8">
-          <PhotoManager storeId={store.id} listingId={listing.id} />
+          <PhotoManager storeId={store.id} listingId={id} />
         </div>
         <div className="mt-10 border-t border-line pt-8">
           <ListingForm
-            key={listing.updatedAt}
             storeId={store.id}
             categories={options.categories}
             sellers={options.sellers}
             ownSellerId={sellerId}
             canAssignSellers={isManager(role)}
-            listing={listing}
+            listingId={id}
           />
         </div>
       </div>

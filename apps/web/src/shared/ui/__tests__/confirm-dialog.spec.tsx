@@ -171,6 +171,11 @@ describe("ConfirmDialog", () => {
     await screen.findByRole("button", { name: copy.pendingLabel });
 
     rerender(<Page shown={false} />);
+    // Let the dialog's own unmount focus handling run before the action ends.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+    expect(onSuccess).not.toHaveBeenCalled();
     await act(async () => finish());
 
     await waitFor(() => expect(onSuccess).toHaveBeenCalledTimes(1));

@@ -7,10 +7,10 @@ import {
 } from "@closeout/contracts/enums";
 import { listingRequestSchema } from "@closeout/contracts/schemas";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useSuspenseQuery } from "@tanstack/react-query";
 import { Plus, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Controller, useFieldArray, useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import {
@@ -19,9 +19,11 @@ import {
   LISTING_NOTICES,
   listingEditHref,
   listingKeys,
+  listingReads,
   PhotoDropzone,
   type Seller,
 } from "@/entities/listing";
+import { readQuery } from "@/shared/api";
 import {
   AVAILABILITY_LABELS,
   CONDITION_LABELS,
@@ -116,6 +118,11 @@ interface ListingFormProps {
   ownSellerId: string;
   /** Managers pick who sells; a seller's listings stay assigned as they are. */
   canAssignSellers: boolean;
+  /** Edit mode: the listing is read from the query cache, like its photos. */
+  listingId?: string;
+}
+
+interface BodyProps extends Omit<ListingFormProps, "listingId"> {
   listing?: AdminListingDetail;
 }
 
@@ -124,14 +131,32 @@ interface ListingFormProps {
  * listing is saved first, then the photos upload in batches, then it is
  * published if asked. Every value stays in the form when a save fails.
  */
-export function ListingForm({
+export function ListingForm({ listingId, ...props }: ListingFormProps) {
+  if (listingId === undefined) return <ListingFormBody {...props} />;
+  return <EditListingForm listingId={listingId} {...props} />;
+}
+
+function EditListingForm({
+  listingId,
+  ...props
+}: Omit<ListingFormProps, "listingId"> & { listingId: string }) {
+  const { data: listing } = useSuspenseQuery(
+    readQuery(listingReads.detail(props.storeId, listingId)),
+  );
+  // A fresher server copy remounts the form so its defaults follow it.
+  return (
+    <ListingFormBody key={listing.updatedAt} {...props} listing={listing} />
+  );
+}
+
+function ListingFormBody({
   storeId,
   categories,
   sellers,
   ownSellerId,
   canAssignSellers,
   listing,
-}: ListingFormProps) {
+}: BodyProps) {
   const router = useRouter();
   const editing = listing !== undefined;
   const assignedNames = listing
@@ -171,19 +196,34 @@ export function ListingForm({
   const noPrice = useWatch({ control, name: "noPrice" });
   const publication = useWatch({ control, name: "publication" });
 
-  const [files, setFiles] = useState<File[]>([]);
+  const [previews, setPreviews] = useState<{ file: File; url: string }[]>([]);
   const [progress, setProgress] = useState<string | null>(null);
+  const files = previews.map((preview) => preview.file);
+  const heldUrls = useRef(new Set<string>());
 
-  const previews = files.map((file) => ({
-    file,
-    url: URL.createObjectURL(file),
-  }));
-  useEffect(
-    () => () => {
-      for (const preview of previews) URL.revokeObjectURL(preview.url);
-    },
-    [previews],
-  );
+  useEffect(() => {
+    const held = heldUrls.current;
+    return () => {
+      for (const url of held) URL.revokeObjectURL(url);
+    };
+  }, []);
+
+  function addFiles(added: File[]) {
+    const entries = added.map((file) => {
+      const url = URL.createObjectURL(file);
+      heldUrls.current.add(url);
+      return { file, url };
+    });
+    setPreviews([...previews, ...entries]);
+  }
+
+  function removeFile(index: number) {
+    const removed = previews[index];
+    if (!removed) return;
+    URL.revokeObjectURL(removed.url);
+    heldUrls.current.delete(removed.url);
+    setPreviews(previews.filter((_, i) => i !== index));
+  }
 
   const save = useMutation({
     mutationFn: ({
@@ -258,7 +298,7 @@ export function ListingForm({
           </p>
           <PhotoDropzone
             existing={files.length}
-            onFiles={(added) => setFiles([...files, ...added])}
+            onFiles={addFiles}
             disabled={save.isPending}
           />
           <span role="status" className="text-sm text-muted">
@@ -285,9 +325,7 @@ export function ListingForm({
                   )}
                   <button
                     type="button"
-                    onClick={() =>
-                      setFiles(files.filter((_, i) => i !== index))
-                    }
+                    onClick={() => removeFile(index)}
                     aria-label={`Remover foto ${index + 1}`}
                     className="absolute top-1 right-1 inline-flex size-11 items-center justify-center rounded-full bg-surface/90 shadow"
                   >

@@ -1,4 +1,4 @@
-import { screen } from "@testing-library/react";
+import { act, screen } from "@testing-library/react";
 import { StrictMode } from "react";
 import { toast } from "sonner";
 import { renderWithFeedback } from "@/test/feedback-harness";
@@ -43,6 +43,25 @@ describe("listing notice toast", () => {
     expect(nav.replace).toHaveBeenCalledWith("/admin/anuncios/abc", {
       scroll: false,
     });
+  });
+
+  it("keeps one toast when the page rerenders while the notice is still in the URL", async () => {
+    const { rerender } = mount("salvo=1");
+    await screen.findByText("Alterações salvas.");
+
+    // Each render reads a new search params object, which reruns the effect.
+    for (let pass = 0; pass < 3; pass += 1) {
+      rerender(
+        <StrictMode>
+          <ListingNoticeToast />
+        </StrictMode>,
+      );
+    }
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+
+    expect(toast.getToasts()).toHaveLength(1);
   });
 
   it("keeps unrelated params when clearing", async () => {
