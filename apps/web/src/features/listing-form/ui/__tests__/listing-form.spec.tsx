@@ -657,10 +657,14 @@ describe("ListingForm", () => {
         screen.getByRole("button", { name: "Salvar e publicar" }),
       );
 
+      // The upload path runs slower under a full parallel test run than the
+      // default 1 s wait allows.
       expect(
-        await screen.findByRole("button", {
-          name: "Enviando fotos (1 de 1)...",
-        }),
+        await screen.findByRole(
+          "button",
+          { name: "Enviando fotos (1 de 1)..." },
+          { timeout: 5000 },
+        ),
       ).toBeDisabled();
       expect(saveDraft()).toBeDisabled();
       fetchMock.mockImplementation(
