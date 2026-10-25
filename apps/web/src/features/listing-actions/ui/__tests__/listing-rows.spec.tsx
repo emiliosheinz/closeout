@@ -453,6 +453,25 @@ describe("listing row cells", () => {
     });
   });
 
+  it("labels each icon action on keyboard focus", async () => {
+    renderRows([row("a")]);
+    for (const [name, label] of [
+      ["Editar Item a", "Editar"],
+      ["Duplicar Item a", "Duplicar"],
+      ["Excluir Item a", "Excluir"],
+    ] as const) {
+      act(() =>
+        (
+          screen.queryByRole("link", { name }) ??
+          screen.getByRole("button", { name })
+        ).focus(),
+      );
+      await waitFor(() =>
+        expect(screen.getByRole("tooltip")).toHaveTextContent(label),
+      );
+    }
+  });
+
   describe("Duplicar", () => {
     it("asks first and copies nothing when cancelled", async () => {
       renderRows([row("a")]);

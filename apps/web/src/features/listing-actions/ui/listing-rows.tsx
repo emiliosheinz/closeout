@@ -28,6 +28,7 @@ import {
   SelectValue,
 } from "@/shared/ui/select";
 import { notify } from "@/shared/ui/sonner";
+import { Tooltip } from "@/shared/ui/tooltip";
 import {
   applyChange,
   type StatusChange,
@@ -173,30 +174,38 @@ export function ListingRowActions({
 
   return (
     <div className="flex flex-wrap gap-1 lg:flex-nowrap lg:justify-end">
-      <Link
-        href={`/admin/anuncios/${listing.id}`}
-        className="inline-flex size-11 items-center justify-center rounded-full hover:bg-ink/5"
-        aria-label={`Editar ${listing.title}`}
-      >
-        <Pencil className="size-4" aria-hidden="true" />
-      </Link>
-      <a
-        href={
-          listing.publication === "published"
-            ? itemPath(storeSlug, listing.slug)
-            : `/admin/anuncios/${listing.id}/previa`
-        }
-        target="_blank"
-        rel="noopener noreferrer"
-        className="inline-flex size-11 items-center justify-center rounded-full hover:bg-ink/5"
-        aria-label={
-          listing.publication === "published"
-            ? `Ver ${listing.title} na loja`
-            : `Pré-visualizar ${listing.title}`
+      <Tooltip label="Editar">
+        <Link
+          href={`/admin/anuncios/${listing.id}`}
+          className="inline-flex size-11 items-center justify-center rounded-full hover:bg-ink/5"
+          aria-label={`Editar ${listing.title}`}
+        >
+          <Pencil className="size-4" aria-hidden="true" />
+        </Link>
+      </Tooltip>
+      <Tooltip
+        label={
+          listing.publication === "published" ? "Ver na loja" : "Pré-visualizar"
         }
       >
-        <Eye className="size-4" aria-hidden="true" />
-      </a>
+        <a
+          href={
+            listing.publication === "published"
+              ? itemPath(storeSlug, listing.slug)
+              : `/admin/anuncios/${listing.id}/previa`
+          }
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex size-11 items-center justify-center rounded-full hover:bg-ink/5"
+          aria-label={
+            listing.publication === "published"
+              ? `Ver ${listing.title} na loja`
+              : `Pré-visualizar ${listing.title}`
+          }
+        >
+          <Eye className="size-4" aria-hidden="true" />
+        </a>
+      </Tooltip>
       <ConfirmDialog
         title={`Duplicar "${listing.title}"?`}
         description="A cópia vira um rascunho com o mesmo texto, preço e vendedores. As fotos não são copiadas."
@@ -205,15 +214,17 @@ export function ListingRowActions({
         destructive={false}
         onConfirm={copy}
         trigger={(open) => (
-          <button
-            type="button"
-            onClick={open}
-            disabled={duplicate.isPending}
-            className="inline-flex size-11 items-center justify-center rounded-full hover:bg-ink/5"
-            aria-label={`Duplicar ${listing.title}`}
-          >
-            <Copy className="size-4" aria-hidden="true" />
-          </button>
+          <Tooltip label="Duplicar">
+            <button
+              type="button"
+              onClick={open}
+              disabled={duplicate.isPending}
+              className="inline-flex size-11 items-center justify-center rounded-full hover:bg-ink/5"
+              aria-label={`Duplicar ${listing.title}`}
+            >
+              <Copy className="size-4" aria-hidden="true" />
+            </button>
+          </Tooltip>
         )}
       />
       <ConfirmDialog
@@ -224,14 +235,16 @@ export function ListingRowActions({
         onSuccess={() => document.getElementById("listings-heading")?.focus()}
         onConfirm={() => remove.mutateAsync()}
         trigger={(open) => (
-          <button
-            type="button"
-            onClick={open}
-            className="inline-flex size-11 items-center justify-center rounded-full text-stamp hover:bg-stamp/10"
-            aria-label={`Excluir ${listing.title}`}
-          >
-            <Trash2 className="size-4" aria-hidden="true" />
-          </button>
+          <Tooltip label="Excluir">
+            <button
+              type="button"
+              onClick={open}
+              className="inline-flex size-11 items-center justify-center rounded-full text-stamp hover:bg-stamp/10"
+              aria-label={`Excluir ${listing.title}`}
+            >
+              <Trash2 className="size-4" aria-hidden="true" />
+            </button>
+          </Tooltip>
         )}
       />
     </div>
