@@ -77,3 +77,55 @@ describe("catalog page past the last page", () => {
     ).resolves.toBeTruthy();
   });
 });
+
+describe("catalog page URL", () => {
+  const visit = (searchParams: Record<string, string | string[]>) =>
+    CatalogPage({
+      params: Promise.resolve({ slug: "loja" }),
+      searchParams: Promise.resolve(searchParams),
+    });
+
+  beforeEach(() => {
+    vi.mocked(getStore).mockResolvedValue(store);
+    vi.mocked(getListings).mockResolvedValue({
+      items: [],
+      received: 0,
+      total: 0,
+      page: 1,
+      pageSize: 24,
+    });
+  });
+
+  it("drops the empty fields a filter form sends", async () => {
+    await expect(
+      visit({
+        estado: "bom",
+        disponibilidade: "",
+        min: "",
+        max: "",
+        ordem: "menor-preco",
+      }),
+    ).rejects.toThrow("redirect:/store/loja?estado=bom&ordem=menor-preco");
+  });
+
+  it("replaces invalid values, repeated keys and unknown keys with the view they show", async () => {
+    await expect(
+      visit({ q: [" mesa ", "sofa"], min: "-5", ordem: "xyz", utm: "a" }),
+    ).rejects.toThrow("redirect:/store/loja?q=mesa");
+  });
+
+  it("puts the parameters in their usual order", async () => {
+    await expect(
+      visit({ ordem: "menor-preco", categoria: "moveis" }),
+    ).rejects.toThrow(
+      "redirect:/store/loja?categoria=moveis&ordem=menor-preco",
+    );
+  });
+
+  it("serves a clean URL without redirecting", async () => {
+    await expect(
+      visit({ q: "mesa azul", categoria: "moveis", ordem: "menor-preco" }),
+    ).resolves.toBeTruthy();
+    await expect(visit({})).resolves.toBeTruthy();
+  });
+});
