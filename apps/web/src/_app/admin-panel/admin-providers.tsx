@@ -5,11 +5,15 @@ import {
   HydrationBoundary,
   QueryClientProvider,
 } from "@tanstack/react-query";
+import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { useState } from "react";
 import { Toaster } from "@/shared/ui/sonner";
 import { makeAdminQueryClient } from "./model/query-client";
 
-/** Providers only the admin panel gets: the data cache and the toaster. */
+/**
+ * Providers only the admin panel gets: the data cache, the toaster and the
+ * URL state adapter behind the tables' search, sort and page.
+ */
 export function AdminProviders({
   state,
   children,
@@ -19,9 +23,11 @@ export function AdminProviders({
 }) {
   const [client] = useState(makeAdminQueryClient);
   return (
-    <QueryClientProvider client={client}>
-      <HydrationBoundary state={state}>{children}</HydrationBoundary>
-      <Toaster />
-    </QueryClientProvider>
+    <NuqsAdapter>
+      <QueryClientProvider client={client}>
+        <HydrationBoundary state={state}>{children}</HydrationBoundary>
+        <Toaster />
+      </QueryClientProvider>
+    </NuqsAdapter>
   );
 }
