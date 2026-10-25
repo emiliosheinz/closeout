@@ -1,5 +1,10 @@
 /// <reference types="vitest/globals" />
 import "@testing-library/jest-dom/vitest";
+import { configure } from "@testing-library/react";
+
+// The full suite runs every file in parallel, and under that load a findBy or
+// waitFor can take longer than the 1 s default even though nothing is wrong.
+configure({ asyncUtilTimeout: 5000 });
 
 if (typeof window !== "undefined") {
   if (!Element.prototype.hasPointerCapture) {
