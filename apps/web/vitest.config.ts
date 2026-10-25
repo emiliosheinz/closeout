@@ -30,5 +30,8 @@ export default defineConfig({
     clearMocks: true,
     mockReset: true,
     restoreMocks: true,
+    // Above the 5 s async-query wait in vitest.setup.ts, so a wait that never
+    // settles fails with the rendered page instead of a bare test timeout.
+    testTimeout: 15_000,
   },
 });
