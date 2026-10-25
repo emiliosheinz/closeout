@@ -33,6 +33,20 @@ describe("proxy", () => {
     );
   });
 
+  it("sends a catalog URL that is not in its clean form to the clean one", () => {
+    const { res } = run("/store/loja?min=&estado=bom");
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toBe(
+      "http://web:3000/store/loja?estado=bom",
+    );
+  });
+
+  it("lets a clean catalog URL through", () => {
+    const { res } = run("/store/loja?estado=bom");
+    expect(res.headers.get("location")).toBeNull();
+    expect(res.headers.get("x-middleware-next")).toBe("1");
+  });
+
   it("maps api and media paths to the API", () => {
     expect(run("/api/v1/stores/x?a=1").rewrite).toBe(`${API}/stores/x?a=1`);
     expect(run("/media/a.webp").rewrite).toBe(`${API}/media/a.webp`);

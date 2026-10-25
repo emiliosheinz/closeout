@@ -70,6 +70,7 @@ test("broken catalog URLs fall back to defaults instead of failing", async ({
     `${STORE}?pagina=abc&ordem=xyz&min=-3&estado=quebrado`,
   );
   expect(response?.status()).toBe(200);
+  await expect(page).toHaveURL(/\/store\/loja-e2e$/);
   await expect(page.getByTestId("results-count")).toBeVisible();
 });
 

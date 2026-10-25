@@ -80,27 +80,9 @@ export async function generateMetadata({
   };
 }
 
-function requestedHref(
-  slug: string,
-  query: Record<string, string | string[] | undefined>,
-): string {
-  const search = new URLSearchParams(
-    Object.entries(query).flatMap(([key, value]) =>
-      [value ?? []].flat().map((item) => [key, item]),
-    ),
-  ).toString();
-  return search ? `${storePath(slug)}?${search}` : storePath(slug);
-}
-
 export async function CatalogPage({ params, searchParams }: PageProps) {
   const { slug } = await params;
-  const query = await searchParams;
-  const filters = parseCatalogParams(query);
-  // Links and chips always use the clean URL, but a plain GET form also sends
-  // its empty fields, and a hand-edited URL can carry invalid values or other
-  // keys. Redirecting gives every view one address to share.
-  const href = catalogHref(slug, filters);
-  if (requestedHref(slug, query) !== href) redirect(href);
+  const filters = parseCatalogParams(await searchParams);
   // getListings throws when the store is missing, so notFound must win over a
   // listings rejection: settle both and check the store first.
   const [storeResult, listingsResult] = await Promise.allSettled([

@@ -116,6 +116,21 @@ export function catalogHref(slug: string, filters: CatalogFilters): string {
   return query ? `${storePath(slug)}?${query}` : storePath(slug);
 }
 
+/**
+ * The clean query for a catalog request, or null when `search` already is it.
+ * A plain GET form also sends its empty fields, and a hand-edited URL can
+ * carry invalid values, repeats or other keys; redirecting to the clean query
+ * gives every view one address to share.
+ */
+export function canonicalCatalogSearch(search: URLSearchParams): string | null {
+  const raw: RawParams = {};
+  for (const key of search.keys()) raw[key] = search.getAll(key);
+  const canonical = new URLSearchParams(
+    catalogEntries(parseCatalogParams(raw)),
+  ).toString();
+  return canonical === search.toString() ? null : canonical;
+}
+
 /** Apply a change; any change other than the page itself returns to page 1. */
 export function withFilters(
   filters: CatalogFilters,

@@ -1,10 +1,12 @@
 import { DEFAULT_FILTERS } from "@/entities/listing";
 import {
   activeFilterChips,
+  canonicalCatalogSearch,
   catalogHref,
   parseCatalogParams,
   withFilters,
 } from "../params";
+import golden from "./fixtures/golden.json";
 
 describe("catalog URL parameters", () => {
   it("reads every filter from Portuguese parameters", () => {
@@ -165,5 +167,45 @@ describe("catalog URL edge cases", () => {
     expect(activeFilterChips("loja", DEFAULT_FILTERS, () => undefined)).toEqual(
       [],
     );
+  });
+});
+
+describe("clean catalog query", () => {
+  const clean = (query: string) =>
+    canonicalCatalogSearch(new URLSearchParams(query));
+
+  it("drops the empty fields a filter form sends", () => {
+    expect(
+      clean("estado=bom&disponibilidade=&min=&max=&ordem=menor-preco"),
+    ).toBe("estado=bom&ordem=menor-preco");
+  });
+
+  it("drops keys the catalog does not read", () => {
+    expect(clean("q=mesa&utm=a")).toBe("q=mesa");
+  });
+
+  it("keeps only the first of a repeated key", () => {
+    expect(clean("q=mesa&q=sofa")).toBe("q=mesa");
+  });
+
+  it("drops invalid values", () => {
+    expect(clean("min=-5")).toBe("");
+  });
+
+  it("trims the search", () => {
+    expect(clean("q=+mesa+")).toBe("q=mesa");
+  });
+
+  it("puts the parameters in their usual order", () => {
+    expect(clean("ordem=menor-preco&categoria=moveis")).toBe(
+      "categoria=moveis&ordem=menor-preco",
+    );
+  });
+
+  it("leaves every URL the catalog itself links to as it is", () => {
+    for (const row of golden) {
+      const query = row.href.split("?")[1] ?? "";
+      expect(clean(query)).toBeNull();
+    }
   });
 });
