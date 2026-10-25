@@ -35,7 +35,9 @@ describe("team page", () => {
     expect(calls).toEqual(["/me", "/stores/store-1/sellers"]);
     expect(screen.getAllByRole("row")).toHaveLength(2);
     expect(screen.getByText("Caio Vendedor")).toBeInTheDocument();
-    expect(screen.getByText("caio@loja.test")).toBeInTheDocument();
+    expect(
+      screen.getByRole("row", { name: /caio@loja\.test/ }),
+    ).toBeInTheDocument();
     expect(screen.queryByText("Ana")).toBeNull();
     expect(
       screen.queryByRole("button", { name: "Convidar pessoas" }),

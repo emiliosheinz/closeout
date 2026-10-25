@@ -98,20 +98,21 @@ const invitesUrlState = createTableUrlState({
 });
 
 function RoleCell({ role }: { role: TeamMember["role"] }) {
-  return (
-    <span className="hidden text-sm text-ink-soft sm:inline">
-      {ROLE_LABELS[role]}
-    </span>
-  );
+  return <span className="text-sm text-ink-soft">{ROLE_LABELS[role]}</span>;
 }
 
-// The same card the listings table sits in.
-const tableCard = "rounded-xl border border-line bg-surface px-2";
+// The actions menu is the last column in both tables: it takes only its
+// button's width and sits at the row's end, leaving the rest to the data. On
+// phones the first column takes all the room left, and its text truncates
+// there instead of widening the table (max-w-0 lets a cell shrink below its
+// content).
+const columnWidths =
+  "[&_tr>*:last-child]:w-px [&_tr>*:last-child]:text-right max-sm:[&_td:first-child]:w-full max-sm:[&_td:first-child]:max-w-0";
 
 // Phones show a column's content under the name or email instead, so its
-// header must not keep the column wide. These hide a column by position:
-// Contato is the 3rd members column and Papel the 2nd invites column, so they
-// depend on the order of the column lists below.
+// header must not keep the column wide. These go by position: Contato is the
+// 3rd members column and Papel the 2nd invites column, so they depend on the
+// order of the column lists below.
 const hideMemberContactOnPhones =
   "max-sm:[&_th:nth-child(3)]:hidden max-sm:[&_td:nth-child(3)]:hidden";
 const hideInviteRoleOnPhones =
@@ -224,16 +225,15 @@ function MembersTable({
           className="mb-3"
         />
       )}
-      <div className={cn(tableCard, hideMemberContactOnPhones)}>
-        <DataTable
-          table={table}
-          empty={
-            query && (
-              <p className="px-4 py-8 text-center text-ink-soft">{`Ninguém encontrado com "${query}".`}</p>
-            )
-          }
-        />
-      </div>
+      <DataTable
+        table={table}
+        className={cn(columnWidths, hideMemberContactOnPhones)}
+        empty={
+          query && (
+            <p className="px-4 py-8 text-center text-ink-soft">{`Ninguém encontrado com "${query}".`}</p>
+          )
+        }
+      />
     </>
   );
 }
@@ -308,16 +308,15 @@ function InvitesTable({
         onChange={(value) => set({ query: value })}
         className="mb-3"
       />
-      <div className={cn(tableCard, hideInviteRoleOnPhones)}>
-        <DataTable
-          table={table}
-          empty={
-            query && (
-              <p className="px-4 py-8 text-center text-ink-soft">{`Nenhum convite com "${query}".`}</p>
-            )
-          }
-        />
-      </div>
+      <DataTable
+        table={table}
+        className={cn(columnWidths, hideInviteRoleOnPhones)}
+        empty={
+          query && (
+            <p className="px-4 py-8 text-center text-ink-soft">{`Nenhum convite com "${query}".`}</p>
+          )
+        }
+      />
     </>
   );
 }

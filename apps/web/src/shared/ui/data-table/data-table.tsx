@@ -17,6 +17,7 @@ import {
   PAGE_SIZE,
   type TableSort,
 } from "@/shared/lib/table-url-state";
+import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
 import {
   Table,
@@ -108,87 +109,92 @@ export function useDataTable<
 
 const ARIA_SORT = { asc: "ascending", desc: "descending" } as const;
 
-/** Renders a table instance; `empty` is shown instead of rows when none match. */
+/**
+ * Renders a table instance in a card; `empty` is shown instead of rows when
+ * none match. `className` goes on the outer box, so it can restyle the cells.
+ */
 export function DataTable<TData extends RowData>({
   table,
   empty,
+  className,
 }: {
   table: DataTableInstance<TData>;
   empty: React.ReactNode;
+  className?: string;
 }) {
   const rows = table.getRowModel().rows;
   const pageCount = table.getPageCount();
   const pageNumber = table.state.pagination.pageIndex + 1;
 
   return (
-    <div className="space-y-4">
-      <Table>
-        <TableHeader>
-          {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow key={headerGroup.id}>
-              {headerGroup.headers.map((header) => {
-                const sorted = header.column.getIsSorted();
-                const canSort = header.column.getCanSort();
-                return (
-                  <TableHead
-                    key={header.id}
-                    colSpan={header.colSpan}
-                    aria-sort={
-                      canSort
-                        ? sorted
-                          ? ARIA_SORT[sorted]
-                          : "none"
-                        : undefined
-                    }
-                  >
-                    {canSort ? (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        // Pulled left by its own padding so the label lines up
-                        // with the cells, and styled like the plain headers.
-                        className="-ml-3.5 font-medium text-inherit"
-                        onClick={header.column.getToggleSortingHandler()}
-                      >
+    <div className={cn("space-y-4", className)}>
+      {/* Edge cells take the inset instead of the card, so row lines and the
+          hover band run to the card's edges. */}
+      <div className="overflow-hidden rounded-xl border border-line bg-surface [&_tr>*:first-child]:pl-4 [&_tr>*:last-child]:pr-4">
+        <Table>
+          <TableHeader>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow key={headerGroup.id} className="hover:bg-transparent">
+                {headerGroup.headers.map((header) => {
+                  const sorted = header.column.getIsSorted();
+                  const canSort = header.column.getCanSort();
+                  return (
+                    <TableHead
+                      key={header.id}
+                      colSpan={header.colSpan}
+                      aria-sort={
+                        canSort
+                          ? sorted
+                            ? ARIA_SORT[sorted]
+                            : "none"
+                          : undefined
+                      }
+                    >
+                      {canSort ? (
+                        <button
+                          type="button"
+                          className="inline-flex items-center gap-1 rounded-sm hover:text-ink"
+                          onClick={header.column.getToggleSortingHandler()}
+                        >
+                          <table.FlexRender header={header} />
+                          <span aria-hidden>
+                            {sorted === "asc"
+                              ? "↑"
+                              : sorted === "desc"
+                                ? "↓"
+                                : ""}
+                          </span>
+                        </button>
+                      ) : (
                         <table.FlexRender header={header} />
-                        <span aria-hidden>
-                          {sorted === "asc"
-                            ? "↑"
-                            : sorted === "desc"
-                              ? "↓"
-                              : ""}
-                        </span>
-                      </Button>
-                    ) : (
-                      <table.FlexRender header={header} />
-                    )}
-                  </TableHead>
-                );
-              })}
-            </TableRow>
-          ))}
-        </TableHeader>
-        <TableBody>
-          {rows.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={table.getAllColumns().length}>
-                {empty}
-              </TableCell>
-            </TableRow>
-          ) : (
-            rows.map((row) => (
-              <TableRow key={row.id}>
-                {row.getAllCells().map((cell) => (
-                  <TableCell key={cell.id}>
-                    <table.FlexRender cell={cell} />
-                  </TableCell>
-                ))}
+                      )}
+                    </TableHead>
+                  );
+                })}
               </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
+            ))}
+          </TableHeader>
+          <TableBody>
+            {rows.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={table.getAllColumns().length}>
+                  {empty}
+                </TableCell>
+              </TableRow>
+            ) : (
+              rows.map((row) => (
+                <TableRow key={row.id}>
+                  {row.getAllCells().map((cell) => (
+                    <TableCell key={cell.id}>
+                      <table.FlexRender cell={cell} />
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
       {pageCount > 1 && (
         <div className="flex items-center justify-end gap-3">
           <Button

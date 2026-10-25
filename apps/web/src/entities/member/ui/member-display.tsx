@@ -1,4 +1,3 @@
-import { ROLE_LABELS } from "@/shared/lib/format";
 import { cn } from "@/shared/lib/utils";
 import type { TeamMember } from "../model/types";
 
@@ -41,7 +40,7 @@ export function MemberAvatar({
   );
 }
 
-/** Avatar, name and, on phones, the role and email that have no column there. */
+/** Avatar, name and, on phones, the email that has no column there. */
 export function MemberIdentity({
   member,
   showSelfBadge,
@@ -51,7 +50,7 @@ export function MemberIdentity({
   showSelfBadge: boolean;
 }) {
   return (
-    <div className="flex min-w-0 max-w-36 items-center gap-3 sm:max-w-none">
+    <div className="flex min-w-0 items-center gap-3">
       <MemberAvatar member={member} className="size-9 text-xs" />
       <div className="min-w-0">
         <p className="flex items-center gap-2">
@@ -62,9 +61,7 @@ export function MemberIdentity({
             </span>
           )}
         </p>
-        <p className="truncate text-sm text-muted sm:hidden">
-          {ROLE_LABELS[member.role]} · {member.email}
-        </p>
+        <p className="truncate text-sm text-muted sm:hidden">{member.email}</p>
       </div>
     </div>
   );

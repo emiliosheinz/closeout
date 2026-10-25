@@ -138,7 +138,9 @@ describe("TeamView for a manager", () => {
         .slice(1)
         .map((tr) => tr.querySelector("span.truncate")?.textContent),
     ).toEqual(["Ana", "Bia", "Caio"]);
-    expect(within(people).getByText("caio@loja.test")).toBeInTheDocument();
+    expect(
+      within(people).getByRole("row", { name: /caio@loja\.test/ }),
+    ).toBeInTheDocument();
     expect(within(people).getByText("Você")).toBeInTheDocument();
     expect(
       within(invites).getByRole("heading", { name: "Convites pendentes (1)" }),
@@ -201,7 +203,7 @@ describe("TeamView for a manager", () => {
 
   it("removes a member after confirming and drops their row", async () => {
     renderManager();
-    expect(screen.getByText("caio@loja.test")).toBeVisible();
+    expect(screen.getByRole("row", { name: /caio@loja\.test/ })).toBeVisible();
     fireEvent.click(
       within(await openMenu("Ações para Caio")).getByRole("menuitem", {
         name: "Remover",
@@ -218,7 +220,7 @@ describe("TeamView for a manager", () => {
       { url: "/stores/store/members/caio", method: "DELETE", body: undefined },
     ]);
     await waitFor(() =>
-      expect(screen.queryByText("caio@loja.test")).not.toBeInTheDocument(),
+      expect(screen.queryAllByText("caio@loja.test")).toHaveLength(0),
     );
   });
 

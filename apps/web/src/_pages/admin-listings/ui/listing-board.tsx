@@ -136,6 +136,8 @@ const reflow = cn(
   "max-lg:[&_thead_tr]:flex max-lg:[&_thead_tr]:flex-wrap max-lg:[&_th:not([aria-sort])]:hidden",
   "max-lg:[&_tbody_tr]:grid max-lg:[&_tbody_tr]:grid-cols-2 max-lg:[&_tbody_tr]:gap-x-4 max-lg:[&_tbody_tr]:py-2",
   "max-lg:[&_td]:col-span-2 max-lg:[&_td:nth-child(2)]:col-span-1 max-lg:[&_td:nth-child(3)]:col-span-1",
+  // Rows are boxes here, so the row takes the card inset instead of its edge cells.
+  "max-lg:[&_tr]:px-2 max-lg:[&_tr>*:first-child]:pl-2 max-lg:[&_tr>*:last-child]:pr-2 max-lg:[&_th]:content-center",
 );
 
 const NO_PINS = new Map<string, AdminListingSummary>();
@@ -269,25 +271,19 @@ export function ListingBoard({
         className="mt-6"
       />
 
-      <div
-        className={cn(
-          "mt-4 rounded-xl border border-line bg-surface px-2",
-          reflow,
-        )}
-      >
-        <DataTable
-          table={table}
-          empty={
-            <p className="px-4 py-8 text-center text-ink-soft">
-              {q
-                ? `Nenhum anúncio${status ? ` em ${status.label}` : ""} com "${q}" no título.`
-                : status
-                  ? `Nenhum anúncio em ${status.label}.`
-                  : "Nenhum anúncio ainda. Comece pelo botão Novo anúncio."}
-            </p>
-          }
-        />
-      </div>
+      <DataTable
+        table={table}
+        className={cn("mt-4", reflow)}
+        empty={
+          <p className="px-4 py-8 text-center text-ink-soft">
+            {q
+              ? `Nenhum anúncio${status ? ` em ${status.label}` : ""} com "${q}" no título.`
+              : status
+                ? `Nenhum anúncio em ${status.label}.`
+                : "Nenhum anúncio ainda. Comece pelo botão Novo anúncio."}
+          </p>
+        }
+      />
     </>
   );
 }

@@ -5,7 +5,7 @@ import type { PendingInvite } from "../model/types";
 /** The invite's email with a mail icon and, on phones, role and expiry. */
 export function InviteIdentity({ invite }: { invite: PendingInvite }) {
   return (
-    <div className="flex min-w-0 max-w-36 items-center gap-3 sm:max-w-none">
+    <div className="flex min-w-0 items-center gap-3">
       <span
         aria-hidden="true"
         className="flex size-9 shrink-0 items-center justify-center rounded-full border border-dashed border-line-strong text-muted"
