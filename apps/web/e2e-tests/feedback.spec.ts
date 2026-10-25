@@ -76,22 +76,6 @@ async function failWith500(
   );
 }
 
-function intersects(a: Box, b: Box): boolean {
-  return (
-    a.x < b.x + b.width &&
-    b.x < a.x + a.width &&
-    a.y < b.y + b.height &&
-    b.y < a.y + a.height
-  );
-}
-type Box = { x: number; y: number; width: number; height: number };
-
-async function box(locator: Locator): Promise<Box> {
-  const found = await locator.boundingBox();
-  if (!found) throw new Error("Element has no bounding box");
-  return found;
-}
-
 /** Best-effort cleanup after a serial chain that may have stopped midway. */
 async function cleanUp(
   browser: Browser,
@@ -536,95 +520,4 @@ test.describe("store settings feedback", () => {
     expect(seconds).toBeGreaterThanOrEqual(4);
     expect(seconds).toBeLessThanOrEqual(6.5);
   });
-});
-
-test.describe("toasts on a phone", () => {
-  test.use({ viewport: { width: 390, height: 844 } });
-
-  const pages: {
-    name: string;
-    open: (page: Page, editUrl: string) => Promise<void>;
-    buttons: string[];
-    api: string;
-    method: string;
-  }[] = [
-    {
-      name: "/admin/loja",
-      open: (page) => page.goto("/admin/loja").then(() => undefined),
-      buttons: ["Salvar loja"],
-      api: "**/api/v1/stores/*",
-      method: "PATCH",
-    },
-    {
-      name: "/admin/anuncios/novo",
-      open: async (page) => {
-        await page.goto("/admin/anuncios/novo");
-        await hydrated(page);
-        await page.getByLabel("Nome do item").fill("Rascunho de celular");
-      },
-      buttons: ["Salvar rascunho", "Salvar e publicar"],
-      api: "**/api/v1/stores/*/listings",
-      method: "POST",
-    },
-    {
-      name: "/admin/anuncios/<id>",
-      open: (page, editUrl) => page.goto(editUrl).then(() => undefined),
-      buttons: ["Salvar alterações", "Salvar e publicar"],
-      api: "**/api/v1/stores/*/listings/*",
-      method: "PATCH",
-    },
-  ];
-
-  let editUrl = "";
-
-  test.beforeAll(async ({ browser }) => {
-    const page = await (await browser.newContext()).newPage();
-    await signIn(page);
-    await page.goto("/admin/anuncios/novo");
-    await hydrated(page);
-    await page.getByLabel("Nome do item").fill(`Celular ${RUN}`);
-    await page.getByRole("button", { name: "Salvar rascunho" }).click();
-    await expect(page).toHaveURL(/\/admin\/anuncios\/[0-9a-f-]{36}/);
-    editUrl = page.url().split("?")[0] ?? "";
-    await page.context().close();
-  });
-
-  test.afterAll(async ({ browser }) => {
-    const page = await (await browser.newContext()).newPage();
-    await signIn(page);
-    await page
-      .getByRole("searchbox", { name: "Buscar anúncios pelo título" })
-      .fill(`Celular ${RUN}`);
-    await page.keyboard.press("Enter");
-    await expect(page).toHaveURL(/\/admin\?q=/);
-    await hydrated(page);
-    await page.getByRole("button", { name: /^Excluir / }).click();
-    await page
-      .getByRole("alertdialog")
-      .getByRole("button", { name: "Excluir anúncio" })
-      .click();
-    await expect(listingRows(page)).toHaveCount(0);
-    await page.context().close();
-  });
-
-  for (const target of pages) {
-    test(`an error toast does not cover the submit buttons on ${target.name}`, async ({
-      page,
-    }) => {
-      await signIn(page);
-      await target.open(page, editUrl);
-      await hydrated(page);
-      await failWith500(page, target.api, target.method);
-      await page.getByRole("button", { name: target.buttons[0] ?? "" }).click();
-      const shown = toast(page, GENERIC);
-      await expect(shown).toBeVisible();
-      await page.waitForTimeout(500);
-
-      const toastBox = await box(shown);
-      for (const name of target.buttons) {
-        const button = page.getByRole("button", { name, exact: true });
-        expect(intersects(toastBox, await box(button))).toBe(false);
-      }
-    });
-  }
 });

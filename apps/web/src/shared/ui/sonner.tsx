@@ -30,7 +30,7 @@ export function Toaster(props: ToasterProps) {
   return (
     <Sonner
       theme="light"
-      position="top-center"
+      position="bottom-center"
       duration={5000}
       closeButton
       containerAriaLabel="Notificações"
@@ -38,7 +38,10 @@ export function Toaster(props: ToasterProps) {
         closeButtonAriaLabel: "Fechar notificação",
         classNames: {
           toast:
-            "!rounded-xl !border-line !bg-surface !text-ink !shadow-xl !font-sans",
+            "!rounded-md !border-line !bg-surface !text-ink !shadow-xl !font-sans !pr-10",
+          // Sonner hangs the button off the top-left corner; keep it inside.
+          closeButton:
+            "!left-auto !right-2 !top-2 !transform-none !border-0 !bg-transparent !text-muted hover:!text-ink",
           description: "!text-muted",
           actionButton: "!bg-ink !text-surface",
           cancelButton: "!bg-paper !text-ink",
