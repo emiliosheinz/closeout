@@ -218,7 +218,7 @@ test.describe
       await signIn(page);
       leaverLink = await invite(page, LEAVER.email, "Admin");
 
-      const members = page.getByRole("region", { name: /pessoas/ });
+      const members = page.getByRole("region", { name: "Membros" });
       const owner = members.getByRole("row").filter({ hasText: ADMIN_EMAIL });
       await expect(owner).toContainText("Ana Teste");
       await expect(owner).toContainText("Dono(a)");
@@ -236,7 +236,7 @@ test.describe
         .getByRole("region")
         .evaluateAll((regions) => regions.map((r) => r.id || r.textContent));
       expect(
-        order.findIndex((id) => id?.includes("pessoas")) <
+        order.findIndex((id) => id?.includes("Membros")) <
           order.findIndex((id) => id?.includes("Convites pendentes")),
       ).toBe(true);
     });

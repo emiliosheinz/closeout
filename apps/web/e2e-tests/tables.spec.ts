@@ -185,7 +185,7 @@ test.describe
         "/admin/equipe?convites-pagina=2&convites-ordem=validade-desc",
       );
       await hydrated(page);
-      const members = page.getByRole("region", { name: /pessoas/ });
+      const members = page.getByRole("region", { name: "Membros" });
       const invites = page.getByRole("region", { name: /Convites pendentes/ });
       const inviteRows = invites.locator("tbody").getByRole("row");
       const memberRows = members.locator("tbody").getByRole("row");
@@ -223,7 +223,7 @@ test.describe
       await signIn(page, TABLES_OWNER_EMAIL, ADMIN_PASSWORD);
       await page.goto("/admin/equipe?membros-pagina=2&membros-ordem=nome-desc");
       await hydrated(page);
-      const members = page.getByRole("region", { name: /pessoas/ });
+      const members = page.getByRole("region", { name: "Membros" });
       const invites = page.getByRole("region", { name: /Convites pendentes/ });
       const memberRows = members.locator("tbody").getByRole("row");
       await expect(memberRows).toHaveCount(TABLES_SEED.members - PAGE_SIZE);

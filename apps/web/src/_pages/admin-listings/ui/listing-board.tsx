@@ -1,7 +1,6 @@
 "use client";
 
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { Search } from "lucide-react";
 import { parseAsString } from "nuqs";
 import { useState } from "react";
 import {
@@ -30,6 +29,7 @@ import {
   type DataTableColumns,
   useDataTable,
 } from "@/shared/ui/data-table/data-table";
+import { SearchInput } from "@/shared/ui/search-input";
 
 const listingsTable = createTableUrlState({
   prefix: "",
@@ -260,23 +260,14 @@ export function ListingBoard({
         </ul>
       </fieldset>
 
-      <div className="relative mt-6 max-w-md">
-        <label htmlFor="admin-search" className="sr-only">
-          Buscar anúncios pelo título
-        </label>
-        <Search
-          className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted"
-          aria-hidden="true"
-        />
-        <input
-          id="admin-search"
-          type="search"
-          value={view.query}
-          onChange={(event) => setView({ query: event.target.value })}
-          placeholder="Buscar pelo título"
-          className="h-11 w-full rounded-full border border-line bg-surface pr-4 pl-9 text-base"
-        />
-      </div>
+      <SearchInput
+        id="admin-search"
+        label="Buscar anúncios pelo título"
+        placeholder="Buscar pelo título"
+        value={view.query}
+        onChange={(query) => setView({ query })}
+        className="mt-6"
+      />
 
       <div
         className={cn(

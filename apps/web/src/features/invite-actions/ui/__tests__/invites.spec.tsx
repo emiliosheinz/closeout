@@ -1,4 +1,10 @@
-import { act, fireEvent, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { inviteKeys, type PendingInvite } from "@/entities/invite";
 import { renderWithFeedback } from "@/test/feedback-harness";
 import { InviteActions, InviteButton } from "../invites";
@@ -275,6 +281,27 @@ describe("InviteButton", () => {
     return view;
   }
   const email = () => screen.getByLabelText("E-mail da pessoa");
+
+  it("asks for an email and a role that defaults to seller", async () => {
+    await openDialog();
+    expect(email()).toBeInTheDocument();
+    const role = screen.getByRole("radiogroup", { name: "Papel" });
+    expect(
+      within(role).getByRole("radio", { name: "Vendedor(a)" }),
+    ).toBeChecked();
+    expect(
+      within(role).getByRole("radio", { name: "Admin" }),
+    ).not.toBeChecked();
+
+    fireEvent.change(email(), { target: { value: "eva@loja.test" } });
+    fireEvent.click(screen.getByRole("button", { name: "Criar convite" }));
+
+    await waitFor(() => expect(apiCalls()).toHaveLength(1));
+    expect(JSON.parse(apiCalls()[0]?.body as string)).toEqual({
+      email: "eva@loja.test",
+      role: "seller",
+    });
+  });
 
   it("enforces the email rule and sends nothing", async () => {
     await openDialog();

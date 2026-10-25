@@ -351,7 +351,6 @@ test.describe
       const url = page.url();
       const row = page.getByRole("row").filter({ hasText: MEMBER.email });
       const people = page.locator("#team-members");
-      const before = await people.innerText();
 
       await row
         .getByRole("button", { name: `Ações para ${MEMBER.name}` })
@@ -385,7 +384,6 @@ test.describe
 
       await confirm.getByRole("button", { name: "Remover da equipe" }).click();
       await expect(row).toHaveCount(0);
-      await expect(people).not.toHaveText(before);
       await expect(people).toBeFocused();
       await expectOneToast(page, `${MEMBER.name} saiu da equipe.`);
       expect(page.url()).toBe(url);

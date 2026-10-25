@@ -145,7 +145,7 @@ test.describe("admin tables on a phone", () => {
     expect(await overflow(page)).toBeLessThanOrEqual(0);
     await page.goto("/admin/equipe");
     await hydrated(page);
-    for (const name of [/pessoas/, /Convites pendentes/]) {
+    for (const name of ["Membros", /Convites pendentes/]) {
       await expect(
         page
           .getByRole("region", { name })
@@ -222,7 +222,7 @@ test.describe("admin tables on a phone", () => {
   }) => {
     await page.goto("/admin/equipe");
     await hydrated(page);
-    const members = page.getByRole("region", { name: /pessoas/ });
+    const members = page.getByRole("region", { name: "Membros" });
     const invites = page.getByRole("region", { name: /Convites pendentes/ });
 
     for (const [region, menu] of [

@@ -146,6 +146,9 @@ export function DataTable<TData extends RowData>({
                         type="button"
                         variant="ghost"
                         size="sm"
+                        // Pulled left by its own padding so the label lines up
+                        // with the cells, and styled like the plain headers.
+                        className="-ml-3.5 font-medium text-inherit"
                         onClick={header.column.getToggleSortingHandler()}
                       >
                         <table.FlexRender header={header} />

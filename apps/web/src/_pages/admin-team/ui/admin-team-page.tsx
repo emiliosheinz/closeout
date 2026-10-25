@@ -8,6 +8,7 @@ import {
   redirectToSessionExpired,
   requireMember,
 } from "@/entities/session/index.server";
+import { InviteButton } from "@/features/invite-actions";
 import { Hydrated, loadRead } from "@/shared/api/index.server";
 import { TeamView } from "./team-view";
 
@@ -62,7 +63,10 @@ export async function TeamPage() {
 
   return (
     <Hydrated>
-      <h1 className="text-3xl font-extrabold">Equipe</h1>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <h1 className="text-3xl font-extrabold">Equipe</h1>
+        {manager && <InviteButton storeId={store.id} />}
+      </div>
       <p className="mt-1 max-w-[60ch] text-ink-soft">
         {manager
           ? "Quem vende e quem cuida da loja. O botão de WhatsApp de cada anúncio abre a conversa com quem vende."

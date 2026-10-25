@@ -12,21 +12,22 @@ import {
   memberReads,
   type TeamMember,
 } from "@/entities/member";
-import { InviteActions, InviteButton } from "@/features/invite-actions";
+import { InviteActions } from "@/features/invite-actions";
 import { MemberActions } from "@/features/member-actions";
 import { readQuery } from "@/shared/api";
-import { formatDate, pluralize, ROLE_LABELS } from "@/shared/lib/format";
+import { formatDate, ROLE_LABELS } from "@/shared/lib/format";
 import {
   createTableUrlState,
   useTableUrlState,
 } from "@/shared/lib/table-url-state";
 import { compareText, matchesSearch } from "@/shared/lib/text";
+import { cn } from "@/shared/lib/utils";
 import {
   DataTable,
   type DataTableColumns,
   useDataTable,
 } from "@/shared/ui/data-table/data-table";
-import { inputClass } from "@/shared/ui/field";
+import { SearchInput } from "@/shared/ui/search-input";
 
 /**
  * The Equipe page body. Managers see every member and the pending invites,
@@ -104,34 +105,8 @@ function RoleCell({ role }: { role: TeamMember["role"] }) {
   );
 }
 
-function SearchInput({
-  id,
-  label,
-  value,
-  onChange,
-}: {
-  id: string;
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-}) {
-  return (
-    <div className="mb-3">
-      <label htmlFor={id} className="sr-only">
-        {label}
-      </label>
-      <input
-        id={id}
-        type="search"
-        autoComplete="off"
-        placeholder={label}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className={`${inputClass} w-full sm:max-w-xs`}
-      />
-    </div>
-  );
-}
+// The same card the listings table sits in.
+const tableCard = "rounded-xl border border-line bg-surface px-2";
 
 // Phones show a column's content under the name or email instead, so its
 // header must not keep the column wide. These hide a column by position:
@@ -246,14 +221,15 @@ function MembersTable({
           label="Buscar membros"
           value={query}
           onChange={(value) => set({ query: value })}
+          className="mb-3"
         />
       )}
-      <div className={hideMemberContactOnPhones}>
+      <div className={cn(tableCard, hideMemberContactOnPhones)}>
         <DataTable
           table={table}
           empty={
             query && (
-              <p className="text-sm text-muted">{`Ninguém encontrado com "${query}".`}</p>
+              <p className="px-4 py-8 text-center text-ink-soft">{`Ninguém encontrado com "${query}".`}</p>
             )
           }
         />
@@ -330,13 +306,14 @@ function InvitesTable({
         label="Buscar convites"
         value={query}
         onChange={(value) => set({ query: value })}
+        className="mb-3"
       />
-      <div className={hideInviteRoleOnPhones}>
+      <div className={cn(tableCard, hideInviteRoleOnPhones)}>
         <DataTable
           table={table}
           empty={
             query && (
-              <p className="text-sm text-muted">{`Nenhum convite com "${query}".`}</p>
+              <p className="px-4 py-8 text-center text-ink-soft">{`Nenhum convite com "${query}".`}</p>
             )
           }
         />
@@ -344,6 +321,8 @@ function InvitesTable({
     </>
   );
 }
+
+const sectionHeading = "mb-3 text-sm font-semibold text-muted outline-none";
 
 function TeamSections({
   storeId,
@@ -360,22 +339,13 @@ function TeamSections({
   return (
     <div className="flex flex-col gap-10">
       <section aria-labelledby="team-members">
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-          {canManage ? (
-            <h2
-              id="team-members"
-              tabIndex={-1}
-              className="text-sm font-semibold text-muted outline-none"
-            >
-              {pluralize(members.length, "pessoa", "pessoas")}
-            </h2>
-          ) : (
-            <h2 id="team-members" tabIndex={-1} className="sr-only">
-              Seu contato
-            </h2>
-          )}
-          {canManage && <InviteButton storeId={storeId} />}
-        </div>
+        <h2
+          id="team-members"
+          tabIndex={-1}
+          className={canManage ? sectionHeading : "sr-only"}
+        >
+          {canManage ? "Membros" : "Seu contato"}
+        </h2>
         {(canManage || members.length > 0) && (
           <MembersTable
             storeId={storeId}
@@ -387,11 +357,7 @@ function TeamSections({
       </section>
       {invites && (
         <section aria-labelledby="team-invites">
-          <h2
-            id="team-invites"
-            tabIndex={-1}
-            className="mb-3 text-sm font-semibold text-muted outline-none"
-          >
+          <h2 id="team-invites" tabIndex={-1} className={sectionHeading}>
             Convites pendentes{" "}
             {invites.length > 0 && (
               <span className="font-medium">({invites.length})</span>

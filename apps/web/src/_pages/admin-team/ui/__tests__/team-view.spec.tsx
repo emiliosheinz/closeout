@@ -126,7 +126,7 @@ describe("TeamView for a manager", () => {
 
   it("lists every member before the pending invites", () => {
     renderManager();
-    const people = screen.getByRole("region", { name: "3 pessoas" });
+    const people = screen.getByRole("region", { name: "Membros" });
     const invites = screen.getByRole("region", { name: /Convites pendentes/ });
     expect(
       people.compareDocumentPosition(invites) &
@@ -199,9 +199,9 @@ describe("TeamView for a manager", () => {
     ).toBeInTheDocument();
   });
 
-  it("removes a member after confirming and drops the heading count by one", async () => {
+  it("removes a member after confirming and drops their row", async () => {
     renderManager();
-    expect(screen.getByRole("region", { name: "3 pessoas" })).toBeVisible();
+    expect(screen.getByText("caio@loja.test")).toBeVisible();
     fireEvent.click(
       within(await openMenu("Ações para Caio")).getByRole("menuitem", {
         name: "Remover",
@@ -217,10 +217,9 @@ describe("TeamView for a manager", () => {
     expect(apiCalls()).toEqual([
       { url: "/stores/store/members/caio", method: "DELETE", body: undefined },
     ]);
-    expect(
-      await screen.findByRole("region", { name: "2 pessoas" }),
-    ).toBeVisible();
-    expect(screen.queryByText("caio@loja.test")).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.queryByText("caio@loja.test")).not.toBeInTheDocument(),
+    );
   });
 
   it("revokes the last invite and leaves the heading without a number", async () => {
@@ -329,54 +328,6 @@ describe("TeamView for a manager", () => {
       "Informe o WhatsApp com o código do país",
     );
     expect(screen.getByRole("dialog")).toBeInTheDocument();
-  });
-
-  it("invites people by email with a role defaulting to seller", () => {
-    renderManager();
-    fireEvent.click(screen.getByRole("button", { name: "Convidar pessoas" }));
-    const dialog = screen.getByRole("dialog", { name: "Convidar pessoas" });
-    expect(
-      within(dialog).getByLabelText("E-mail da pessoa"),
-    ).toBeInTheDocument();
-    const role = within(dialog).getByRole("radiogroup", { name: "Papel" });
-    expect(
-      within(role).getByRole("radio", { name: "Vendedor(a)" }),
-    ).toBeChecked();
-    expect(
-      within(role).getByRole("radio", { name: "Admin" }),
-    ).not.toBeChecked();
-    expect(
-      within(dialog).getByRole("button", { name: "Criar convite" }),
-    ).toBeInTheDocument();
-  });
-
-  it("shows the invite link after creating an invite", async () => {
-    stubApi((method) =>
-      method === "POST"
-        ? Response.json({
-            invite: {
-              id: "inv-2",
-              email: "eva@loja.test",
-              role: "seller",
-              expiresAt: "2026-10-30T15:00:00.000Z",
-            },
-            link: "https://closeout.test/invite/xyz",
-          })
-        : undefined,
-    );
-    renderManager();
-    fireEvent.click(screen.getByRole("button", { name: "Convidar pessoas" }));
-    fireEvent.change(screen.getByLabelText("E-mail da pessoa"), {
-      target: { value: "eva@loja.test" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "Criar convite" }));
-    expect(
-      await screen.findByRole("dialog", { name: "Convite para eva@loja.test" }),
-    ).toBeInTheDocument();
-    expect(JSON.parse(apiCalls()[0]?.body as string)).toEqual({
-      email: "eva@loja.test",
-      role: "seller",
-    });
   });
 
   it("offers a new link or revocation for a pending invite", async () => {

@@ -79,7 +79,7 @@ function renderTeam({
   return { lastUrl };
 }
 
-const membersRegion = () => screen.getByRole("region", { name: /pessoas?$/ });
+const membersRegion = () => screen.getByRole("region", { name: "Membros" });
 const invitesRegion = () =>
   screen.getByRole("region", { name: /Convites pendentes/ });
 
