@@ -1,5 +1,5 @@
 import { type DynamicModule, Module, ValidationPipe } from "@nestjs/common";
-import { APP_PIPE } from "@nestjs/core";
+import { APP_FILTER, APP_PIPE } from "@nestjs/core";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { LoggerModule } from "nestjs-pino";
 import type { Logger } from "pino";
@@ -10,6 +10,7 @@ import { type AppModuleConfig, configModule } from "./config/config.module";
 import { dataSourceOptions } from "./database/connection";
 import { InvitesModule } from "./invites/invites.module";
 import { MediaModule } from "./media/media.module";
+import { ProblemFilter } from "./problem/problem.filter";
 import { SellersModule } from "./sellers/sellers.module";
 import { StoresModule } from "./stores/stores.module";
 
@@ -24,6 +25,7 @@ import { StoresModule } from "./stores/stores.module";
   ],
   controllers: [AppController],
   providers: [
+    { provide: APP_FILTER, useClass: ProblemFilter },
     {
       provide: APP_PIPE,
       useValue: new ValidationPipe({
