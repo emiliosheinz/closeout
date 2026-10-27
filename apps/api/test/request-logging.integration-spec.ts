@@ -122,6 +122,18 @@ describe("request logging", () => {
       expect(raw()).not.toContain(SENTINEL);
     });
 
+    it("records only the request's id, method and path, never its headers", async () => {
+      await request(server())
+        .get("/nope")
+        .set("x-request-id", "probe-2")
+        .set("Cookie", `closeout_session=${SENTINEL}`)
+        .expect(404);
+
+      expect(completions().map((line) => line.req)).toEqual([
+        { id: "probe-2", method: "GET", path: "/nope" },
+      ]);
+    });
+
     it("is not written for health checks", async () => {
       await request(server()).get("/nope").expect(404);
       await request(server()).get("/health").expect(200);
