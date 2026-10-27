@@ -10,8 +10,10 @@ import { Test } from "@nestjs/testing";
 import sharp from "sharp";
 import request from "supertest";
 import { DataSource } from "typeorm";
-import { AppModule } from "@/app.module";
+import { appModule } from "@/app.module";
 import { createAdmin } from "@/cli/admin-commands";
+import { serverScope } from "@/config/config";
+import { parseEnv } from "@/config/report";
 import { configureApp } from "@/configure-app";
 import { Roles } from "@/stores/membership";
 import { StoresService } from "@/stores/services/stores.service";
@@ -30,12 +32,14 @@ export interface TestContext {
 export async function createTestApp(
   extraModules: Type[] = [],
 ): Promise<TestContext> {
+  const parsed = parseEnv(serverScope, process.env);
+  if (!parsed.ok) throw new Error(parsed.problems.join("\n"));
   const moduleRef = await Test.createTestingModule({
-    imports: [AppModule, ...extraModules],
+    imports: [appModule(parsed.config), ...extraModules],
   }).compile();
   const app = moduleRef.createNestApplication({ logger: false });
   if (process.env.ERROR_FIXTURE === "record") installErrorRecorder(app);
-  configureApp(app);
+  configureApp(app, parsed.config.http);
   await app.init();
   return { app, dataSource: app.get(DataSource) };
 }

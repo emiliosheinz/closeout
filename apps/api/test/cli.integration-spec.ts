@@ -169,20 +169,20 @@ describe("operator commands", () => {
     });
   });
 
+  // The built CLI, as `pnpm cli` runs it: tsx emits no decorator metadata,
+  // which Nest needs to inject the app's providers.
   describe("command line", () => {
     const run = (...args: string[]) =>
-      promisify(execFile)("pnpm", ["exec", "tsx", "src/cli/main.ts", ...args], {
+      promisify(execFile)(process.execPath, ["dist/cli/main.js", ...args], {
         cwd: path.join(__dirname, ".."),
         timeout: 30_000,
       });
 
     it("creates a store and its owner from the command line", async () => {
       const { stdout } = await promisify(execFile)(
-        "pnpm",
+        process.execPath,
         [
-          "exec",
-          "tsx",
-          "src/cli/main.ts",
+          "dist/cli/main.js",
           "admin:create",
           "--store",
           "loja-cli",

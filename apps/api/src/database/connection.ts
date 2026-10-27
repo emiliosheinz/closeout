@@ -1,14 +1,15 @@
 import path from "node:path";
-import { DataSource, type DataSourceOptions } from "typeorm";
+import type { DataSourceOptions } from "typeorm";
+import type { DatabaseConfig } from "@/config/config";
 import { ENTITIES } from "./entities";
 
 /**
  * Connection options for the Nest app and the operator CLI, with pool guards
  * against runaway queries and abandoned transactions.
  */
-export function dataSourceOptions(): DataSourceOptions {
+export function dataSourceOptions(database: DatabaseConfig): DataSourceOptions {
   return {
-    ...baseOptions(),
+    ...migrationDataSourceOptions(database),
     extra: {
       statement_timeout: 10_000,
       idle_in_transaction_session_timeout: 30_000,
@@ -17,27 +18,21 @@ export function dataSourceOptions(): DataSourceOptions {
   };
 }
 
-function baseOptions(): DataSourceOptions {
+/** For migrations: no statement_timeout, migrations can run long. */
+export function migrationDataSourceOptions(
+  database: DatabaseConfig,
+): DataSourceOptions {
   return {
     type: "postgres",
-    host: requireEnv("POSTGRES_HOST"),
-    port: Number(requireEnv("POSTGRES_PORT")),
-    database: requireEnv("POSTGRES_DB"),
-    username: requireEnv("POSTGRES_USER"),
-    password: requireEnv("POSTGRES_PASSWORD"),
-    ssl: process.env.POSTGRES_SSL === "true",
+    host: database.host,
+    port: database.port,
+    database: database.name,
+    username: database.user,
+    password: database.password.reveal(),
+    ssl: database.ssl,
     entities: ENTITIES,
     migrations: [path.join(__dirname, "migrations", "*.{ts,js}")],
     migrationsTableName: "migrations",
     synchronize: false,
   };
 }
-
-function requireEnv(name: string): string {
-  const value = process.env[name];
-  if (!value) throw new Error(`${name} must be set`);
-  return value;
-}
-
-// Used by the migration CLI: no statement_timeout, migrations can run long.
-export const AppDataSource = new DataSource(baseOptions());

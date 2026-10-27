@@ -17,6 +17,9 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
   process.env.POSTGRES_DB = database;
   const mediaDir = await mkdtemp(path.join(tmpdir(), "closeout-media-"));
   process.env.MEDIA_DIR = mediaDir;
+  // The server scope's listen address; the harness never binds it.
+  process.env.PORT = "3000";
+  process.env.HOST = "127.0.0.1";
   process.env.PUBLIC_BASE_URL = "http://storefront.test";
   process.env.INTERNAL_API_SECRET = "integration-test-secret-0123456789abcdef";
 

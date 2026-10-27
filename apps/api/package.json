@@ -22,10 +22,10 @@
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "cli": "node dist/cli/main.js",
     "migration:generate": "scripts/generate-migration.sh",
-    "migration:run": "tsx node_modules/typeorm/cli.js migration:run -d src/database/connection.ts",
-    "migration:revert": "tsx node_modules/typeorm/cli.js migration:revert -d src/database/connection.ts",
-    "migration:show": "tsx node_modules/typeorm/cli.js migration:show -d src/database/connection.ts",
-    "migration:check": "tsx node_modules/typeorm/cli.js migration:generate --check -d src/database/connection.ts src/database/migrations/Drift"
+    "migration:run": "tsx node_modules/typeorm/cli.js migration:run -d src/database/data-source.ts",
+    "migration:revert": "tsx node_modules/typeorm/cli.js migration:revert -d src/database/data-source.ts",
+    "migration:show": "tsx node_modules/typeorm/cli.js migration:show -d src/database/data-source.ts",
+    "migration:check": "tsx node_modules/typeorm/cli.js migration:generate --check -d src/database/data-source.ts src/database/migrations/Drift"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1152.0",

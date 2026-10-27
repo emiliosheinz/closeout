@@ -3,10 +3,12 @@ import { createInterface } from "node:readline";
 import { parseArgs } from "node:util";
 import { NestFactory } from "@nestjs/core";
 import { DataSource } from "typeorm";
-import { AppModule } from "@/app.module";
+import { appModule } from "@/app.module";
 import { SessionsService } from "@/auth/services/sessions.service";
 import { ListingImagesService } from "@/catalog/services/listing-images.service";
 import { ListingsService } from "@/catalog/services/listings.service";
+import { cliScope } from "@/config/config";
+import { parseOrExit } from "@/config/report";
 import { StoresService } from "@/stores/services/stores.service";
 import {
   CommandError,
@@ -26,6 +28,7 @@ The password is read from CLOSEOUT_PASSWORD or prompted for.
 A missing store is created; --store-name is required then and ignored otherwise.`;
 
 async function main(): Promise<void> {
+  const config = parseOrExit(cliScope);
   const [command, ...rest] = process.argv.slice(2);
   const { values } = parseArgs({
     args: rest,
@@ -58,7 +61,7 @@ async function main(): Promise<void> {
     name: values["store-name"],
   });
 
-  const app = await NestFactory.createApplicationContext(AppModule, {
+  const app = await NestFactory.createApplicationContext(appModule(config), {
     logger: ["error", "warn"],
   });
   try {

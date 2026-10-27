@@ -1,6 +1,6 @@
 import "reflect-metadata";
 import { type DataSource, MigrationExecutor } from "typeorm";
-import { AppDataSource } from "./connection";
+import { AppDataSource } from "./data-source";
 
 /** Arbitrary but fixed: every release must contend for the same lock. */
 const MIGRATION_LOCK_KEY = 7_260_418_001;

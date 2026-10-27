@@ -3,6 +3,7 @@ import {
   ConflictException,
   HttpException,
   HttpStatus,
+  Inject,
   Injectable,
   InternalServerErrorException,
   Logger,
@@ -18,6 +19,7 @@ import {
   newRawToken,
   SessionsService,
 } from "@/auth/services/sessions.service";
+import { APP_CONFIG, type AppModuleConfig } from "@/config/config.module";
 import { SlidingWindowCounter } from "@/security/sliding-window";
 import {
   type ProvisionedMember,
@@ -93,6 +95,7 @@ export class InvitesService {
   constructor(
     @InjectDataSource() private readonly dataSource: DataSource,
     private readonly sessions: SessionsService,
+    @Inject(APP_CONFIG) private readonly config: AppModuleConfig,
   ) {}
 
   /** `email` is already parsed. Replaces any pending invite for it. */
@@ -126,7 +129,7 @@ export class InvitesService {
     this.logger.log(
       `Invite ${row.id} for ${email} as ${role} created in store ${actor.storeId} by ${actor.userId}`,
     );
-    return { invite: toSummary(row), link: inviteLink(token) };
+    return { invite: toSummary(row), link: this.inviteLink(token) };
   }
 
   /** Pending, unexpired invites; never their links. */
@@ -172,7 +175,7 @@ export class InvitesService {
     this.logger.log(
       `Invite ${row.id} for ${row.email} regenerated in store ${actor.storeId} by ${actor.userId}`,
     );
-    return { invite: toSummary(row), link: inviteLink(token) };
+    return { invite: toSummary(row), link: this.inviteLink(token) };
   }
 
   /** What the accept page shows for a valid link. */
@@ -289,6 +292,11 @@ export class InvitesService {
     });
   }
 
+  private inviteLink(token: string): string {
+    const base = this.config.http.publicBaseUrl.replace(/\/+$/, "");
+    return `${base}/invite/${token}`;
+  }
+
   /**
    * Counts the attempt as invalid up front, so a burst cannot slip past
    * the limit while the first ones run; valid outcomes give it back.
@@ -300,12 +308,6 @@ export class InvitesService {
     }
     this.attempts.record(clientIp);
   }
-}
-
-function inviteLink(token: string): string {
-  const base = process.env.PUBLIC_BASE_URL;
-  if (!base) throw new Error("PUBLIC_BASE_URL must be set");
-  return `${base.replace(/\/+$/, "")}/invite/${token}`;
 }
 
 function toSummary(row: InviteRow): InviteSummary {

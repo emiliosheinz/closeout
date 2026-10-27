@@ -4,11 +4,17 @@ import {
   Controller,
   ForbiddenException,
   HttpCode,
+  Inject,
   Post,
   Req,
   UseGuards,
 } from "@nestjs/common";
 import type { Request } from "express";
+import {
+  APP_CONFIG,
+  type AppModuleConfig,
+  internalSecret,
+} from "@/config/config.module";
 import {
   isInternalRequest,
   trustedClientIp,
@@ -27,6 +33,7 @@ export class AuthController {
   constructor(
     private readonly auth: AuthService,
     private readonly sessions: SessionsService,
+    @Inject(APP_CONFIG) private readonly config: AppModuleConfig,
   ) {}
 
   /**
@@ -39,10 +46,13 @@ export class AuthController {
     @Req() req: Request,
     @Body() body: LoginDto,
   ): Promise<{ sessionToken: string; expiresAt: string }> {
-    if (!isInternalRequest(req.headers)) throw new ForbiddenException();
+    const secret = internalSecret(this.config);
+    if (!isInternalRequest(req.headers, secret)) {
+      throw new ForbiddenException();
+    }
     // Without the visitor's IP every attempt would share one rate-limit
     // bucket, letting anyone lock the admins out.
-    const clientIp = trustedClientIp(req.headers);
+    const clientIp = trustedClientIp(req.headers, secret);
     if (!clientIp) throw new BadRequestException("Missing client IP");
     const { sessionToken, expiresAt } = await this.auth.login(
       body.email,
