@@ -5,7 +5,7 @@ import {
   pino,
 } from "pino";
 import type { LogLevel } from "@/config/config";
-import { REDACTED_PATHS, serializers } from "./serializers";
+import { errorMessage, REDACTED_PATHS, serializers } from "./serializers";
 
 /**
  * The process logger. JSON lines on stdout in production, pretty-printed
@@ -20,6 +20,17 @@ export function createLogger(
     level,
     serializers,
     redact: { paths: REDACTED_PATHS },
+    hooks: {
+      logMethod(args, method) {
+        const [first, second] = args as unknown[];
+        const err =
+          first instanceof Error ? first : (first as { err?: unknown })?.err;
+        if (typeof second === "string" || !(err instanceof Error)) {
+          return method.apply(this, args);
+        }
+        return method.call(this, first as object, errorMessage(err));
+      },
+    },
   };
   if (destination) return pino(options, destination);
   if (process.env.NODE_ENV === "production") return pino(options);

@@ -103,6 +103,24 @@ describe("logger", () => {
     expect(line).not.toContain(SENTINEL);
   });
 
+  it("never takes the message of a line logged without one from a driver error", () => {
+    const out = memory();
+    const logger = createLogger("info", out);
+    const err = new QueryFailedError("SELECT $1::uuid", [SENTINEL], pgError());
+
+    logger.error({ err });
+    logger.error(err);
+    logger.error(new Error("disk full"));
+
+    const lines = out.lines();
+    expect(lines.map((line) => JSON.parse(line).msg)).toEqual([
+      "QueryFailedError",
+      "QueryFailedError",
+      "disk full",
+    ]);
+    expect(lines.join("\n")).not.toContain(SENTINEL);
+  });
+
   it("logs only the SQLSTATE and object names of a bare driver error", () => {
     const out = memory();
 

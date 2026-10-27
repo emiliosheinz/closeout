@@ -49,6 +49,14 @@ function framesOf(stack: string | undefined): string | undefined {
     .join("\n");
 }
 
+/**
+ * The line message for an error logged without one: pino would otherwise
+ * take the error's own message, driver text included.
+ */
+export function errorMessage(err: Error): string {
+  return driverErrorOf(err) ? err.constructor.name : err.message;
+}
+
 /** Type, code and stack frames; the message only when no driver error is wrapped. */
 export function serializeError(err: unknown): Record<string, unknown> {
   if (!(err instanceof Error)) return { type: typeof err };
