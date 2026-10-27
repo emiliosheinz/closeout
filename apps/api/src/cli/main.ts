@@ -1,5 +1,4 @@
 import "reflect-metadata";
-import { createInterface } from "node:readline";
 import { parseArgs } from "node:util";
 import { NestFactory } from "@nestjs/core";
 import { DataSource } from "typeorm";
@@ -17,6 +16,7 @@ import {
   resetPassword,
   type StoreIdentity,
 } from "./admin-commands";
+import { readPassword } from "./password";
 import { DEMO_PASSWORD, seedDemo } from "./seed-demo";
 
 const USAGE = `Usage:
@@ -72,7 +72,7 @@ async function main(): Promise<void> {
       const result = await createAdmin(dataSource, stores, {
         email: required(values.email, "--email"),
         name: required(values.name, "--name"),
-        password: await readPassword(),
+        password: await readPassword(config.cli.password),
         whatsapp: values.whatsapp,
         store: store(),
       });
@@ -82,7 +82,7 @@ async function main(): Promise<void> {
     } else if (command === "admin:password") {
       await resetPassword(dataSource, app.get(SessionsService), {
         email: required(values.email, "--email"),
-        password: await readPassword(),
+        password: await readPassword(config.cli.password),
       });
       console.log("Password updated; existing sessions were signed out.");
     } else {
@@ -121,40 +121,6 @@ async function main(): Promise<void> {
 function required(value: string | undefined, name: string): string {
   if (!value) throw new CommandError(`${name} is required.\n\n${USAGE}`);
   return value;
-}
-
-async function readPassword(): Promise<string> {
-  const fromEnv = process.env.CLOSEOUT_PASSWORD;
-  if (fromEnv) return fromEnv;
-  if (!process.stdin.isTTY) {
-    throw new CommandError(
-      "No TTY to prompt for a password; set CLOSEOUT_PASSWORD instead.",
-    );
-  }
-  const first = await prompt("Password: ");
-  const second = await prompt("Repeat password: ");
-  if (first !== second) throw new CommandError("Passwords do not match.");
-  return first;
-}
-
-/** Prompt without echoing what is typed. */
-function prompt(question: string): Promise<string> {
-  const rl = createInterface({
-    input: process.stdin,
-    output: process.stdout,
-    terminal: true,
-  });
-  const output = rl as unknown as { _writeToOutput: (s: string) => void };
-  output._writeToOutput = (text: string) => {
-    if (text.includes(question)) process.stdout.write(question);
-  };
-  return new Promise((resolve) =>
-    rl.question(question, (answer) => {
-      rl.close();
-      process.stdout.write("\n");
-      resolve(answer);
-    }),
-  );
 }
 
 main().catch((err) => {

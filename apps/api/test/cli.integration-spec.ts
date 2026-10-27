@@ -211,6 +211,38 @@ describe("operator commands", () => {
       ]);
     });
 
+    it("boots without the server's port, host or internal secret", async () => {
+      const { stdout } = await promisify(execFile)(
+        process.execPath,
+        [
+          "dist/cli/main.js",
+          "admin:create",
+          "--store",
+          "loja-operador",
+          "--store-name",
+          "Loja do Operador",
+          "--email",
+          "operador@example.com",
+          "--name",
+          "Operador",
+        ],
+        {
+          cwd: path.join(__dirname, ".."),
+          timeout: 30_000,
+          env: {
+            ...process.env,
+            PORT: undefined,
+            HOST: undefined,
+            INTERNAL_API_SECRET: undefined,
+            CLOSEOUT_PASSWORD: PASSWORD,
+          },
+        },
+      );
+      expect(stdout).toContain(
+        "Created owner operador@example.com for store loja-operador.",
+      );
+    });
+
     it.each([
       "admin:create",
       "seed:demo",
