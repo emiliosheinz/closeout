@@ -12,11 +12,11 @@ describe("dataSourceOptions", () => {
   const original = { ...process.env };
   let dataSourceOptions: typeof import("./connection").dataSourceOptions;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     Object.assign(process.env, SETTINGS);
     // The module builds the migration data source on import, which needs
     // every setting present.
-    ({ dataSourceOptions } = require("./connection"));
+    ({ dataSourceOptions } = await import("./connection.js"));
   });
 
   afterEach(() => {

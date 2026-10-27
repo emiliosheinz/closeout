@@ -18,10 +18,10 @@ function serviceWith(session: Partial<Session>): SessionsService {
 describe("SessionsService.findActiveByRawToken", () => {
   const now = new Date("2026-10-17T12:00:00.000Z");
   beforeAll(() => {
-    jest.useFakeTimers({ now });
+    vi.useFakeTimers({ now });
   });
   afterAll(() => {
-    jest.useRealTimers();
+    vi.useRealTimers();
   });
 
   it("accepts a session that expires later", async () => {

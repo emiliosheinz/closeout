@@ -18,7 +18,7 @@ describe("configureApp", () => {
   it("accepts an internal secret of exactly 32 characters", () => {
     process.env.PUBLIC_BASE_URL = "http://storefront.test";
     process.env.INTERNAL_API_SECRET = "x".repeat(32);
-    const app = { disable: jest.fn(), use: jest.fn() };
+    const app = { disable: vi.fn(), use: vi.fn() };
     expect(() =>
       configureApp(app as unknown as INestApplication),
     ).not.toThrow();

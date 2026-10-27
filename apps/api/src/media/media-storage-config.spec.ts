@@ -19,7 +19,7 @@ describe("mediaStorageFromEnv", () => {
   });
 
   it("writes to the configured bucket", async () => {
-    const send = jest
+    const send = vi
       .spyOn(S3Client.prototype, "send")
       .mockResolvedValue({} as never);
     await mediaStorageFromEnv(BUCKET_ENV).put(

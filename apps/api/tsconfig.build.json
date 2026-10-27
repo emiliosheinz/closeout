@@ -11,6 +11,7 @@
     "node_modules",
     "**/*spec.ts",
     "**/__tests__/**",
-    "jest.config.ts"
+    "vitest.config.ts",
+    "vitest.integration.config.ts"
   ]
 }
