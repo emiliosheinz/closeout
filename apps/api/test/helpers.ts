@@ -7,14 +7,14 @@ import {
 } from "@nestjs/common/constants";
 import { ModulesContainer } from "@nestjs/core";
 import { Test } from "@nestjs/testing";
+import type { DestinationStream } from "pino";
 import sharp from "sharp";
 import request from "supertest";
 import { DataSource } from "typeorm";
-import { appModule } from "@/app.module";
 import { createAdmin } from "@/cli/admin-commands";
 import { serverScope } from "@/config/config";
 import { parseEnv } from "@/config/report";
-import { configureApp } from "@/configure-app";
+import { appSetup } from "@/configure-app";
 import { Roles } from "@/stores/membership";
 import { StoresService } from "@/stores/services/stores.service";
 import { installErrorRecorder } from "./error-recorder";
@@ -28,18 +28,26 @@ export interface TestContext {
   dataSource: DataSource;
 }
 
-/** `extraModules` lets a suite mount test-only controllers next to the app. */
+const DISCARD: DestinationStream = { write: () => {} };
+
+/**
+ * Boots the app the way the server entry point does. `extraModules` lets a
+ * suite mount test-only controllers next to the app; log lines go to `logs`,
+ * discarded by default.
+ */
 export async function createTestApp(
   extraModules: Type[] = [],
+  logs: DestinationStream = DISCARD,
 ): Promise<TestContext> {
   const parsed = parseEnv(serverScope, process.env);
   if (!parsed.ok) throw new Error(parsed.problems.join("\n"));
+  const setup = appSetup(parsed.config, logs);
   const moduleRef = await Test.createTestingModule({
-    imports: [appModule(parsed.config), ...extraModules],
+    imports: [setup.module, ...extraModules],
   }).compile();
-  const app = moduleRef.createNestApplication({ logger: false });
+  const app = moduleRef.createNestApplication(setup.options);
   if (process.env.ERROR_FIXTURE === "record") installErrorRecorder(app);
-  configureApp(app, parsed.config.http);
+  setup.configure(app);
   await app.init();
   return { app, dataSource: app.get(DataSource) };
 }

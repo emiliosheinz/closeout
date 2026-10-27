@@ -1,14 +1,14 @@
 import { Logger } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
-import { appModule } from "./app.module";
 import { serverScope } from "./config/config";
 import { parseOrExit } from "./config/report";
-import { configureApp } from "./configure-app";
+import { appSetup } from "./configure-app";
 
 async function bootstrap() {
   const config = parseOrExit(serverScope);
-  const app = await NestFactory.create(appModule(config));
-  configureApp(app, config.http);
+  const setup = appSetup(config);
+  const app = await NestFactory.create(setup.module, setup.options);
+  setup.configure(app);
   app.enableShutdownHooks([], { useProcessExit: true });
 
   const { port, host } = config.http;
