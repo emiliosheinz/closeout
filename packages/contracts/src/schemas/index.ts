@@ -5,6 +5,7 @@ export * from "./invite";
 export * from "./listing";
 export * from "./me";
 export * from "./member";
+export * from "./problem";
 export * from "./seller";
 export * from "./session";
 export * from "./store";
