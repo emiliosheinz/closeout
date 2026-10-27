@@ -38,6 +38,12 @@ export interface HttpConfig {
   internalSecret: Secret;
 }
 
+export interface LoggingConfig {
+  level: LogLevel;
+  /** `pretty` only when NODE_ENV is development: the production image ships no pretty-printer. */
+  format: "json" | "pretty";
+}
+
 export interface DatabaseConfig {
   host: string;
   port: number;
@@ -167,8 +173,14 @@ const media = z
 const logging = z
   .object({
     LOG_LEVEL: z.enum(LOG_LEVELS, { error: LOG_LEVEL_RULE }).default("info"),
+    NODE_ENV: z.string().optional(),
   })
-  .transform((env) => ({ level: env.LOG_LEVEL }));
+  .transform(
+    (env): LoggingConfig => ({
+      level: env.LOG_LEVEL,
+      format: env.NODE_ENV === "development" ? "pretty" : "json",
+    }),
+  );
 
 const cli = z
   .object({ CLOSEOUT_PASSWORD: z.string().optional() })

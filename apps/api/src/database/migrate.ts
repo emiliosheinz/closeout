@@ -39,7 +39,7 @@ export async function migrate(dataSource: DataSource): Promise<string[]> {
 
 if (require.main === module) {
   const { database, logging } = parseOrExit(migrateScope);
-  const logger = createLogger(logging.level);
+  const logger = createLogger(logging);
   migrate(new DataSource(migrationDataSourceOptions(database))).then(
     (applied) => {
       logger.info(

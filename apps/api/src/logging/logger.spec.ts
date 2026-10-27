@@ -5,6 +5,7 @@ import { parseEnv } from "@/config/report";
 import { createLogger } from "./logger";
 
 const SENTINEL = "sentinel-7f3a9c";
+const INFO = { level: "info", format: "json" } as const;
 
 function memory(): DestinationStream & { lines: () => string[] } {
   const chunks: string[] = [];
@@ -41,14 +42,9 @@ function pgError(): Error {
 }
 
 describe("logger", () => {
-  afterEach(() => {
-    vi.unstubAllEnvs();
-  });
-
-  it("writes one JSON object with level, time and msg per line in production", () => {
-    vi.stubEnv("NODE_ENV", "production");
+  it("writes one JSON object with level, time and msg per line to an injected destination", () => {
     const out = memory();
-    const logger = createLogger("info", out);
+    const logger = createLogger(INFO, out);
 
     logger.info("started");
     logger.warn({ storeId: "s1" }, "slow");
@@ -71,7 +67,7 @@ describe("logger", () => {
     const out = memory();
     const err = Object.assign(new Error("disk full"), { code: "ENOSPC" });
 
-    createLogger("info", out).error({ err }, "write failed");
+    createLogger(INFO, out).error({ err }, "write failed");
 
     const [record] = records(out);
     expect(record.err).toEqual({
@@ -90,7 +86,7 @@ describe("logger", () => {
       pgError(),
     );
 
-    createLogger("info", out).error({ err }, "query failed");
+    createLogger(INFO, out).error({ err }, "query failed");
 
     const line = onlyLine(out);
     expect(JSON.parse(line).err).toEqual({
@@ -105,7 +101,7 @@ describe("logger", () => {
 
   it("never takes the message of a line logged without one from a driver error", () => {
     const out = memory();
-    const logger = createLogger("info", out);
+    const logger = createLogger(INFO, out);
     const err = new QueryFailedError("SELECT $1::uuid", [SENTINEL], pgError());
 
     logger.error({ err });
@@ -124,7 +120,7 @@ describe("logger", () => {
   it("logs only the SQLSTATE and object names of a bare driver error", () => {
     const out = memory();
 
-    createLogger("info", out).error({ err: pgError() }, "query failed");
+    createLogger(INFO, out).error({ err: pgError() }, "query failed");
 
     const line = onlyLine(out);
     expect(JSON.parse(line).err).toMatchObject({ code: "22P02" });
@@ -143,7 +139,7 @@ describe("logger", () => {
   ])("redacts %s at the top level and nested", (key) => {
     const out = memory();
 
-    createLogger("info", out).info(
+    createLogger(INFO, out).info(
       {
         [key]: SENTINEL,
         body: { [key]: SENTINEL },
@@ -180,7 +176,7 @@ describe("logger", () => {
     if (!parsed.ok) throw new Error(parsed.problems.join("\n"));
     const out = memory();
 
-    createLogger("info", out).info({ config: parsed.config }, "config");
+    createLogger(INFO, out).info({ config: parsed.config }, "config");
 
     const line = onlyLine(out);
     expect(JSON.parse(line).config.database.host).toBe("db.internal");
@@ -193,7 +189,7 @@ describe("logger", () => {
     ["debug", ["debug", "info", "warn", "error"]],
   ] as const)("writes only lines at or above level %s", (level, written) => {
     const out = memory();
-    const logger = createLogger(level, out);
+    const logger = createLogger({ level, format: "json" }, out);
 
     logger.debug("debug");
     logger.info("info");

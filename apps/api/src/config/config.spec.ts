@@ -264,7 +264,7 @@ describe("parsed configuration", () => {
         ssl: true,
       },
       media: { kind: "disk", dir: "/data/media" },
-      logging: { level: "info" },
+      logging: { level: "info", format: "json" },
     });
   });
 
@@ -275,8 +275,22 @@ describe("parsed configuration", () => {
     }
   });
 
-  it("logs at info when LOG_LEVEL is unset", () => {
-    expect(config(migrateScope, DATABASE).logging).toEqual({ level: "info" });
+  it("logs JSON at info when LOG_LEVEL and NODE_ENV are unset", () => {
+    expect(config(migrateScope, DATABASE).logging).toEqual({
+      level: "info",
+      format: "json",
+    });
+  });
+
+  it.each([
+    ["production", "json"],
+    ["test", "json"],
+    ["development", "pretty"],
+  ])("with NODE_ENV=%s, formats log lines as %s", (nodeEnv, format) => {
+    for (const scope of [serverScope, migrateScope]) {
+      const env = { ...SERVER_ENV, NODE_ENV: nodeEnv };
+      expect(config(scope, env).logging).toMatchObject({ format });
+    }
   });
 
   it("stores media on disk at MEDIA_DIR when no S3_* is set", () => {

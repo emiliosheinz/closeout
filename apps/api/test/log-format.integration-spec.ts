@@ -68,6 +68,17 @@ describe("production log format", () => {
     expectStructured(written);
   });
 
+  it("writes JSON lines, without the dev-only pretty-printer, when NODE_ENV is unset", async () => {
+    const run = runBuilt("database/migrate.js", { NODE_ENV: undefined });
+    expect(await run.exit).toEqual({ code: 0, signal: null });
+
+    const written = lines(run);
+    expect(written).toContainEqual(
+      expect.objectContaining({ msg: "No pending migrations" }),
+    );
+    expectStructured(written);
+  });
+
   it("writes only JSON lines from a failing migrate run", async () => {
     const run = runBuilt("database/migrate.js", {
       ...PRODUCTION,

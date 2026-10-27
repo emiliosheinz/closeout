@@ -31,9 +31,7 @@ export function appSetup(
   config: AppConfig,
   destination?: DestinationStream,
 ): AppSetup {
-  const httpLogger = requestLogger(
-    createLogger(config.logging.level, destination),
-  );
+  const httpLogger = requestLogger(createLogger(config.logging, destination));
   const { publicBaseUrl, internalSecret } = config.http;
   return {
     module: appModule(config, httpLogger.logger),
