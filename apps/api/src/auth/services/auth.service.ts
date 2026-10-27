@@ -43,7 +43,7 @@ export class AuthService {
     clientIp: string,
   ): Promise<{ sessionToken: string; expiresAt: Date }> {
     if (this.limiter.isBlocked(email, clientIp)) {
-      this.logger.warn(`Login rate limited for ${clientIp}`);
+      this.logger.warn({ ip: clientIp }, "Login rate limited");
       throw new HttpException(TOO_MANY_ATTEMPTS, HttpStatus.TOO_MANY_REQUESTS);
     }
 
@@ -54,7 +54,7 @@ export class AuthService {
       user?.passwordHash ?? (await getDummyHash()),
     );
     if (!user || !valid) {
-      this.logger.warn(`Failed login from ${clientIp}`);
+      this.logger.warn({ ip: clientIp }, "Failed login");
       throw new UnauthorizedException(INVALID_CREDENTIALS);
     }
 

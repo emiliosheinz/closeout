@@ -61,7 +61,15 @@ export class TeamService {
       [actor.storeId, userId, role],
     );
     this.logger.log(
-      `Member ${userId} (${target.email}) of store ${actor.storeId} changed from ${target.role} to ${role} by ${actor.userId}`,
+      {
+        memberId: userId,
+        email: target.email,
+        storeId: actor.storeId,
+        fromRole: target.role,
+        toRole: role,
+        actorId: actor.userId,
+      },
+      "Member role changed",
     );
     return toTeamMember({ ...target, role });
   }
@@ -94,7 +102,13 @@ export class TeamService {
       await manager.query(`DELETE FROM users WHERE id = $1`, [userId]);
     });
     this.logger.log(
-      `Member ${userId} (${target.email}) removed from store ${actor.storeId} by ${actor.userId}`,
+      {
+        memberId: userId,
+        email: target.email,
+        storeId: actor.storeId,
+        actorId: actor.userId,
+      },
+      "Member removed",
     );
     if (target.avatarKey) await this.media.remove(target.avatarKey);
   }

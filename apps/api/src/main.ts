@@ -13,6 +13,6 @@ async function bootstrap() {
 
   const { port, host } = config.http;
   await app.listen(port, host);
-  new Logger("Bootstrap").log(`API listening on http://${host}:${port}`);
+  new Logger("Bootstrap").log({ host, port }, "API listening");
 }
 bootstrap();

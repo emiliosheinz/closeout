@@ -127,7 +127,14 @@ export class InvitesService {
     );
     if (!row) throw new Error("Invite upsert returned no row");
     this.logger.log(
-      `Invite ${row.id} for ${email} as ${role} created in store ${actor.storeId} by ${actor.userId}`,
+      {
+        inviteId: row.id,
+        email,
+        role,
+        storeId: actor.storeId,
+        actorId: actor.userId,
+      },
+      "Invite created",
     );
     return { invite: toSummary(row), link: this.inviteLink(token) };
   }
@@ -153,7 +160,13 @@ export class InvitesService {
     const [row] = rows;
     if (!row) throw new NotFoundException(INVITE_NOT_FOUND);
     this.logger.log(
-      `Invite ${row.id} for ${row.email} revoked in store ${actor.storeId} by ${actor.userId}`,
+      {
+        inviteId: row.id,
+        email: row.email,
+        storeId: actor.storeId,
+        actorId: actor.userId,
+      },
+      "Invite revoked",
     );
   }
 
@@ -173,7 +186,13 @@ export class InvitesService {
     const [row] = rows;
     if (!row) throw new NotFoundException(INVITE_NOT_FOUND);
     this.logger.log(
-      `Invite ${row.id} for ${row.email} regenerated in store ${actor.storeId} by ${actor.userId}`,
+      {
+        inviteId: row.id,
+        email: row.email,
+        storeId: actor.storeId,
+        actorId: actor.userId,
+      },
+      "Invite regenerated",
     );
     return { invite: toSummary(row), link: this.inviteLink(token) };
   }
@@ -221,7 +240,12 @@ export class InvitesService {
     if (outcome === "has-account") throw new ConflictException(HAS_ACCOUNT);
 
     this.logger.log(
-      `Invite accepted: user ${outcome.userId} joined store ${outcome.storeId} as ${outcome.role}`,
+      {
+        userId: outcome.userId,
+        storeId: outcome.storeId,
+        role: outcome.role,
+      },
+      "Invite accepted",
     );
     // Minted after commit: the sessions service writes on its own
     // connection, which could not see the uncommitted user.
@@ -229,7 +253,7 @@ export class InvitesService {
       const { rawToken, expiresAt } = await this.sessions.mint(outcome.userId);
       return { sessionToken: rawToken, expiresAt };
     } catch (err) {
-      this.logger.error(`Session mint failed for user ${outcome.userId}`, err);
+      this.logger.error({ err, userId: outcome.userId }, "Session mint failed");
       throw new InternalServerErrorException(SIGN_IN_INSTEAD);
     }
   }
@@ -303,7 +327,7 @@ export class InvitesService {
    */
   private beginAttempt(clientIp: string): void {
     if (this.attempts.count(clientIp) >= MAX_INVALID_ATTEMPTS) {
-      this.logger.warn(`Invite attempts rate limited for ${clientIp}`);
+      this.logger.warn({ ip: clientIp }, "Invite attempts rate limited");
       throw new HttpException(TOO_MANY_ATTEMPTS, HttpStatus.TOO_MANY_REQUESTS);
     }
     this.attempts.record(clientIp);
