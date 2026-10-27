@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { mkdtemp } from "node:fs/promises";
+import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { DataSource } from "typeorm";
@@ -7,15 +7,16 @@ import { DataSource } from "typeorm";
 /**
  * Creates a throwaway database on the compose Postgres for this run and
  * applies the real migrations to it, so integration tests exercise the
- * production schema without touching development data.
+ * production schema without touching development data. Returns the teardown
+ * that drops it again.
  */
-export default async function globalSetup(): Promise<void> {
+export default async function globalSetup(): Promise<() => Promise<void>> {
   const database = `closeout_test_${randomBytes(4).toString("hex")}`;
   await runOnServer(`CREATE DATABASE "${database}"`);
 
   process.env.POSTGRES_DB = database;
-  process.env.CLOSEOUT_TEST_DATABASE = database;
-  process.env.MEDIA_DIR = await mkdtemp(path.join(tmpdir(), "closeout-media-"));
+  const mediaDir = await mkdtemp(path.join(tmpdir(), "closeout-media-"));
+  process.env.MEDIA_DIR = mediaDir;
   process.env.PUBLIC_BASE_URL = "http://storefront.test";
   process.env.INTERNAL_API_SECRET = "integration-test-secret-0123456789abcdef";
 
@@ -30,6 +31,11 @@ export default async function globalSetup(): Promise<void> {
   await dataSource.initialize();
   await dataSource.runMigrations();
   await dataSource.destroy();
+
+  return async () => {
+    await runOnServer(`DROP DATABASE IF EXISTS "${database}" WITH (FORCE)`);
+    await rm(mediaDir, { recursive: true, force: true });
+  };
 }
 
 export function connection(database: string | undefined) {

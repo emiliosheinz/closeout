@@ -19,7 +19,7 @@
     "check:fix": "biome check . --fix",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:integration": "jest --config ./test/jest-integration.json",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
     "cli": "node dist/cli/main.js",
     "migration:generate": "scripts/generate-migration.sh",
     "migration:run": "tsx node_modules/typeorm/cli.js migration:run -d src/database/connection.ts",

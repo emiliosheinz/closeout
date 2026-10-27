@@ -478,7 +478,7 @@ describe("store invites", () => {
 
     it("lets a blocked client try again once 15 minutes have passed", async () => {
       const start = Date.now();
-      const clock = jest.spyOn(Date, "now").mockReturnValue(start);
+      const clock = vi.spyOn(Date, "now").mockReturnValue(start);
       try {
         const { token } = await invite("nova@example.com");
         for (let i = 0; i < 10; i++) {
