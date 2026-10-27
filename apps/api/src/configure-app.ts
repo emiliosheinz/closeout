@@ -4,7 +4,7 @@ import type {
   NestApplicationOptions,
 } from "@nestjs/common";
 import type { NestExpressApplication } from "@nestjs/platform-express";
-import { Logger } from "nestjs-pino";
+import { Logger, PinoLogger } from "nestjs-pino";
 import type { DestinationStream } from "pino";
 import { appModule } from "./app.module";
 import type { AppConfig } from "./config/config";
@@ -24,7 +24,9 @@ export interface AppSetup {
  * How the server entry point and the integration tests boot the app: the
  * module, its creation options and the HTTP stages. The request id and
  * logger stage runs first, so requests refused by the origin check or the
- * body parser still get an id and a completion line. `destination` replaces
+ * body parser still get an id and a completion line. Nest logs through the
+ * same logger from creation on, so boot lines, a failed database connection
+ * included, are written in the configured format. `destination` replaces
  * stdout for log lines.
  */
 export function appSetup(
@@ -32,10 +34,17 @@ export function appSetup(
   destination?: DestinationStream,
 ): AppSetup {
   const httpLogger = requestLogger(createLogger(config.logging, destination));
+  const logger = new Logger(
+    new PinoLogger({
+      pinoHttp: { logger: httpLogger.logger },
+      useExisting: true,
+    }),
+    {},
+  );
   const { publicBaseUrl, internalSecret } = config.http;
   return {
     module: appModule(config, httpLogger.logger),
-    options: { bodyParser: false, bufferLogs: true },
+    options: { bodyParser: false, logger },
     configure: (app) => {
       const express = app as NestExpressApplication;
       express.disable("x-powered-by");
@@ -44,7 +53,6 @@ export function appSetup(
       express.use(originCheck(publicBaseUrl, internalSecret));
       express.useBodyParser("json");
       express.useBodyParser("urlencoded", { extended: true });
-      app.useLogger(app.get(Logger));
     },
   };
 }

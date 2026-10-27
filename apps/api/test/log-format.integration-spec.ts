@@ -1,6 +1,7 @@
 import {
   type BuiltProcess,
   type BuiltServer,
+  freePort,
   runBuilt,
   startBuiltServer,
 } from "./child-process";
@@ -53,6 +54,22 @@ describe("production log format", () => {
     );
     expect(written).toContainEqual(
       expect.objectContaining({ msg: "request completed" }),
+    );
+    expectStructured(written);
+  });
+
+  it("writes only JSON lines from a server that cannot reach the database", async () => {
+    const run = runBuilt("main.js", {
+      ...PRODUCTION,
+      PORT: String(await freePort()),
+      POSTGRES_HOST: "127.0.0.1",
+      POSTGRES_PORT: String(await freePort()),
+    });
+    expect(await run.exit).not.toEqual({ code: 0, signal: null });
+
+    const written = lines(run);
+    expect(written).toContainEqual(
+      expect.objectContaining({ level: 50, err: expect.any(Object) }),
     );
     expectStructured(written);
   });
