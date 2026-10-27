@@ -11,9 +11,7 @@ allowBuilds:
 
 catalog:
   '@biomejs/biome': 2.4.15
-  '@types/jest': 30.0.0
   '@types/node': 24.12.4
-  jest: 30.4.2
   typescript: 6.0.3
 
 injectWorkspacePackages: true
