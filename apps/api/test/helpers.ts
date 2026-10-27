@@ -15,6 +15,7 @@ import { createAdmin } from "@/cli/admin-commands";
 import { configureApp } from "@/configure-app";
 import { Roles } from "@/stores/membership";
 import { StoresService } from "@/stores/services/stores.service";
+import { installErrorRecorder } from "./error-recorder";
 
 export const ORIGIN = "http://storefront.test";
 export const INTERNAL_SECRET = "integration-test-secret-0123456789abcdef";
@@ -33,6 +34,7 @@ export async function createTestApp(
     imports: [AppModule, ...extraModules],
   }).compile();
   const app = moduleRef.createNestApplication({ logger: false });
+  if (process.env.ERROR_FIXTURE === "record") installErrorRecorder(app);
   configureApp(app);
   await app.init();
   return { app, dataSource: app.get(DataSource) };
