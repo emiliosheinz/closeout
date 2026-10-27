@@ -1,14 +1,9 @@
 import { randomUUID } from "node:crypto";
-import type { IncomingMessage } from "node:http";
 import type { Logger } from "pino";
 import { pinoHttp } from "pino-http";
-import { serializers } from "./serializers";
+import { pathOf, serializers } from "./serializers";
 
 const REQUEST_ID = /^[A-Za-z0-9_-]{1,128}$/;
-
-function pathOf(req: IncomingMessage): string {
-  return (req.url ?? "").split("?")[0] ?? "";
-}
 
 /**
  * Gives every request an id (a valid incoming `x-request-id`, else a new

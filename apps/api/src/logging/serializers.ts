@@ -71,12 +71,18 @@ export function serializeError(err: unknown): Record<string, unknown> {
   return { type, message: err.message, code, stack };
 }
 
-/** Method, id and path without the query string: never headers or bodies. */
+/** The request's path, without the query string. */
+export function pathOf(
+  req: IncomingMessage & { originalUrl?: string },
+): string {
+  return (req.originalUrl ?? req.url ?? "").split("?")[0] ?? "";
+}
+
+/** Method, id and path: never headers or bodies. */
 export function serializeRequest(
   req: IncomingMessage & { id?: unknown; originalUrl?: string },
 ): Record<string, unknown> {
-  const url = req.originalUrl ?? req.url ?? "";
-  return { id: req.id, method: req.method, path: url.split("?")[0] };
+  return { id: req.id, method: req.method, path: pathOf(req) };
 }
 
 export function serializeResponse(
