@@ -17,7 +17,7 @@
     "check:fix": { "dependsOn": ["^build"] },
     "test": { "dependsOn": ["^build"] },
     "test:watch": { "dependsOn": ["^build"], "persistent": true },
-    "test:integration": { "dependsOn": ["^build"], "cache": false },
+    "test:integration": { "dependsOn": ["build", "^build"], "cache": false },
     "test:e2e": { "dependsOn": ["^build"], "cache": false },
     "migration:run": { "dependsOn": ["^build"], "cache": false },
     "migration:revert": { "dependsOn": ["^build"], "cache": false },

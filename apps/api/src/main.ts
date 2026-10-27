@@ -6,6 +6,7 @@ import { configureApp } from "./configure-app";
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   configureApp(app);
+  app.enableShutdownHooks([], { useProcessExit: true });
 
   if (!process.env.PORT || !process.env.HOST) {
     throw new Error("PORT and HOST must be defined in environment variables");
