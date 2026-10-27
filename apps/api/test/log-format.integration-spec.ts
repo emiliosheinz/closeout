@@ -50,7 +50,11 @@ describe("production log format", () => {
 
     const written = lines(server);
     expect(written).toContainEqual(
-      expect.objectContaining({ msg: "API listening" }),
+      expect.objectContaining({
+        msg: "API listening",
+        host: "127.0.0.1",
+        port: Number(new URL(server.url).port),
+      }),
     );
     expect(written).toContainEqual(
       expect.objectContaining({ msg: "request completed" }),

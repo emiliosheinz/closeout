@@ -48,6 +48,13 @@ describe("diagnostic events", () => {
   let ipCount = 0;
   const server = () => ctx.app.getHttpServer();
   const asOwner = () => as(ctx.app, owner.cookie);
+  const ownerId = async (): Promise<string> => {
+    const [user] = await ctx.dataSource.query(
+      `SELECT id FROM users WHERE email = $1`,
+      [owner.email],
+    );
+    return user.id;
+  };
   const invites = () => `/stores/${owner.storeId}/invites`;
   const login = (password: string) =>
     request(server())
@@ -96,17 +103,19 @@ describe("diagnostic events", () => {
     });
   });
 
-  it("logs an issued invite with its id, store and inviter", async () => {
+  it("logs an issued invite with its id, email, role, store and inviter", async () => {
     const issued = await issueInvite();
 
     expect(event("Invite created", issued.res)).toMatchObject({
       inviteId: issued.id,
+      email: "nova@example.com",
       storeId: owner.storeId,
       role: "seller",
+      actorId: await ownerId(),
     });
   });
 
-  it("logs a regenerated invite with its id and store", async () => {
+  it("logs a regenerated invite with its id, email, store and actor", async () => {
     const issued = await issueInvite();
     const res = await asOwner()
       .post(`${invites()}/${issued.id}/regenerate`)
@@ -114,17 +123,21 @@ describe("diagnostic events", () => {
 
     expect(event("Invite regenerated", res)).toMatchObject({
       inviteId: issued.id,
+      email: "nova@example.com",
       storeId: owner.storeId,
+      actorId: await ownerId(),
     });
   });
 
-  it("logs a revoked invite with its id and store", async () => {
+  it("logs a revoked invite with its id, email, store and actor", async () => {
     const issued = await issueInvite();
     const res = await asOwner().delete(`${invites()}/${issued.id}`).expect(204);
 
     expect(event("Invite revoked", res)).toMatchObject({
       inviteId: issued.id,
+      email: "nova@example.com",
       storeId: owner.storeId,
+      actorId: await ownerId(),
     });
   });
 
@@ -196,7 +209,7 @@ describe("diagnostic events", () => {
     }
   });
 
-  it("logs a member role change with the member, store and actor", async () => {
+  it("logs a member role change with the member, email, store and actor", async () => {
     const member = await addMember(ctx, owner, {
       email: "vendedor@example.com",
       name: "Vendedor",
@@ -210,13 +223,15 @@ describe("diagnostic events", () => {
 
     expect(event("Member role changed", res)).toMatchObject({
       memberId: member.userId,
+      email: "vendedor@example.com",
       storeId: owner.storeId,
       fromRole: "seller",
       toRole: "admin",
+      actorId: await ownerId(),
     });
   });
 
-  it("logs a member removal with the member, store and actor", async () => {
+  it("logs a member removal with the member, email, store and actor", async () => {
     const member = await addMember(ctx, owner, {
       email: "vendedor@example.com",
       name: "Vendedor",
@@ -229,7 +244,9 @@ describe("diagnostic events", () => {
 
     expect(event("Member removed", res)).toMatchObject({
       memberId: member.userId,
+      email: "vendedor@example.com",
       storeId: owner.storeId,
+      actorId: await ownerId(),
     });
   });
 
