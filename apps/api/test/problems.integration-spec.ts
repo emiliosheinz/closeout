@@ -1,8 +1,20 @@
-import { Controller, Get, HttpException, Module } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Get,
+  HttpException,
+  Module,
+  Post,
+} from "@nestjs/common";
 import type { DestinationStream } from "pino";
 import request from "supertest";
 import { DataSource } from "typeorm";
-import { createTestApp, type TestContext } from "./helpers";
+import {
+  createTestApp,
+  INTERNAL_SECRET,
+  ORIGIN,
+  type TestContext,
+} from "./helpers";
 
 const SENTINEL = "sentinel-0b9e4d";
 const ERROR = 50;
@@ -25,6 +37,11 @@ class ProbeController {
   query() {
     return this.dataSource.query("SELECT $1::uuid", [SENTINEL]);
   }
+
+  @Post("echo")
+  echo(@Body() body: unknown) {
+    return { received: body };
+  }
 }
 
 @Module({ controllers: [ProbeController] })
@@ -35,6 +52,7 @@ interface LogLine {
   msg: string;
   reqId?: string;
   err?: { stack?: string; code?: string };
+  res?: { statusCode?: number };
 }
 
 describe("problem documents", () => {
@@ -46,12 +64,28 @@ describe("problem documents", () => {
     },
   };
   const raw = () => chunks.join("");
-  const errorLines = (): LogLine[] =>
+  const lines = (): LogLine[] =>
     raw()
       .split("\n")
       .filter(Boolean)
-      .map((line) => JSON.parse(line) as LogLine)
-      .filter((line) => line.level >= ERROR && line.err !== undefined);
+      .map((line) => JSON.parse(line) as LogLine);
+  const errorLines = () =>
+    lines().filter((line) => line.level >= ERROR && line.err !== undefined);
+  /** The request's single completion line carries its id and status. */
+  const completedOnce = (res: request.Response) => {
+    expect(lines().filter((line) => line.res !== undefined)).toEqual([
+      expect.objectContaining({
+        reqId: res.headers["x-request-id"],
+        res: { statusCode: res.status },
+      }),
+    ]);
+  };
+  const internalJson = (url: string) =>
+    request(server())
+      .post(url)
+      .set("x-internal-secret", INTERNAL_SECRET)
+      .set("x-client-ip", "192.0.2.80")
+      .set("Content-Type", "application/json");
   const server = () => ctx.app.getHttpServer();
 
   /** Asserts the problem envelope and returns the body. */
@@ -155,5 +189,69 @@ describe("problem documents", () => {
       requestId: res.headers["x-request-id"],
     });
     expect(res.text).not.toContain(SENTINEL);
+  });
+
+  describe("request bodies the parser cannot take", () => {
+    it("answers a malformed JSON body with 400 and never echoes or logs it", async () => {
+      const res = await internalJson("/auth/login").send(
+        `{"email": "a@example.com", "password": "${SENTINEL}`,
+      );
+
+      expect(problem(res, 400)).toEqual({
+        type: "about:blank",
+        title: "Bad Request",
+        status: 400,
+        detail: "Não foi possível ler os dados enviados.",
+        requestId: res.headers["x-request-id"],
+      });
+      expect(res.text).not.toContain(SENTINEL);
+      expect(raw()).not.toContain(SENTINEL);
+      completedOnce(res);
+    });
+
+    it("answers a JSON body over the size limit with 413", async () => {
+      const res = await internalJson("/auth/login").send(
+        JSON.stringify({
+          email: "a@example.com",
+          password: "x".repeat(200_000),
+        }),
+      );
+
+      expect(problem(res, 413)).toEqual({
+        type: "about:blank",
+        title: "Payload Too Large",
+        status: 413,
+        detail: "Requisição grande demais.",
+        requestId: res.headers["x-request-id"],
+      });
+      completedOnce(res);
+    });
+
+    it("reads a zero-length JSON body as an empty object", async () => {
+      const res = await request(server())
+        .post("/problem-probe/echo")
+        .set("Origin", ORIGIN)
+        .set("Content-Type", "application/json")
+        .send("");
+
+      expect(res.status).toBe(201);
+      expect(res.body).toEqual({ received: {} });
+    });
+  });
+
+  it("answers a write from a foreign origin with 403", async () => {
+    const res = await request(server())
+      .post("/problem-probe/echo")
+      .set("Origin", "https://elsewhere.example")
+      .send({ name: "x" });
+
+    expect(problem(res, 403)).toEqual({
+      type: "about:blank",
+      title: "Forbidden",
+      status: 403,
+      detail: "Origem não permitida.",
+      requestId: res.headers["x-request-id"],
+    });
+    completedOnce(res);
   });
 });

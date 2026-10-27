@@ -1,15 +1,19 @@
-import type {
-  DynamicModule,
-  INestApplication,
-  NestApplicationOptions,
+import { MALFORMED_BODY, PAYLOAD_TOO_LARGE } from "@closeout/contracts/schemas";
+import {
+  type DynamicModule,
+  HttpStatus,
+  type INestApplication,
+  type NestApplicationOptions,
 } from "@nestjs/common";
 import type { NestExpressApplication } from "@nestjs/platform-express";
+import type { ErrorRequestHandler } from "express";
 import { Logger, PinoLogger } from "nestjs-pino";
 import type { DestinationStream } from "pino";
 import { appModule } from "./app.module";
 import type { AppConfig } from "./config/config";
 import { createLogger } from "./logging/logger";
 import { requestLogger } from "./logging/request-logger";
+import { AppException } from "./problem/app-exception";
 import { originCheck } from "./security/origin-check.middleware";
 import { securityHeaders } from "./security/security-headers.middleware";
 
@@ -53,6 +57,25 @@ export function appSetup(
       express.use(originCheck(publicBaseUrl, internalSecret));
       express.useBodyParser("json");
       express.useBodyParser("urlencoded", { extended: true });
+      express.use(bodyParserFailures);
     },
   };
 }
+
+/**
+ * Hands body-parser failures to the problem filter as app exceptions, keyed
+ * on the parser's error type: left alone, the framework turns a malformed
+ * body into a 400 whose message echoes the body.
+ */
+const bodyParserFailures: ErrorRequestHandler = (err, _req, _res, next) => {
+  const type = (err as { type?: unknown } | null)?.type;
+  if (type === "entity.parse.failed") {
+    next(new AppException(HttpStatus.BAD_REQUEST, MALFORMED_BODY));
+    return;
+  }
+  if (type === "entity.too.large") {
+    next(new AppException(HttpStatus.PAYLOAD_TOO_LARGE, PAYLOAD_TOO_LARGE));
+    return;
+  }
+  next(err);
+};
