@@ -160,7 +160,7 @@ interface Outcome {
   code: number | null;
   stdout: string;
   stderr: string;
-  /** Whether the server's port accepted connections after the exit. */
+  /** Whether the server's port accepted connections at any point before the exit. */
   listening: boolean;
   /** Connections the stand-in database accepted during the run. */
   connections: number;
@@ -178,6 +178,15 @@ async function launch(entry: Entry, changes: Env): Promise<Outcome> {
   const before = connections;
   const run = start(entry, env);
   const timer = setTimeout(() => run.child.kill("SIGKILL"), 30_000);
+  let exited = false;
+  void run.exit.then(() => {
+    exited = true;
+  });
+  let listening = false;
+  while (!exited) {
+    if (await accepts(port)) listening = true;
+    await sleep(25);
+  }
   const { code } = await run.exit;
   clearTimeout(timer);
   // Let a connection made just before the exit reach the listener.
@@ -186,7 +195,7 @@ async function launch(entry: Entry, changes: Env): Promise<Outcome> {
     code,
     stdout: run.stdout(),
     stderr: run.stderr(),
-    listening: await accepts(port),
+    listening,
     connections: connections - before,
   };
 }

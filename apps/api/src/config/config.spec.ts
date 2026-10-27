@@ -225,6 +225,19 @@ describe("problem report", () => {
     expect(report.join("\n")).not.toContain("sentinel");
   });
 
+  it.each([
+    "POSTGRES_HOST",
+    "POSTGRES_DB",
+    "POSTGRES_USER",
+    "POSTGRES_PASSWORD",
+  ])("refuses %s when empty or unset, saying it must be set", (variable) => {
+    for (const value of ["", undefined]) {
+      expect(
+        problems(databaseScope, { ...DATABASE, [variable]: value }),
+      ).toEqual([`${variable} must be set`]);
+    }
+  });
+
   it("names a variable missing with no S3_* set", () => {
     expect(problems(cliScope, { ...CLI_ENV, MEDIA_DIR: undefined })).toEqual([
       "MEDIA_DIR must be set when no S3_* variable is set",
