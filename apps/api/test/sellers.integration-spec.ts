@@ -184,7 +184,15 @@ describe("seller profiles", () => {
       .attach("file", await photo("#111"), "a.jpg")
       .attach("file", await photo("#222"), "b.jpg")
       .expect(400);
-    expect(res.body.message).toBe("Envie uma foto por vez.");
+    expect(res.body.detail).toBe("Envie uma foto por vez.");
+  });
+
+  it("answers an avatar upload under another field name in Portuguese", async () => {
+    const res = await client()
+      .post(`${base()}/${admin.sellerId}/avatar`)
+      .attach("photo", await photo("#111"), "a.jpg")
+      .expect(400);
+    expect(res.body.detail).toBe("Envie uma foto por vez.");
   });
 
   it("refuses avatar uploads for another store's seller", async () => {

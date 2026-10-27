@@ -511,23 +511,37 @@ describe("listing administration", () => {
       expect(detail.body.imageCount).toBe(0);
     });
 
-    it("rejects files over 10 MB with 413 and persists nothing", async () => {
+    it("rejects uploaded files over 10 MB with 413 and persists nothing", async () => {
       const listing = await createListing();
       const before = await mediaFileCount();
       const res = await upload(listing.id, [
         Buffer.alloc(10 * 1024 * 1024 + 1),
       ]).expect(413);
-      expect(res.body.message).toBe("Cada foto pode ter até 10 MB.");
+      expect(res.body.detail).toBe("Cada foto pode ter até 10 MB.");
       expect(await mediaFileCount()).toBe(before);
       const detail = await client().get(`${base()}/${listing.id}`).expect(200);
       expect(detail.body.imageCount).toBe(0);
     });
 
-    it("rejects more than 8 files per request", async () => {
+    it("rejects more than 8 files per upload", async () => {
       const listing = await createListing();
       const small = await photo("#123", 32, 32);
       const res = await upload(listing.id, Array(9).fill(small)).expect(400);
-      expect(res.body.message).toBe("Envie até 8 fotos por vez.");
+      expect(res.body.detail).toBe("Envie até 8 fotos por vez.");
+    });
+
+    it("answers other errors on the upload route as problem documents", async () => {
+      const res = await upload("00000000-0000-4000-8000-000000000000", [
+        await photo(),
+      ]).expect(404);
+      expect(res.headers["content-type"]).toMatch(
+        /^application\/problem\+json(;|$)/,
+      );
+      expect(res.body).toMatchObject({
+        type: "about:blank",
+        status: 404,
+        requestId: res.headers["x-request-id"],
+      });
     });
 
     it("rejects images above 40 megapixels before decoding them", async () => {
@@ -635,7 +649,7 @@ describe("listing administration", () => {
         .field("alt", "texto")
         .attach("files", await photo(), "a.jpg")
         .expect(400);
-      expect(res.body.message).toBe("Envie apenas fotos, sem outros campos.");
+      expect(res.body.detail).toBe("Envie apenas fotos, sem outros campos.");
     });
 
     it("never serves files outside the media naming scheme", async () => {
