@@ -109,7 +109,14 @@ describe("production log format", () => {
 
     const written = lines(run);
     expect(written).toContainEqual(
-      expect.objectContaining({ msg: "Migration failed" }),
+      expect.objectContaining({
+        msg: "Migration failed",
+        // Postgres' SQLSTATE for a database that does not exist.
+        err: expect.objectContaining({
+          type: expect.any(String),
+          code: "3D000",
+        }),
+      }),
     );
     expectStructured(written);
   });
