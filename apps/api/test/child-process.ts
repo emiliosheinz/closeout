@@ -44,8 +44,21 @@ export async function freePort(): Promise<number> {
 export function runBuilt(
   script: string,
   env: NodeJS.ProcessEnv = {},
+  args: string[] = [],
 ): BuiltProcess {
-  const child = spawn(process.execPath, [path.join("dist", script)], {
+  return runInApi(process.execPath, [path.join("dist", script), ...args], env);
+}
+
+/**
+ * Run a command from the API package directory, with the test run's env
+ * plus `env`, capturing its output.
+ */
+export function runInApi(
+  command: string,
+  args: string[],
+  env: NodeJS.ProcessEnv = {},
+): BuiltProcess {
+  const child = spawn(command, args, {
     cwd: API_ROOT,
     env: { ...process.env, ...env },
   });
@@ -89,7 +102,8 @@ export async function startBuiltServer(
   return { ...server, url: `http://${HOST}:${port}` };
 }
 
-function accepts(port: number): Promise<boolean> {
+/** True when something accepts TCP connections on `port`. */
+export function accepts(port: number): Promise<boolean> {
   return new Promise((resolve) => {
     const socket = connect(port, HOST);
     socket.once("connect", () => {
