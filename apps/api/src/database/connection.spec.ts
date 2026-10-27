@@ -1,4 +1,4 @@
-import type { PostgresConnectionOptions } from "typeorm/driver/postgres/PostgresConnectionOptions";
+import type { PostgresDataSourceOptions } from "typeorm/driver/postgres/PostgresDataSourceOptions";
 
 const SETTINGS = {
   POSTGRES_HOST: "db.internal",
@@ -34,7 +34,7 @@ describe("dataSourceOptions", () => {
   });
 
   it("connects with the configured settings", () => {
-    const options = dataSourceOptions() as PostgresConnectionOptions;
+    const options = dataSourceOptions() as PostgresDataSourceOptions;
     expect([
       options.host,
       options.port,
