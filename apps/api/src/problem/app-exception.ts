@@ -25,6 +25,11 @@ export class AppException extends HttpException {
     { errors, checks, retryAfter }: ProblemExtensions = {},
   ) {
     super(detail, status);
+    if (errors && errors[0]?.detail !== detail) {
+      throw new Error(
+        "AppException errors must be non-empty and lead with the detail",
+      );
+    }
     this.errors = errors;
     this.checks = checks;
     this.retryAfter = retryAfter;
