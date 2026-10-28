@@ -1,4 +1,4 @@
-import { NOT_FOUND } from "@closeout/contracts/schemas";
+import { type CatalogQuery, NOT_FOUND } from "@closeout/contracts/schemas";
 import { HttpStatus, Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import {
@@ -13,10 +13,6 @@ import { AppException } from "@/problem/app-exception";
 import { Seller } from "@/sellers/entities/seller.entity";
 import { Category } from "@/stores/entities/category.entity";
 import { Store } from "@/stores/entities/store.entity";
-import {
-  type CatalogQueryDto,
-  DEFAULT_PAGE_SIZE,
-} from "../dto/catalog-query.dto";
 import { Listing } from "../entities/listing.entity";
 import { ListingImage } from "../entities/listing-image.entity";
 import {
@@ -28,6 +24,7 @@ import {
 import { escapeLike } from "../sql";
 
 const RELATED_LIMIT = 4;
+const DEFAULT_PAGE_SIZE = 24;
 
 /** Exactly what toPublicSummary reads, plus the id used to attach covers. */
 const SUMMARY_COLUMNS = [
@@ -152,7 +149,7 @@ export class PublicCatalogService {
 
   async listListings(
     storeSlug: string,
-    query: CatalogQueryDto,
+    query: CatalogQuery,
   ): Promise<PublicListingPage> {
     const store = await this.findStore(storeSlug);
     const page = query.page ?? 1;
@@ -244,7 +241,7 @@ export class PublicCatalogService {
 
 function applyFilters(
   builder: SelectQueryBuilder<Listing>,
-  query: CatalogQueryDto,
+  query: CatalogQuery,
 ): void {
   const availability = query.availability ?? "listed";
   if (availability === "listed") {
@@ -283,7 +280,7 @@ function applyFilters(
 
 function applySort(
   builder: SelectQueryBuilder<Listing>,
-  sort: NonNullable<CatalogQueryDto["sort"]>,
+  sort: NonNullable<CatalogQuery["sort"]>,
 ): void {
   if (sort === "price_asc") {
     builder.orderBy("l.priceCents", "ASC", "NULLS LAST");

@@ -1,5 +1,9 @@
+import {
+  type CatalogQuery,
+  catalogQuerySchema,
+  routeNameSchema,
+} from "@closeout/contracts/schemas";
 import { Controller, Get, Param, Query } from "@nestjs/common";
-import { CatalogQueryDto } from "../dto/catalog-query.dto";
 import type { PublicListingDetail } from "../public-mappers";
 import {
   PublicCatalogService,
@@ -20,22 +24,24 @@ export class PublicCatalogController {
   }
 
   @Get(":storeSlug")
-  store(@Param("storeSlug") storeSlug: string): Promise<PublicStore> {
+  store(
+    @Param("storeSlug", { schema: routeNameSchema }) storeSlug: string,
+  ): Promise<PublicStore> {
     return this.catalog.getStore(storeSlug);
   }
 
   @Get(":storeSlug/listings")
   listings(
-    @Param("storeSlug") storeSlug: string,
-    @Query() query: CatalogQueryDto,
+    @Param("storeSlug", { schema: routeNameSchema }) storeSlug: string,
+    @Query({ schema: catalogQuerySchema }) query: CatalogQuery,
   ): Promise<PublicListingPage> {
     return this.catalog.listListings(storeSlug, query);
   }
 
   @Get(":storeSlug/listings/:listingSlug")
   listing(
-    @Param("storeSlug") storeSlug: string,
-    @Param("listingSlug") listingSlug: string,
+    @Param("storeSlug", { schema: routeNameSchema }) storeSlug: string,
+    @Param("listingSlug", { schema: routeNameSchema }) listingSlug: string,
   ): Promise<PublicListingDetail> {
     return this.catalog.getListing(storeSlug, listingSlug);
   }

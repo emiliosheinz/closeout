@@ -64,7 +64,7 @@
       "page must not be less than 1",
       "sort must be one of the following values: recent, price_asc, price_desc"
     ],
-    "expectedDetail": "Requisição inválida.",
+    "expectedDetail": ["Campo não permitido.", "Valor inválido."],
     "changedBy": "request validation reports field errors"
   },
   "GET /public/stores/:storeSlug/listings 404": {
@@ -154,7 +154,13 @@
       "property storeId should not exist",
       "sellerIds must contain at least 1 elements"
     ],
-    "expectedDetail": "Requisição inválida.",
+    "expectedDetail": [
+      "Campo não permitido.",
+      "Escolha ao menos uma pessoa para receber as mensagens.",
+      "Escolha cada pessoa uma vez só.",
+      "Escolha uma categoria.",
+      "Valor inválido."
+    ],
     "changedBy": "request validation reports field errors"
   },
   "PATCH /stores/:storeId/listings/:id 403": {
@@ -173,7 +179,7 @@
     "recorded": [
       "availability must be one of the following values: available, reserved, sold"
     ],
-    "expectedDetail": "Requisição inválida.",
+    "expectedDetail": "Valor inválido.",
     "changedBy": "request validation reports field errors"
   },
   "PATCH /stores/:storeId/listings/:id/status 404": {
@@ -338,7 +344,14 @@
       "priceCents must not be less than 0",
       "title should not be empty"
     ],
-    "expectedDetail": ["Escolha ao menos um vendedor.", "Requisição inválida."],
+    "expectedDetail": [
+      "Dê um nome ao item.",
+      "Escolha ao menos um vendedor.",
+      "Escolha ao menos uma pessoa para receber as mensagens.",
+      "Escolha uma categoria.",
+      "Use um valor como 1.200,00, ou deixe vazio para \"Preço a combinar\".",
+      "Vendedor inválido."
+    ],
     "changedBy": "request validation reports field errors"
   },
   "POST /stores/:storeId/listings 404": {
@@ -365,7 +378,8 @@
       "Arquivo não é uma imagem válida.",
       "Envie ao menos uma foto.",
       "Envie apenas fotos, sem outros campos.",
-      "Envie até 8 fotos por vez."
+      "Envie até 8 fotos por vez.",
+      "Valor inválido."
     ]
   },
   "POST /stores/:storeId/listings/:id/images 404": {

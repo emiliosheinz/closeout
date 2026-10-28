@@ -170,6 +170,70 @@ describe("listing administration", () => {
         .expect(400);
     });
 
+    it("reports each required field of an empty listing", async () => {
+      const res = await client()
+        .post(base())
+        .set("Content-Type", "application/json")
+        .expect(400);
+      expect(res.body.detail).toBe("Dê um nome ao item.");
+      expect(res.body.errors).toEqual([
+        { pointer: "/title", detail: "Dê um nome ao item." },
+        { pointer: "/categoryId", detail: "Escolha uma categoria." },
+        { pointer: "/condition", detail: "Escolha o estado do item." },
+      ]);
+    });
+
+    it("rejects category and seller ids that are not UUIDs", async () => {
+      const fields = {
+        title: "Mesa",
+        categoryId: admin.categoryId,
+        sellerIds: [admin.sellerId],
+        condition: "good",
+      };
+      const category = await client()
+        .post(base())
+        .send({ ...fields, categoryId: "sala" })
+        .expect(400);
+      expect(category.body.errors).toEqual([
+        { pointer: "/categoryId", detail: "Escolha uma categoria." },
+      ]);
+      const sellers = await client()
+        .post(base())
+        .send({ ...fields, sellerIds: [admin.sellerId, "ana"] })
+        .expect(400);
+      expect(sellers.body.errors).toEqual([
+        { pointer: "/sellerIds/1", detail: "Vendedor inválido." },
+      ]);
+      const listing = await createListing();
+      const update = await client()
+        .patch(`${base()}/${listing.id}`)
+        .send({ categoryId: "sala" })
+        .expect(400);
+      expect(update.body.errors).toEqual([
+        { pointer: "/categoryId", detail: "Escolha uma categoria." },
+      ]);
+    });
+
+    it("rejects listing and photo ids that are not UUIDs at their route params", async () => {
+      const listing = await createListing();
+      const invalidId = [{ pointer: "/params/id", detail: "Valor inválido." }];
+      for (const res of [
+        await client().get(`${base()}/mesa`),
+        await client().patch(`${base()}/mesa`).send({ title: "Mesa" }),
+        await client().delete(`${base()}/mesa`),
+        await upload("mesa", [await photo()]),
+      ]) {
+        expect(res.status).toBe(400);
+        expect(res.body.errors).toEqual(invalidId);
+      }
+      const image = await client()
+        .delete(`${base()}/${listing.id}/images/foto`)
+        .expect(400);
+      expect(image.body.errors).toEqual([
+        { pointer: "/params/imageId", detail: "Valor inválido." },
+      ]);
+    });
+
     it("sells one listing through several sellers, listed by name", async () => {
       const partner = await addMember(ctx, admin, {
         email: "bia@example.com",
@@ -218,11 +282,25 @@ describe("listing administration", () => {
         .send({
           title: "Mesa",
           categoryId: admin.categoryId,
-          sellerIds: [],
           condition: "good",
         })
         .expect(400);
       expect(noSeller.body.detail).toBe("Escolha ao menos um vendedor.");
+      const emptySellers = await client()
+        .post(base())
+        .send({
+          title: "Mesa",
+          categoryId: admin.categoryId,
+          sellerIds: [],
+          condition: "good",
+        })
+        .expect(400);
+      expect(emptySellers.body.errors).toEqual([
+        {
+          pointer: "/sellerIds",
+          detail: "Escolha ao menos uma pessoa para receber as mensagens.",
+        },
+      ]);
       const listing = await createListing();
       await client()
         .patch(`${base()}/${listing.id}`)
@@ -818,7 +896,6 @@ describe("listing administration", () => {
     it("makes the seller the only seller of what they create, whatever they submit", async () => {
       const submissions = [
         { sellerIds: [admin.sellerId, partner.sellerId] },
-        { sellerIds: [] },
         {},
       ];
       for (const submitted of submissions) {
@@ -834,6 +911,28 @@ describe("listing administration", () => {
         expect(res.body.sellers).toEqual([
           { id: seller.sellerId, displayName: "Vendedora" },
         ]);
+      }
+      await asSeller()
+        .post(base())
+        .send({
+          title: "Luminária",
+          categoryId: admin.categoryId,
+          condition: "good",
+          sellerIds: [],
+        })
+        .expect(400);
+    });
+
+    it("answers a seller's non-UUID listing id as an unknown listing", async () => {
+      for (const res of [
+        await asSeller().get(`${base()}/mesa`),
+        await asSeller().patch(`${base()}/mesa`).send({ title: "Mesa" }),
+        await asSeller()
+          .post(`${base()}/mesa/images`)
+          .attach("files", await photo(), "a.jpg"),
+      ]) {
+        expect(res.status).toBe(404);
+        expect(res.body.detail).toBe("Anúncio não encontrado.");
       }
     });
 

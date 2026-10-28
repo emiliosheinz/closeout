@@ -235,6 +235,51 @@ describe("public catalog", () => {
     await get("/listings?minPrice=100000001").expect(400);
   });
 
+  it("accepts query numbers at their bounds", async () => {
+    await publish({ title: "Mesa", priceCents: 0 });
+    const res = await get(
+      "/listings?page=1000&pageSize=100&minPrice=0&maxPrice=100000000",
+    ).expect(200);
+    expect(res.body).toMatchObject({ page: 1000, pageSize: 100, total: 1 });
+    const first = await get("/listings?page=1&pageSize=1").expect(200);
+    expect(first.body).toMatchObject({ page: 1, pageSize: 1 });
+  });
+
+  it.each([
+    ["page", "1001"],
+    ["page", "1.5"],
+    ["pageSize", "0"],
+    ["pageSize", "101"],
+    ["minPrice", "-1"],
+    ["minPrice", "10.5"],
+    ["maxPrice", "100000001"],
+  ])("reports %s=%s at its query pointer", async (name, value) => {
+    const res = await get(`/listings?${name}=${value}`).expect(400);
+    expect(res.body.errors).toEqual([
+      { pointer: `/query/${name}`, detail: "Valor inválido." },
+    ]);
+  });
+
+  it("reports an unknown query key at its query pointer", async () => {
+    const res = await get("/listings?color=blue").expect(400);
+    expect(res.body.errors).toEqual([
+      { pointer: "/query/color", detail: "Campo não permitido." },
+    ]);
+  });
+
+  it("answers 404 for malformed store and listing slugs", async () => {
+    const server = ctx.app.getHttpServer();
+    for (const path of [
+      "/public/stores/Loja%20A",
+      "/public/stores/Loja%20A/listings",
+      "/public/stores/loja-a/listings/..%2Fmesa",
+      `/public/stores/loja-a/listings/${"x".repeat(300)}`,
+    ]) {
+      const res = await request(server).get(path).expect(404);
+      expect(res.body.detail).toBe("Não encontrado.");
+    }
+  });
+
   it("answers 404 for drafts, archived listings and unknown stores", async () => {
     const draft = await insertListing(ctx.dataSource, admin, {
       publication: "draft",

@@ -1,9 +1,9 @@
+import { parseRequest, uuidSchema } from "@closeout/contracts/schemas";
 import {
   type CanActivate,
   type ExecutionContext,
   Injectable,
 } from "@nestjs/common";
-import { isUUID } from "class-validator";
 import {
   isManager,
   type RequestWithMembership,
@@ -27,7 +27,10 @@ export class AssignedListingGuard implements CanActivate {
     const member = requireMembership(request);
     if (!("id" in request.params) || isManager(member.role)) return true;
     const id = request.params.id;
-    if (!id || !isUUID(id) || !(await this.listings.isVisibleTo(member, id))) {
+    if (
+      !parseRequest(uuidSchema, id).success ||
+      !(await this.listings.isVisibleTo(member, id))
+    ) {
       throw listingNotFound();
     }
     return true;
