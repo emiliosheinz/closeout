@@ -3,7 +3,7 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { DataSource } from "typeorm";
-import { compareWithFixture } from "./error-recorder";
+import { compareWithFixture } from "./error-fixture";
 
 /**
  * Creates a throwaway database on the compose Postgres for this run and

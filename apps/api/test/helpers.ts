@@ -17,7 +17,7 @@ import { parseEnv } from "@/config/report";
 import { appSetup } from "@/configure-app";
 import { Roles } from "@/stores/membership";
 import { StoresService } from "@/stores/services/stores.service";
-import { installErrorObserver } from "./error-recorder";
+import { installErrorObserver } from "./error-fixture";
 
 export const ORIGIN = "http://storefront.test";
 export const INTERNAL_SECRET = "integration-test-secret-0123456789abcdef";
