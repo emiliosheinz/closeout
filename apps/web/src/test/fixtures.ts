@@ -93,3 +93,20 @@ export const problemResponse = (
     status,
     headers: { "Content-Type": "application/problem+json" },
   });
+
+/** Asserts a route handler answered with a problem document of that status and detail. */
+export async function expectProblem(
+  response: Response,
+  status: number,
+  detail: string,
+) {
+  expect(response.status).toBe(status);
+  expect(response.headers.get("content-type")).toBe("application/problem+json");
+  expect(await response.json()).toEqual({
+    type: "about:blank",
+    title: expect.any(String),
+    status,
+    detail,
+    requestId: expect.any(String),
+  });
+}

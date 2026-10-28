@@ -46,9 +46,9 @@ export function LoginForm() {
       return;
     }
     const body = (await response.json().catch(() => ({}))) as {
-      message?: string;
+      detail?: string;
     };
-    setError("root", { message: body.message ?? FALLBACK_MESSAGE });
+    setError("root", { message: body.detail ?? FALLBACK_MESSAGE });
   }
 
   function guarded(event: React.FormEvent<HTMLFormElement>) {

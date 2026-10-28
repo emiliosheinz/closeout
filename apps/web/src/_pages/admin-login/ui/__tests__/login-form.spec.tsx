@@ -5,13 +5,14 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
+import { problem } from "@/test/fixtures";
 import { LoginForm } from "../login-form";
 
 describe("LoginForm", () => {
   it("keeps its Origin even when the page arrived with a no-referrer policy", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: false,
-      json: async () => ({ message: "E-mail ou senha inválidos." }),
+      json: async () => problem(401, "E-mail ou senha inválidos."),
     });
     global.fetch = fetchMock as unknown as typeof fetch;
     render(<LoginForm />);
@@ -35,6 +36,26 @@ describe("LoginForm", () => {
         }),
       ),
     );
+  });
+
+  it.each([
+    [400, "Informe um e-mail válido e a senha."],
+    [429, "Muitas tentativas. Tente novamente em alguns minutos."],
+  ])("shows the %s problem's detail", async (status, detail) => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      json: async () => problem(status, detail),
+    }) as unknown as typeof fetch;
+    render(<LoginForm />);
+    fireEvent.change(screen.getByLabelText("E-mail"), {
+      target: { value: "ana@loja.test" },
+    });
+    fireEvent.change(screen.getByLabelText("Senha"), {
+      target: { value: "senha-longa-1" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Entrar" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(detail);
   });
 
   it("falls back to a generic message when a failed response carries none", async () => {
@@ -150,7 +171,7 @@ describe("LoginForm", () => {
   it("clears the field messages once both are fixed and resubmitted", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: false,
-      json: async () => ({ message: "E-mail ou senha inválidos." }),
+      json: async () => problem(401, "E-mail ou senha inválidos."),
     });
     global.fetch = fetchMock as unknown as typeof fetch;
     render(<LoginForm />);
@@ -191,7 +212,7 @@ describe("LoginForm", () => {
       .fn()
       .mockResolvedValueOnce({
         ok: false,
-        json: async () => ({ message: "E-mail ou senha inválidos." }),
+        json: async () => problem(401, "E-mail ou senha inválidos."),
       })
       .mockReturnValueOnce(
         new Promise((r) => {

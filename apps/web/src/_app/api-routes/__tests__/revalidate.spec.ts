@@ -3,7 +3,7 @@ import { revalidateTag } from "next/cache";
 import { NextRequest } from "next/server";
 import { POST } from "@/_app/api-routes/revalidate";
 import { getMe } from "@/entities/session/index.server";
-import { meResponse } from "@/test/fixtures";
+import { expectProblem, meResponse } from "@/test/fixtures";
 
 vi.mock("next/cache", () => ({ revalidateTag: vi.fn() }));
 vi.mock("@/entities/session/index.server", () => ({ getMe: vi.fn() }));
@@ -32,13 +32,21 @@ describe("catalog revalidate route", () => {
 
   it("refuses visitors without a session", async () => {
     vi.mocked(getMe).mockResolvedValue(null);
-    expect((await expire()).status).toBe(401);
+    await expectProblem(
+      await expire(),
+      401,
+      "Sua sessão expirou. Entre de novo.",
+    );
     expect(revalidateTag).not.toHaveBeenCalled();
   });
 
   it("refuses cross-origin calls before checking the session", async () => {
     vi.mocked(getMe).mockClear();
-    expect((await expire("https://evil.example")).status).toBe(403);
+    await expectProblem(
+      await expire("https://evil.example"),
+      403,
+      "Origem não permitida.",
+    );
     expect(getMe).not.toHaveBeenCalled();
     expect(revalidateTag).not.toHaveBeenCalled();
   });
