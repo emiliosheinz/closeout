@@ -435,18 +435,21 @@ describe("store permissions", () => {
     const unknown = await seller
       .get(`${store(fx)}/listings/00000000-0000-4000-8000-000000000000`)
       .expect(404);
-    expect(unknown.body).toEqual({
-      statusCode: 404,
-      message: "Anúncio não encontrado.",
-      error: "Not Found",
-    });
+    const notFound = {
+      type: "about:blank",
+      title: "Not Found",
+      status: 404,
+      detail: "Anúncio não encontrado.",
+      requestId: expect.any(String),
+    };
+    expect(unknown.body).toEqual(notFound);
     const hidden = await seller.get(await unassigned(fx)).expect(404);
-    expect(hidden.body).toEqual(unknown.body);
+    expect(hidden.body).toEqual(notFound);
     const malformed = await seller
       .patch(`${store(fx)}/listings/not-a-uuid/status`)
       .send({ availability: "sold" })
       .expect(404);
-    expect(malformed.body).toEqual(unknown.body);
+    expect(malformed.body).toEqual(notFound);
   });
 
   it("declares the allowed roles on every store route", () => {

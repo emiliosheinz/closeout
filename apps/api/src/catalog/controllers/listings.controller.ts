@@ -1,10 +1,10 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   Delete,
   Get,
   HttpCode,
+  HttpStatus,
   Param,
   ParseUUIDPipe,
   Patch,
@@ -27,6 +27,7 @@ import {
   imageUploadOptions,
   MAX_FILES_PER_REQUEST,
 } from "@/media/upload-limits";
+import { AppException } from "@/problem/app-exception";
 import { StoreMemberGuard } from "@/stores/guards/store-member.guard";
 import {
   ANY_MEMBER,
@@ -50,6 +51,8 @@ import {
   type AdminListingSummary,
   ListingsService,
 } from "../services/listings.service";
+
+const NO_PHOTOS = "Envie ao menos uma foto.";
 
 @Controller("stores/:storeId/listings")
 @UseGuards(SessionGuard, StoreMemberGuard, AssignedListingGuard)
@@ -153,7 +156,7 @@ export class ListingsController {
     @UploadedFiles() files: Express.Multer.File[] | undefined,
   ): Promise<{ items: AdminImage[] }> {
     if (!files || files.length === 0) {
-      throw new BadRequestException("Envie ao menos uma foto.");
+      throw new AppException(HttpStatus.BAD_REQUEST, NO_PHOTOS);
     }
     try {
       const items = await this.images.add(
@@ -164,7 +167,7 @@ export class ListingsController {
       return { items };
     } catch (err) {
       if (err instanceof InvalidImageError) {
-        throw new BadRequestException(err.message);
+        throw new AppException(HttpStatus.BAD_REQUEST, err.message);
       }
       throw err;
     }

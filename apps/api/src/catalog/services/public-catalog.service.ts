@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { NOT_FOUND } from "@closeout/contracts/schemas";
+import { HttpStatus, Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import {
   In,
@@ -8,6 +9,7 @@ import {
   type SelectQueryBuilder,
 } from "typeorm";
 import { mediaUrls } from "@/media/media-urls";
+import { AppException } from "@/problem/app-exception";
 import { Seller } from "@/sellers/entities/seller.entity";
 import { Category } from "@/stores/entities/category.entity";
 import { Store } from "@/stores/entities/store.entity";
@@ -194,7 +196,7 @@ export class PublicCatalogService {
       relations: { category: true, sellers: { seller: true }, images: true },
       order: { images: { position: "ASC" } },
     });
-    if (!listing) throw new NotFoundException();
+    if (!listing) throw new AppException(HttpStatus.NOT_FOUND, NOT_FOUND);
     return toPublicDetail(listing, await this.related(listing));
   }
 
@@ -235,7 +237,7 @@ export class PublicCatalogService {
 
   private async findStore(slug: string): Promise<Store> {
     const store = await this.stores.findOne({ where: { slug } });
-    if (!store) throw new NotFoundException();
+    if (!store) throw new AppException(HttpStatus.NOT_FOUND, NOT_FOUND);
     return store;
   }
 }

@@ -1,17 +1,19 @@
-import {
-  Injectable,
-  NotFoundException,
-  UnprocessableEntityException,
-} from "@nestjs/common";
+import { HttpStatus, Injectable } from "@nestjs/common";
 import { InjectDataSource } from "@nestjs/typeorm";
 import type { DataSource, EntityManager } from "typeorm";
 import { MediaService, type StoredImage } from "@/media/media.service";
 import { MAX_IMAGES_PER_LISTING } from "@/media/upload-limits";
+import { AppException } from "@/problem/app-exception";
 import { type AdminImage, toAdminImage } from "../admin-mappers";
 import { Listing } from "../entities/listing.entity";
 import { ListingImage } from "../entities/listing-image.entity";
 import { canRemovePhoto, PUBLISHED_KEEPS_A_PHOTO } from "../listing-rules";
-import { LISTING_NOT_FOUND, lockListing } from "./listings.service";
+import { listingNotFound, lockListing } from "./listings.service";
+
+const TOO_MANY_IMAGES = `Cada anúncio pode ter até ${MAX_IMAGES_PER_LISTING} fotos.`;
+const INCOMPLETE_ORDER =
+  "A nova ordem precisa conter todas as fotos do anúncio.";
+const PHOTO_NOT_FOUND = "Foto não encontrada.";
 
 @Injectable()
 export class ListingImagesService {
@@ -36,13 +38,11 @@ export class ListingImagesService {
         .getRepository(Listing)
         .exists({ where: { id: listingId, storeId } }))
     ) {
-      throw new NotFoundException(LISTING_NOT_FOUND);
+      throw listingNotFound();
     }
     const existing = await repo.count({ where: { listingId } });
     if (existing + files.length > MAX_IMAGES_PER_LISTING) {
-      throw new UnprocessableEntityException(
-        `Cada anúncio pode ter até ${MAX_IMAGES_PER_LISTING} fotos.`,
-      );
+      throw new AppException(HttpStatus.UNPROCESSABLE_ENTITY, TOO_MANY_IMAGES);
     }
 
     const stored: StoredImage[] = [];
@@ -54,8 +54,9 @@ export class ListingImagesService {
           .getRepository(ListingImage)
           .count({ where: { listingId } });
         if (count + stored.length > MAX_IMAGES_PER_LISTING) {
-          throw new UnprocessableEntityException(
-            `Cada anúncio pode ter até ${MAX_IMAGES_PER_LISTING} fotos.`,
+          throw new AppException(
+            HttpStatus.UNPROCESSABLE_ENTITY,
+            TOO_MANY_IMAGES,
           );
         }
         await manager.getRepository(ListingImage).save(
@@ -93,8 +94,9 @@ export class ListingImagesService {
         new Set(ids).size === ids.length &&
         ids.every((id) => currentIds.has(id));
       if (!sameSet) {
-        throw new UnprocessableEntityException(
-          "A nova ordem precisa conter todas as fotos do anúncio.",
+        throw new AppException(
+          HttpStatus.UNPROCESSABLE_ENTITY,
+          INCOMPLETE_ORDER,
         );
       }
       for (const [position, id] of ids.entries()) {
@@ -120,9 +122,14 @@ export class ListingImagesService {
           order: { position: "ASC" },
         });
         const target = remaining.find((image) => image.id === imageId);
-        if (!target) throw new NotFoundException("Foto não encontrada.");
+        if (!target) {
+          throw new AppException(HttpStatus.NOT_FOUND, PHOTO_NOT_FOUND);
+        }
         if (!canRemovePhoto(listing, remaining.length)) {
-          throw new UnprocessableEntityException(PUBLISHED_KEEPS_A_PHOTO);
+          throw new AppException(
+            HttpStatus.UNPROCESSABLE_ENTITY,
+            PUBLISHED_KEEPS_A_PHOTO,
+          );
         }
         await repo.delete({ id: target.id });
         const rest = remaining.filter((image) => image.id !== target.id);

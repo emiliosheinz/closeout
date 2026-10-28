@@ -242,11 +242,13 @@ describe("public catalog", () => {
     const archived = await insertListing(ctx.dataSource, admin, {
       publication: "archived",
     });
-    await get(`/listings/${draft.slug}`).expect(404);
+    const hidden = await get(`/listings/${draft.slug}`).expect(404);
     await get(`/listings/${archived.slug}`).expect(404);
-    await request(ctx.app.getHttpServer())
+    const unknownStore = await request(ctx.app.getHttpServer())
       .get("/public/stores/nope/listings")
       .expect(404);
+    expect(hidden.body.detail).toBe("Não encontrado.");
+    expect(unknownStore.body.detail).toBe("Não encontrado.");
   });
 
   it("serves full detail for a published listing with its seller's contact", async () => {

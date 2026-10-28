@@ -2,7 +2,6 @@ import {
   type CanActivate,
   type ExecutionContext,
   Injectable,
-  NotFoundException,
 } from "@nestjs/common";
 import { isUUID } from "class-validator";
 import {
@@ -10,10 +9,7 @@ import {
   type RequestWithMembership,
   requireMembership,
 } from "@/stores/membership";
-import {
-  LISTING_NOT_FOUND,
-  ListingsService,
-} from "../services/listings.service";
+import { ListingsService, listingNotFound } from "../services/listings.service";
 
 /**
  * Runs after `StoreMemberGuard` on the listing routes. On a route addressing
@@ -32,7 +28,7 @@ export class AssignedListingGuard implements CanActivate {
     if (!("id" in request.params) || isManager(member.role)) return true;
     const id = request.params.id;
     if (!id || !isUUID(id) || !(await this.listings.isVisibleTo(member, id))) {
-      throw new NotFoundException(LISTING_NOT_FOUND);
+      throw listingNotFound();
     }
     return true;
   }

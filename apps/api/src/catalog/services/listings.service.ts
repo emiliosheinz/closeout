@@ -3,13 +3,7 @@ import type {
   Condition,
   Publication,
 } from "@closeout/contracts/enums";
-import {
-  BadRequestException,
-  ConflictException,
-  Injectable,
-  NotFoundException,
-  UnprocessableEntityException,
-} from "@nestjs/common";
+import { HttpStatus, Injectable } from "@nestjs/common";
 import { InjectDataSource, InjectRepository } from "@nestjs/typeorm";
 import {
   DataSource,
@@ -21,6 +15,7 @@ import {
 } from "typeorm";
 import { MediaService } from "@/media/media.service";
 import { mediaUrls } from "@/media/media-urls";
+import { AppException } from "@/problem/app-exception";
 import { Seller } from "@/sellers/entities/seller.entity";
 import { Category } from "@/stores/entities/category.entity";
 import {
@@ -97,8 +92,14 @@ export type ListingActor = Pick<
   "storeId" | "role" | "sellerId"
 >;
 
-export const LISTING_NOT_FOUND = "Anúncio não encontrado.";
+const LISTING_NOT_FOUND = "Anúncio não encontrado.";
+
+export function listingNotFound(): AppException {
+  return new AppException(HttpStatus.NOT_FOUND, LISTING_NOT_FOUND);
+}
 const INVALID_SELLER = "Vendedor inválido.";
+const INVALID_CATEGORY = "Categoria inválida.";
+const NO_SELLER_CHOSEN = "Escolha ao menos um vendedor.";
 const COPY_SUFFIX = " (cópia)";
 
 @Injectable()
@@ -207,7 +208,7 @@ export class ListingsService {
     const { storeId } = actor;
     const sellerIds = sellersForNewListing(actor, input.sellerIds);
     if (!sellerIds) {
-      throw new BadRequestException("Escolha ao menos um vendedor.");
+      throw new AppException(HttpStatus.BAD_REQUEST, NO_SELLER_CHOSEN);
     }
     return this.dataSource.transaction(async (manager) => {
       await assertReferencesBelongToStore(manager, storeId, {
@@ -249,7 +250,10 @@ export class ListingsService {
 
       if (patch.publication === "published") {
         if (!canPublish(listing.images.length)) {
-          throw new UnprocessableEntityException(PUBLISH_REQUIRES_PHOTO);
+          throw new AppException(
+            HttpStatus.UNPROCESSABLE_ENTITY,
+            PUBLISH_REQUIRES_PHOTO,
+          );
         }
         listing.publishedAt ??= new Date();
       }
@@ -330,7 +334,7 @@ export class ListingsService {
       relations: { category: true, sellers: { seller: true }, images: true },
       order: { images: { position: "ASC" } },
     });
-    if (!listing) throw new NotFoundException(LISTING_NOT_FOUND);
+    if (!listing) throw listingNotFound();
     return listing;
   }
 }
@@ -344,7 +348,7 @@ export async function lockListing(
     where: { id, storeId },
     lock: { mode: "pessimistic_write" },
   });
-  if (!listing) throw new NotFoundException(LISTING_NOT_FOUND);
+  if (!listing) throw listingNotFound();
   return listing;
 }
 
@@ -366,7 +370,7 @@ async function setSellers(
       err instanceof QueryFailedError &&
       (err.driverError as { code?: string }).code === "23503"
     ) {
-      throw new ConflictException(INVALID_SELLER);
+      throw new AppException(HttpStatus.CONFLICT, INVALID_SELLER);
     }
     throw err;
   }
@@ -388,7 +392,7 @@ async function assertReferencesBelongToStore(
       .getRepository(Seller)
       .countBy({ id: In(input.sellerIds), storeId })) !== input.sellerIds.length
   ) {
-    throw new UnprocessableEntityException(INVALID_SELLER);
+    throw new AppException(HttpStatus.UNPROCESSABLE_ENTITY, INVALID_SELLER);
   }
   if (
     input.categoryId !== undefined &&
@@ -396,7 +400,7 @@ async function assertReferencesBelongToStore(
       .getRepository(Category)
       .exists({ where: { id: input.categoryId, storeId } }))
   ) {
-    throw new UnprocessableEntityException("Categoria inválida.");
+    throw new AppException(HttpStatus.UNPROCESSABLE_ENTITY, INVALID_CATEGORY);
   }
 }
 
