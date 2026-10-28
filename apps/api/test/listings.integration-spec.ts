@@ -238,6 +238,35 @@ describe("listing administration", () => {
       ]);
     });
 
+    it("answers 409 when a seller profile disappears while the listing is saved", async () => {
+      // Stands in for a member removed between validation and the insert.
+      await ctx.dataSource.query(`
+        CREATE FUNCTION lose_seller() RETURNS trigger LANGUAGE plpgsql
+          AS $$ BEGIN RAISE EXCEPTION 'seller gone' USING ERRCODE = '23503'; END $$;
+        CREATE TRIGGER lose_seller BEFORE INSERT ON listing_sellers
+          FOR EACH ROW EXECUTE FUNCTION lose_seller();
+      `);
+      try {
+        const res = await client()
+          .post(base())
+          .send({
+            title: "Mesa",
+            categoryId: admin.categoryId,
+            sellerIds: [admin.sellerId],
+            condition: "good",
+          })
+          .expect(409);
+        expect(res.body.detail).toBe("Vendedor inválido.");
+      } finally {
+        await ctx.dataSource.query(`
+          DROP TRIGGER lose_seller ON listing_sellers;
+          DROP FUNCTION lose_seller();
+        `);
+      }
+      const listings = await client().get(base()).expect(200);
+      expect(listings.body.items).toHaveLength(0);
+    });
+
     it("duplicates into a new draft without photos", async () => {
       const listing = await createListing({
         priceCents: 500,
