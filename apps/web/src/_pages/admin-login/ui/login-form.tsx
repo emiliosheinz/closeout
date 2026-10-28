@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  LOGIN_FAILED,
   type LoginRequest,
   loginRequestSchema,
 } from "@closeout/contracts/schemas";
@@ -10,7 +11,6 @@ import { readProblem } from "@/shared/api";
 import { Button } from "@/shared/ui/button";
 import { Field, inputClass } from "@/shared/ui/field";
 
-const FALLBACK_MESSAGE = "Não foi possível entrar agora.";
 const NETWORK_MESSAGE = "Sem conexão. Verifique a internet e tente de novo.";
 
 export function LoginForm() {
@@ -46,7 +46,7 @@ export function LoginForm() {
       window.location.assign("/admin");
       return;
     }
-    const { detail } = await readProblem(response, FALLBACK_MESSAGE);
+    const { detail } = await readProblem(response, LOGIN_FAILED);
     setError("root", { message: detail });
   }
 
