@@ -3,6 +3,7 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { DataSource } from "typeorm";
+import type { TestProject } from "vitest/node";
 import { compareWithFixture } from "./error-fixture";
 
 /**
@@ -11,7 +12,9 @@ import { compareWithFixture } from "./error-fixture";
  * production schema without touching development data. Returns the teardown
  * that drops it again.
  */
-export default async function globalSetup(): Promise<() => Promise<void>> {
+export default async function globalSetup(
+  project: TestProject,
+): Promise<() => Promise<void>> {
   const database = `closeout_test_${randomBytes(4).toString("hex")}`;
   await runOnServer(`CREATE DATABASE "${database}"`);
 
@@ -23,12 +26,13 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
   process.env.HOST = "127.0.0.1";
   process.env.PUBLIC_BASE_URL = "http://storefront.test";
   process.env.INTERNAL_API_SECRET = "integration-test-secret-0123456789abcdef";
-  // ERROR_FIXTURE=compare checks every error response against the fixture
-  // of the copy users saw before error bodies became problem documents.
+  // Every error response is checked against the fixture of the copy users
+  // saw before error bodies became problem documents; ERROR_FIXTURE=off
+  // skips the check for one debugging run.
   const observedErrors =
-    process.env.ERROR_FIXTURE === "compare"
-      ? path.join(mediaDir, "..", `${database}-errors.jsonl`)
-      : undefined;
+    process.env.ERROR_FIXTURE === "off"
+      ? undefined
+      : path.join(mediaDir, "..", `${database}-errors.jsonl`);
   if (observedErrors) {
     await writeFile(observedErrors, "");
     process.env.ERROR_FIXTURE_OBSERVED = observedErrors;
@@ -50,7 +54,8 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
     await runOnServer(`DROP DATABASE IF EXISTS "${database}" WITH (FORCE)`);
     await rm(mediaDir, { recursive: true, force: true });
     if (!observedErrors) return;
-    const problems = compareWithFixture(observedErrors);
+    const fullRun = await ranEveryTest(project);
+    const problems = fullRun ? compareWithFixture(observedErrors) : [];
     await rm(observedErrors, { force: true });
     if (problems.length > 0) {
       throw new Error(
@@ -58,6 +63,13 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
       );
     }
   };
+}
+
+/** A run limited to some files or tests cannot observe every fixture key. */
+async function ranEveryTest(project: TestProject): Promise<boolean> {
+  if (project.vitest.config.testNamePattern) return false;
+  const { testFiles } = await project.globTestFiles();
+  return project.vitest.state.getFiles().length === testFiles.length;
 }
 
 export function connection(database: string | undefined) {
