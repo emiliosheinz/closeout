@@ -1,4 +1,4 @@
-import { type DynamicModule, Module, ValidationPipe } from "@nestjs/common";
+import { type DynamicModule, Module } from "@nestjs/common";
 import { APP_FILTER, APP_PIPE } from "@nestjs/core";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { LoggerModule } from "nestjs-pino";
@@ -27,14 +27,6 @@ import { ContractPipe } from "./validation/contract.pipe";
   controllers: [AppController],
   providers: [
     { provide: APP_FILTER, useClass: ProblemFilter },
-    {
-      provide: APP_PIPE,
-      useValue: new ValidationPipe({
-        whitelist: true,
-        forbidNonWhitelisted: true,
-        transform: true,
-      }),
-    },
     { provide: APP_PIPE, useClass: ContractPipe },
   ],
 })

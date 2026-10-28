@@ -4,6 +4,7 @@ import {
   GUARDS_METADATA,
   METHOD_METADATA,
   PATH_METADATA,
+  ROUTE_ARGS_METADATA,
 } from "@nestjs/common/constants";
 import { ModulesContainer } from "@nestjs/core";
 import { Test } from "@nestjs/testing";
@@ -257,6 +258,8 @@ interface Route {
   guarded: boolean;
   /** Roles the handler declares with `@Roles`, if any. */
   roles: readonly StoreRole[] | undefined;
+  /** The handler's arguments, keyed `<RouteParamtypes>:<index>`. */
+  args: Record<string, { data?: unknown; schema?: unknown }>;
 }
 
 /** Every route the app registers, read from Nest's controller metadata. */
@@ -286,6 +289,8 @@ export function registeredRoutes(app: INestApplication): Route[] {
             guardedClass ||
             (Reflect.getMetadata(GUARDS_METADATA, handler) ?? []).length > 0,
           roles: Reflect.getMetadata(Roles.KEY, handler),
+          args:
+            Reflect.getMetadata(ROUTE_ARGS_METADATA, controller, name) ?? {},
         });
       }
     }
