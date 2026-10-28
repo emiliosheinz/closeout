@@ -5,6 +5,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
+import { problem } from "@/test/fixtures";
 import { InviteForm } from "../invite-form";
 
 describe("InviteForm", () => {
@@ -87,45 +88,88 @@ describe("InviteForm", () => {
     );
   });
 
-  it("shows API messages under their field and nowhere else", async () => {
+  function failWith(body: unknown) {
     global.fetch = vi.fn().mockResolvedValue({
       ok: false,
-      json: async () => ({
-        message: [
-          "Informe seu nome.",
-          "A senha precisa ter pelo menos 10 caracteres.",
-          "WhatsApp inválido.",
-        ],
-      }),
+      json: async () => body,
     }) as unknown as typeof fetch;
+  }
+
+  it("shows API field errors under the field their pointer names, and nowhere else", async () => {
+    failWith(
+      problem(400, "Nome longo demais.", [
+        { pointer: "/name", detail: "Nome longo demais." },
+        { pointer: "/password", detail: "Senha comum demais." },
+        { pointer: "/whatsappNumber", detail: "Número sem código do país." },
+      ]),
+    );
     render(<InviteForm token="tok" email="ana@loja.test" />);
     fill("Ana", "senha-longa-1");
     submit();
 
     expect(
       await screen.findByLabelText("Seu nome"),
-    ).toHaveAccessibleDescription(/Informe seu nome\./);
+    ).toHaveAccessibleDescription(/Nome longo demais\./);
+    expect(screen.getByLabelText("Senha")).toHaveAccessibleDescription(
+      /Senha comum demais\./,
+    );
     expect(
       screen.getByLabelText("WhatsApp (opcional)"),
-    ).toHaveAccessibleDescription(/WhatsApp inválido\./);
-    expect(screen.getByLabelText("Senha")).toHaveAccessibleDescription(
-      /A senha precisa ter pelo menos 10 caracteres\./,
-    );
-    expect(screen.getAllByText("Informe seu nome.")).toHaveLength(1);
+    ).toHaveAccessibleDescription(/Número sem código do país\./);
+    expect(screen.getAllByText("Nome longo demais.")).toHaveLength(1);
     expect(screen.getAllByRole("alert")).toHaveLength(3);
   });
 
-  it("shows other API messages inline in the form", async () => {
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: false,
-      json: async () => ({ message: "Convite expirado." }),
-    }) as unknown as typeof fetch;
+  it("places a field message by its pointer, not by its wording", async () => {
+    failWith(
+      problem(400, "Informe seu nome.", [
+        { pointer: "/token", detail: "Informe seu nome." },
+        { pointer: "/password", detail: "WhatsApp inválido." },
+      ]),
+    );
+    render(<InviteForm token="tok" email="ana@loja.test" />);
+    fill("Ana", "senha-longa-1");
+    submit();
+
+    expect(await screen.findByLabelText("Senha")).toHaveAccessibleDescription(
+      /WhatsApp inválido\./,
+    );
+    expect(screen.getByLabelText("Seu nome")).toHaveAttribute(
+      "aria-invalid",
+      "false",
+    );
+    expect(screen.getByLabelText("WhatsApp (opcional)")).toHaveAttribute(
+      "aria-invalid",
+      "false",
+    );
+    expect(
+      screen.getAllByRole("alert").map((alert) => alert.textContent),
+    ).toContain("Informe seu nome.");
+  });
+
+  it.each([
+    [429, "Muitas tentativas. Tente novamente em alguns minutos."],
+    [
+      404,
+      "Este convite é inválido ou expirou. Peça um novo link a quem convidou você.",
+    ],
+  ])("shows the %s problem's detail inline in the form", async (status, detail) => {
+    failWith(problem(status, detail));
+    render(<InviteForm token="tok" email="ana@loja.test" />);
+    fill("Ana", "senha-longa-1");
+    submit();
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(detail);
+  });
+
+  it("falls back to a generic message when the body is not a problem", async () => {
+    failWith({ message: "Convite expirado." });
     render(<InviteForm token="tok" email="ana@loja.test" />);
     fill("Ana", "senha-longa-1");
     submit();
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Convite expirado.",
+      "Não foi possível aceitar o convite agora.",
     );
   });
 

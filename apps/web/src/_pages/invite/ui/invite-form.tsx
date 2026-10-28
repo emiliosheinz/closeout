@@ -2,7 +2,7 @@
 
 import {
   acceptInviteRequestSchema,
-  MIN_PASSWORD_LENGTH,
+  problemDocumentSchema,
 } from "@closeout/contracts/schemas";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -10,8 +10,7 @@ import { z } from "zod";
 import { Button } from "@/shared/ui/button";
 import { Field, inputClass } from "@/shared/ui/field";
 
-const NAME_MESSAGE = "Informe seu nome.";
-const PASSWORD_MESSAGE = `A senha precisa ter pelo menos ${MIN_PASSWORD_LENGTH} caracteres.`;
+const FALLBACK_MESSAGE = "Não foi possível aceitar o convite agora.";
 
 const formSchema = acceptInviteRequestSchema.extend({
   whatsappNumber: z.string(),
@@ -20,21 +19,11 @@ type FormValues = z.infer<typeof formSchema>;
 
 type FieldName = "name" | "password" | "whatsappNumber";
 
-/** Sorts the API's messages onto the fields they are about. */
-function sortMessages(message: unknown) {
-  const messages = (Array.isArray(message) ? message : [message]).filter(
-    (m): m is string => typeof m === "string",
-  );
-  const fields: Partial<Record<FieldName, string>> = {};
-  const rest: string[] = [];
-  for (const text of messages) {
-    if (text === NAME_MESSAGE) fields.name = text;
-    else if (text === PASSWORD_MESSAGE) fields.password = text;
-    else if (text.includes("WhatsApp")) fields.whatsappNumber = text;
-    else rest.push(text);
-  }
-  return { fields, form: rest.join(" ") };
-}
+const FIELD_BY_POINTER = new Map<string, FieldName>([
+  ["/name", "name"],
+  ["/password", "password"],
+  ["/whatsappNumber", "whatsappNumber"],
+]);
 
 /** Creates the invitee's account; on success the new session opens the admin. */
 export function InviteForm({ token, email }: { token: string; email: string }) {
@@ -72,17 +61,27 @@ export function InviteForm({ token, email }: { token: string; email: string }) {
       window.location.assign("/admin");
       return;
     }
-    const body = (await response.json().catch(() => ({}))) as {
-      message?: unknown;
-    };
-    const { fields, form } = sortMessages(body.message);
-    const entries = Object.entries(fields) as [FieldName, string][];
-    for (const [name, message] of entries) setError(name, { message });
-    if (form) setError("root", { message: form });
-    else if (entries.length === 0)
-      setError("root", {
-        message: "Não foi possível aceitar o convite agora.",
-      });
+    const problem = problemDocumentSchema.safeParse(
+      await response.json().catch(() => undefined),
+    );
+    if (!problem.success) {
+      setError("root", { message: FALLBACK_MESSAGE });
+      return;
+    }
+    const { detail, errors = [] } = problem.data;
+    const placed = new Set<FieldName>();
+    const unplaced: string[] = [];
+    for (const error of errors) {
+      const field = FIELD_BY_POINTER.get(error.pointer);
+      if (!field) unplaced.push(error.detail);
+      else if (!placed.has(field)) {
+        placed.add(field);
+        setError(field, { message: error.detail });
+      }
+    }
+    if (errors.length === 0) setError("root", { message: detail });
+    else if (unplaced.length > 0)
+      setError("root", { message: unplaced.join(" ") });
   }
 
   function guarded(event: React.FormEvent<HTMLFormElement>) {
