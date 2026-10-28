@@ -11,6 +11,7 @@ import { MAX_FILE_BYTES, MAX_FILES_PER_REQUEST } from "./upload-limits";
 const FILE_TOO_LARGE = `Cada foto pode ter até ${MAX_FILE_BYTES / 1024 / 1024} MB.`;
 const FIELDS_NOT_ALLOWED = "Envie apenas fotos, sem outros campos.";
 export const TOO_MANY_PHOTOS = `Envie até ${MAX_FILES_PER_REQUEST} fotos por vez.`;
+export const ONE_PHOTO_AT_A_TIME = "Envie uma foto por vez.";
 
 /**
  * Nest turns Multer limit errors into English messages; upload routes

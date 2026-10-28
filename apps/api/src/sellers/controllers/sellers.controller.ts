@@ -15,7 +15,10 @@ import {
 import { FileInterceptor } from "@nestjs/platform-express";
 import { SessionGuard } from "@/auth/guards/session.guard";
 import { InvalidImageError } from "@/media/image-processor";
-import { UploadErrorsFilter } from "@/media/upload-errors.filter";
+import {
+  ONE_PHOTO_AT_A_TIME,
+  UploadErrorsFilter,
+} from "@/media/upload-errors.filter";
 import { imageUploadOptions } from "@/media/upload-limits";
 import { AppException } from "@/problem/app-exception";
 import { StoreMemberGuard } from "@/stores/guards/store-member.guard";
@@ -62,7 +65,7 @@ export class SellersController {
 
   @Post(":id/avatar")
   @Roles(ANY_MEMBER)
-  @UseFilters(new UploadErrorsFilter("Envie uma foto por vez."))
+  @UseFilters(new UploadErrorsFilter(ONE_PHOTO_AT_A_TIME))
   @UseInterceptors(FileInterceptor("file", imageUploadOptions(1)))
   async avatar(
     @CurrentMember() member: MembershipContext,
