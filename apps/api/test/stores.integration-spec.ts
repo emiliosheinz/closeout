@@ -137,13 +137,17 @@ describe("store administration", () => {
     const a = await createStoreWithAdmin(ctx, "loja-a");
     const b = await createStoreWithAdmin(ctx, "loja-b");
     const intruder = as(ctx.app, a.cookie);
-    await intruder.get(`/stores/${b.storeId}`).expect(404);
+    const foreign = await intruder.get(`/stores/${b.storeId}`).expect(404);
+    expect(foreign.body.detail).toBe("Não encontrado.");
     await intruder.get(`/stores/${b.storeId}/dashboard`).expect(404);
     await intruder
       .patch(`/stores/${b.storeId}`)
       .send({ name: "Hacked" })
       .expect(404);
-    await intruder.get(`/stores/not-a-uuid/dashboard`).expect(404);
+    const malformed = await intruder
+      .get(`/stores/not-a-uuid/dashboard`)
+      .expect(404);
+    expect(malformed.body.detail).toBe("Não encontrado.");
     const [store] = await ctx.dataSource.query(
       `SELECT name FROM stores WHERE id = $1`,
       [b.storeId],

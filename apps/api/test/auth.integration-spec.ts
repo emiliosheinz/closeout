@@ -51,17 +51,18 @@ describe("admin authentication", () => {
     const unknownEmail = await attempt("ghost@example.com", PASSWORD).expect(
       401,
     );
-    expect(wrongPassword.body.message).toBe("E-mail ou senha inválidos.");
-    expect(unknownEmail.body.message).toBe("E-mail ou senha inválidos.");
+    expect(wrongPassword.body.detail).toBe("E-mail ou senha inválidos.");
+    expect(unknownEmail.body.detail).toBe("E-mail ou senha inválidos.");
   });
 
   it("refuses login calls that do not come from the web server", async () => {
     await createStoreWithAdmin(ctx, "loja-a");
-    await request(server())
+    const res = await request(server())
       .post("/auth/login")
       .set("Origin", ORIGIN)
       .send({ email: "loja-a@example.com", password: PASSWORD })
       .expect(403);
+    expect(res.body.detail).toBe("Você não tem permissão para esta ação.");
   });
 
   it("returns 429 on the 11th attempt after ten failures, even with the right password", async () => {
@@ -71,7 +72,9 @@ describe("admin authentication", () => {
       await attempt("limite@example.com", "wrong").expect(401);
     }
     const blocked = await attempt("limite@example.com", PASSWORD).expect(429);
-    expect(blocked.body.message).toMatch(/Muitas tentativas/);
+    expect(blocked.body.detail).toBe(
+      "Muitas tentativas. Tente novamente em alguns minutos.",
+    );
     await attempt("limite@example.com", PASSWORD, "198.51.100.1").expect(200);
   });
 
@@ -124,11 +127,14 @@ describe("admin authentication", () => {
 
   it("requires the forwarded client IP on internal login calls", async () => {
     await createStoreWithAdmin(ctx, "loja-a");
-    await request(server())
+    const res = await request(server())
       .post("/auth/login")
       .set("x-internal-secret", INTERNAL_SECRET)
       .send({ email: "loja-a@example.com", password: PASSWORD })
       .expect(400);
+    expect(res.body.detail).toBe(
+      "Não foi possível identificar a origem da requisição.",
+    );
   });
 
   it("does not let a burst of concurrent guesses exceed the limit", async () => {
@@ -145,11 +151,13 @@ describe("admin authentication", () => {
 
   it("rejects admin endpoints without a valid session", async () => {
     const admin = await createStoreWithAdmin(ctx, "loja-a");
-    await request(server()).get("/me").expect(401);
-    await request(server())
+    const missing = await request(server()).get("/me").expect(401);
+    const forged = await request(server())
       .get(`/stores/${admin.storeId}/listings`)
       .set("Cookie", "closeout_session=forged")
       .expect(401);
+    expect(missing.body.detail).toBe("Entre para continuar.");
+    expect(forged.body.detail).toBe("Entre para continuar.");
   });
 
   it("revokes the session on logout", async () => {

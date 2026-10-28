@@ -1,14 +1,10 @@
 import type { AssignableRole, StoreRole } from "@closeout/contracts/enums";
-import {
-  ConflictException,
-  Injectable,
-  Logger,
-  NotFoundException,
-} from "@nestjs/common";
+import { HttpStatus, Injectable, Logger } from "@nestjs/common";
 import { InjectDataSource } from "@nestjs/typeorm";
 import type { DataSource } from "typeorm";
 import { MediaService } from "@/media/media.service";
 import { mediaUrls } from "@/media/media-urls";
+import { AppException } from "@/problem/app-exception";
 import { forbidden, type MembershipContext } from "../membership";
 
 export interface TeamMember {
@@ -98,7 +94,9 @@ export class TeamService {
         [target.sellerId],
       );
       const count = sole?.count ?? 0;
-      if (count > 0) throw new ConflictException(soleSellerMessage(count));
+      if (count > 0) {
+        throw new AppException(HttpStatus.CONFLICT, soleSellerMessage(count));
+      }
       await manager.query(`DELETE FROM users WHERE id = $1`, [userId]);
     });
     this.logger.log(
@@ -119,7 +117,7 @@ export class TeamService {
     userId: string,
   ): Promise<MemberRow> {
     const [target] = await this.members(actor.storeId, userId);
-    if (!target) throw new NotFoundException(MEMBER_NOT_FOUND);
+    if (!target) throw new AppException(HttpStatus.NOT_FOUND, MEMBER_NOT_FOUND);
     if (target.role === "owner" || target.userId === actor.userId) {
       throw forbidden();
     }

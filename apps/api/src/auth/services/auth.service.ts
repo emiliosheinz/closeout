@@ -1,12 +1,8 @@
-import {
-  HttpException,
-  HttpStatus,
-  Injectable,
-  Logger,
-  UnauthorizedException,
-} from "@nestjs/common";
+import { TOO_MANY_ATTEMPTS } from "@closeout/contracts/schemas";
+import { HttpStatus, Injectable, Logger } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import type { Repository } from "typeorm";
+import { AppException } from "@/problem/app-exception";
 import { User } from "../entities/user.entity";
 import { LoginRateLimiter } from "./login-rate-limiter";
 import {
@@ -18,8 +14,6 @@ import {
 import { SessionsService } from "./sessions.service";
 
 const INVALID_CREDENTIALS = "E-mail ou senha inválidos.";
-export const TOO_MANY_ATTEMPTS =
-  "Muitas tentativas. Tente novamente em alguns minutos.";
 
 @Injectable()
 export class AuthService {
@@ -44,7 +38,7 @@ export class AuthService {
   ): Promise<{ sessionToken: string; expiresAt: Date }> {
     if (this.limiter.isBlocked(email, clientIp)) {
       this.logger.warn({ ip: clientIp }, "Login rate limited");
-      throw new HttpException(TOO_MANY_ATTEMPTS, HttpStatus.TOO_MANY_REQUESTS);
+      throw new AppException(HttpStatus.TOO_MANY_REQUESTS, TOO_MANY_ATTEMPTS);
     }
 
     this.limiter.recordFailure(email, clientIp);
@@ -55,7 +49,7 @@ export class AuthService {
     );
     if (!user || !valid) {
       this.logger.warn({ ip: clientIp }, "Failed login");
-      throw new UnauthorizedException(INVALID_CREDENTIALS);
+      throw new AppException(HttpStatus.UNAUTHORIZED, INVALID_CREDENTIALS);
     }
 
     this.limiter.forgiveSuccess(email, clientIp);

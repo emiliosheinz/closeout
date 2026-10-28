@@ -1,8 +1,10 @@
 import type { StoreRole } from "@closeout/contracts/enums";
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { NOT_FOUND } from "@closeout/contracts/schemas";
+import { HttpStatus, Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import type { EntityManager, Repository } from "typeorm";
 import { User } from "@/auth/entities/user.entity";
+import { AppException } from "@/problem/app-exception";
 import { Seller } from "@/sellers/entities/seller.entity";
 import { DEFAULT_CATEGORIES } from "../default-categories";
 import { Category } from "../entities/category.entity";
@@ -125,7 +127,7 @@ export class StoresService {
 
   private async findOrFail(storeId: string): Promise<Store> {
     const store = await this.stores.findOne({ where: { id: storeId } });
-    if (!store) throw new NotFoundException();
+    if (!store) throw new AppException(HttpStatus.NOT_FOUND, NOT_FOUND);
     return store;
   }
 }

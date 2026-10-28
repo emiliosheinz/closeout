@@ -1,10 +1,12 @@
 import type { StoreRole } from "@closeout/contracts/enums";
+import { FORBIDDEN } from "@closeout/contracts/schemas";
 import {
   createParamDecorator,
   type ExecutionContext,
-  ForbiddenException,
+  HttpStatus,
 } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
+import { AppException } from "@/problem/app-exception";
 
 export { ANY_MEMBER, isManager, MANAGERS } from "./roles";
 
@@ -21,16 +23,14 @@ export interface RequestWithMembership {
   membership?: MembershipContext;
 }
 
-export const FORBIDDEN = "Você não tem permissão para esta ação.";
-
 /**
  * Roles allowed to call a store-scoped handler. `StoreMemberGuard` refuses
  * every handler that does not declare them.
  */
 export const Roles = Reflector.createDecorator<readonly StoreRole[]>();
 
-export function forbidden(): ForbiddenException {
-  return new ForbiddenException(FORBIDDEN);
+export function forbidden(): AppException {
+  return new AppException(HttpStatus.FORBIDDEN, FORBIDDEN);
 }
 
 /** Read the membership a `StoreMemberGuard` attached; throws if absent. */

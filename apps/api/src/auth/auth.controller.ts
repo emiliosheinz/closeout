@@ -1,9 +1,9 @@
+import { FORBIDDEN, NO_CLIENT_IP } from "@closeout/contracts/schemas";
 import {
-  BadRequestException,
   Body,
   Controller,
-  ForbiddenException,
   HttpCode,
+  HttpStatus,
   Inject,
   Post,
   Req,
@@ -15,6 +15,7 @@ import {
   type AppModuleConfig,
   internalSecret,
 } from "@/config/config.module";
+import { AppException } from "@/problem/app-exception";
 import {
   isInternalRequest,
   trustedClientIp,
@@ -48,12 +49,14 @@ export class AuthController {
   ): Promise<{ sessionToken: string; expiresAt: string }> {
     const secret = internalSecret(this.config);
     if (!isInternalRequest(req.headers, secret)) {
-      throw new ForbiddenException();
+      throw new AppException(HttpStatus.FORBIDDEN, FORBIDDEN);
     }
     // Without the visitor's IP every attempt would share one rate-limit
     // bucket, letting anyone lock the admins out.
     const clientIp = trustedClientIp(req.headers, secret);
-    if (!clientIp) throw new BadRequestException("Missing client IP");
+    if (!clientIp) {
+      throw new AppException(HttpStatus.BAD_REQUEST, NO_CLIENT_IP);
+    }
     const { sessionToken, expiresAt } = await this.auth.login(
       body.email,
       body.password,

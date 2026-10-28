@@ -427,7 +427,7 @@ describe("store permissions", () => {
     else if (body) req = req.send(body);
     const res = await req;
     expect(res.status).toBe(status);
-    if (status === 403) expect(res.body.message).toBe(FORBIDDEN);
+    if (status === 403) expect(res.body.detail).toBe(FORBIDDEN);
   });
 
   it("answers a seller's request for an unassigned or malformed listing id exactly like an unknown id", async () => {
@@ -514,7 +514,7 @@ describe("a store route without a role declaration", () => {
       const res = await as(ctx.app, member.cookie)
         .get(`/stores/${owner.storeId}/undeclared`)
         .expect(403);
-      expect(res.body.message).toBe(FORBIDDEN);
+      expect(res.body.detail).toBe(FORBIDDEN);
     }
     const outsider = await createStoreWithAdmin(ctx, "loja-b");
     await as(ctx.app, outsider.cookie)

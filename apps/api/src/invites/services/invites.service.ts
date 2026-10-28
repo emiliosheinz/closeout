@@ -1,4 +1,5 @@
 import type { AssignableRole } from "@closeout/contracts/enums";
+import { TOO_MANY_ATTEMPTS } from "@closeout/contracts/schemas";
 import {
   ConflictException,
   HttpException,
@@ -12,7 +13,6 @@ import {
 import { InjectDataSource } from "@nestjs/typeorm";
 import { DataSource, QueryFailedError } from "typeorm";
 import { User } from "@/auth/entities/user.entity";
-import { TOO_MANY_ATTEMPTS } from "@/auth/services/auth.service";
 import { hashPassword } from "@/auth/services/passwords";
 import {
   hashToken,
