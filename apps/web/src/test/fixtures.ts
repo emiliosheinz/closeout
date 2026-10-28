@@ -2,6 +2,7 @@ import type {
   AdminListingDetail,
   AdminListingSummary,
   Category,
+  FieldError,
   Seller,
   StoreSettings,
 } from "@closeout/contracts/schemas";
@@ -67,3 +68,28 @@ export const meResponse = (
   user = { id: "u-ana", name: "Ana", email: "ana@loja.test" },
   sellerId = "s-ana",
 ) => ({ user, memberships: [{ role, sellerId, store: STORE }] });
+
+/** An error body as the API writes it: an RFC 9457 problem document. */
+export const problem = (
+  status: number,
+  detail: string,
+  errors?: FieldError[],
+) => ({
+  type: "about:blank",
+  title: "Error",
+  status,
+  detail,
+  requestId: "req-1",
+  ...(errors && { errors }),
+});
+
+/** A failed API response carrying a problem document. */
+export const problemResponse = (
+  status: number,
+  detail: string,
+  errors?: FieldError[],
+) =>
+  Response.json(problem(status, detail, errors), {
+    status,
+    headers: { "Content-Type": "application/problem+json" },
+  });
