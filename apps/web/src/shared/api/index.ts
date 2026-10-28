@@ -6,6 +6,7 @@ export {
   GENERIC_ERROR,
   type WriteResult,
 } from "./http/client";
+export { type Problem, readProblem } from "./http/problem";
 export {
   dropInvalid,
   itemsEnvelope,

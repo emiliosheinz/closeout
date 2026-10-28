@@ -1,12 +1,10 @@
 "use client";
 
-import {
-  acceptInviteRequestSchema,
-  problemDocumentSchema,
-} from "@closeout/contracts/schemas";
+import { acceptInviteRequestSchema } from "@closeout/contracts/schemas";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { readProblem } from "@/shared/api";
 import { Button } from "@/shared/ui/button";
 import { Field, inputClass } from "@/shared/ui/field";
 
@@ -61,25 +59,18 @@ export function InviteForm({ token, email }: { token: string; email: string }) {
       window.location.assign("/admin");
       return;
     }
-    const problem = problemDocumentSchema.safeParse(
-      await response.json().catch(() => undefined),
+    const { detail, fieldErrors } = await readProblem(
+      response,
+      FALLBACK_MESSAGE,
     );
-    if (!problem.success) {
-      setError("root", { message: FALLBACK_MESSAGE });
-      return;
-    }
-    const { detail, errors = [] } = problem.data;
-    const placed = new Set<FieldName>();
+    const entries = Object.entries(fieldErrors);
     const unplaced: string[] = [];
-    for (const error of errors) {
-      const field = FIELD_BY_POINTER.get(error.pointer);
-      if (!field) unplaced.push(error.detail);
-      else if (!placed.has(field)) {
-        placed.add(field);
-        setError(field, { message: error.detail });
-      }
+    for (const [pointer, message] of entries) {
+      const field = FIELD_BY_POINTER.get(pointer);
+      if (field) setError(field, { message });
+      else unplaced.push(message);
     }
-    if (errors.length === 0) setError("root", { message: detail });
+    if (entries.length === 0) setError("root", { message: detail });
     else if (unplaced.length > 0)
       setError("root", { message: unplaced.join(" ") });
   }

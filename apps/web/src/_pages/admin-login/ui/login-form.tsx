@@ -6,6 +6,7 @@ import {
 } from "@closeout/contracts/schemas";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
+import { readProblem } from "@/shared/api";
 import { Button } from "@/shared/ui/button";
 import { Field, inputClass } from "@/shared/ui/field";
 
@@ -45,10 +46,8 @@ export function LoginForm() {
       window.location.assign("/admin");
       return;
     }
-    const body = (await response.json().catch(() => ({}))) as {
-      detail?: string;
-    };
-    setError("root", { message: body.detail ?? FALLBACK_MESSAGE });
+    const { detail } = await readProblem(response, FALLBACK_MESSAGE);
+    setError("root", { message: detail });
   }
 
   function guarded(event: React.FormEvent<HTMLFormElement>) {

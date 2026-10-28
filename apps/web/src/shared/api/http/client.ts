@@ -1,8 +1,6 @@
-import {
-  problemDocumentSchema,
-  SESSION_EXPIRED,
-} from "@closeout/contracts/schemas";
+import { SESSION_EXPIRED } from "@closeout/contracts/schemas";
 import { ApiError } from "./api-error";
+import { readProblem } from "./problem";
 import type { Schema } from "./schema";
 
 export const GENERIC_ERROR = "Não foi possível salvar. Tente de novo.";
@@ -21,19 +19,11 @@ export type WriteResult<T> =
   | { parsed: false; data: unknown };
 
 async function readError(response: Response): Promise<ApiError> {
-  const body: unknown = await response.json().catch(() => undefined);
-  const problem = problemDocumentSchema.safeParse(body);
-  if (!problem.success) {
-    return new ApiError(
-      response.status,
-      response.status === 400 ? INVALID_FIELDS : GENERIC_ERROR,
-    );
-  }
-  const fieldErrors: Record<string, string> = {};
-  for (const { pointer, detail } of problem.data.errors ?? []) {
-    fieldErrors[pointer] ??= detail;
-  }
-  return new ApiError(response.status, problem.data.detail, fieldErrors);
+  const { detail, fieldErrors } = await readProblem(
+    response,
+    response.status === 400 ? INVALID_FIELDS : GENERIC_ERROR,
+  );
+  return new ApiError(response.status, detail, fieldErrors);
 }
 
 // The write already succeeded; a failed expiry only delays the storefront
