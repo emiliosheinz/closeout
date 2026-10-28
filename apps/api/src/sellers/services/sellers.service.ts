@@ -1,15 +1,18 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { HttpStatus, Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import type { Repository } from "typeorm";
 import { ListingSeller } from "@/catalog/entities/listing-seller.entity";
 import { MediaService } from "@/media/media.service";
 import { mediaUrls } from "@/media/media-urls";
+import { AppException } from "@/problem/app-exception";
 import {
   forbidden,
   isManager,
   type MembershipContext,
 } from "@/stores/membership";
 import { Seller } from "../entities/seller.entity";
+
+const SELLER_NOT_FOUND = "Vendedor não encontrado.";
 
 export interface SellerResponse {
   id: string;
@@ -94,7 +97,9 @@ export class SellersService {
     const seller = await this.sellers.findOne({
       where: { id, storeId: actor.storeId },
     });
-    if (!seller) throw new NotFoundException("Vendedor não encontrado.");
+    if (!seller) {
+      throw new AppException(HttpStatus.NOT_FOUND, SELLER_NOT_FOUND);
+    }
     return seller;
   }
 

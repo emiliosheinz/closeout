@@ -1,15 +1,6 @@
 import type { AssignableRole } from "@closeout/contracts/enums";
 import { TOO_MANY_ATTEMPTS } from "@closeout/contracts/schemas";
-import {
-  ConflictException,
-  HttpException,
-  HttpStatus,
-  Inject,
-  Injectable,
-  InternalServerErrorException,
-  Logger,
-  NotFoundException,
-} from "@nestjs/common";
+import { HttpStatus, Inject, Injectable, Logger } from "@nestjs/common";
 import { InjectDataSource } from "@nestjs/typeorm";
 import { DataSource, QueryFailedError } from "typeorm";
 import { User } from "@/auth/entities/user.entity";
@@ -20,6 +11,7 @@ import {
   SessionsService,
 } from "@/auth/services/sessions.service";
 import { APP_CONFIG, type AppModuleConfig } from "@/config/config.module";
+import { AppException } from "@/problem/app-exception";
 import { SlidingWindowCounter } from "@/security/sliding-window";
 import {
   type ProvisionedMember,
@@ -107,7 +99,7 @@ export class InvitesService {
     if (
       await this.dataSource.getRepository(User).exists({ where: { email } })
     ) {
-      throw new ConflictException(HAS_ACCOUNT);
+      throw new AppException(HttpStatus.CONFLICT, HAS_ACCOUNT);
     }
     await this.dataSource.query(
       `DELETE FROM store_invites WHERE store_id = $1 AND expires_at <= now()`,
@@ -158,7 +150,7 @@ export class InvitesService {
       [id, actor.storeId],
     );
     const [row] = rows;
-    if (!row) throw new NotFoundException(INVITE_NOT_FOUND);
+    if (!row) throw new AppException(HttpStatus.NOT_FOUND, INVITE_NOT_FOUND);
     this.logger.log(
       {
         inviteId: row.id,
@@ -184,7 +176,7 @@ export class InvitesService {
       [id, actor.storeId, hashToken(token), INVITE_LIFETIME],
     );
     const [row] = rows;
-    if (!row) throw new NotFoundException(INVITE_NOT_FOUND);
+    if (!row) throw new AppException(HttpStatus.NOT_FOUND, INVITE_NOT_FOUND);
     this.logger.log(
       {
         inviteId: row.id,
@@ -206,7 +198,7 @@ export class InvitesService {
         WHERE i.token_hash = $1 AND i.expires_at > now()`,
       [hashToken(token)],
     );
-    if (!details) throw new NotFoundException(INVITE_INVALID);
+    if (!details) throw inviteInvalid();
     this.attempts.forgetLatest(clientIp);
     return details;
   }
@@ -227,7 +219,7 @@ export class InvitesService {
       `SELECT 1 FROM store_invites WHERE token_hash = $1 AND expires_at > now()`,
       [tokenHash],
     );
-    if (!pending) throw new NotFoundException(INVITE_INVALID);
+    if (!pending) throw inviteInvalid();
 
     const passwordHash = await hashPassword(input.password);
     const outcome = await this.consumeOrHasAccount(
@@ -235,9 +227,11 @@ export class InvitesService {
       input,
       passwordHash,
     );
-    if (outcome === "invalid") throw new NotFoundException(INVITE_INVALID);
+    if (outcome === "invalid") throw inviteInvalid();
     this.attempts.forgetLatest(clientIp);
-    if (outcome === "has-account") throw new ConflictException(HAS_ACCOUNT);
+    if (outcome === "has-account") {
+      throw new AppException(HttpStatus.CONFLICT, HAS_ACCOUNT);
+    }
 
     this.logger.log(
       {
@@ -254,7 +248,7 @@ export class InvitesService {
       return { sessionToken: rawToken, expiresAt };
     } catch (err) {
       this.logger.error({ err, userId: outcome.userId }, "Session mint failed");
-      throw new InternalServerErrorException(SIGN_IN_INSTEAD);
+      throw new AppException(HttpStatus.INTERNAL_SERVER_ERROR, SIGN_IN_INSTEAD);
     }
   }
 
@@ -328,10 +322,14 @@ export class InvitesService {
   private beginAttempt(clientIp: string): void {
     if (this.attempts.count(clientIp) >= MAX_INVALID_ATTEMPTS) {
       this.logger.warn({ ip: clientIp }, "Invite attempts rate limited");
-      throw new HttpException(TOO_MANY_ATTEMPTS, HttpStatus.TOO_MANY_REQUESTS);
+      throw new AppException(HttpStatus.TOO_MANY_REQUESTS, TOO_MANY_ATTEMPTS);
     }
     this.attempts.record(clientIp);
   }
+}
+
+function inviteInvalid(): AppException {
+  return new AppException(HttpStatus.NOT_FOUND, INVITE_INVALID);
 }
 
 function toSummary(row: InviteRow): InviteSummary {

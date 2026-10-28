@@ -49,7 +49,7 @@ describe("seller profiles", () => {
         .patch(`${base()}/${admin.sellerId}`)
         .send({ displayName: "Ana", whatsappNumber })
         .expect(400);
-      expect(res.body.message.join(" ")).toMatch(/código do país/);
+      expect(res.body.detail).toBe("Requisição inválida.");
     }
   });
 
@@ -92,12 +92,12 @@ describe("seller profiles", () => {
       .patch(`${base()}/${admin.sellerId}`)
       .send({ displayName: "Trocado" })
       .expect(403);
-    expect(other.body.message).toBe("Você não tem permissão para esta ação.");
+    expect(other.body.detail).toBe("Você não tem permissão para esta ação.");
     const avatar = await asSeller
       .post(`${base()}/${admin.sellerId}/avatar`)
       .attach("file", await photo(), "a.jpg")
       .expect(403);
-    expect(avatar.body.message).toBe("Você não tem permissão para esta ação.");
+    expect(avatar.body.detail).toBe("Você não tem permissão para esta ação.");
     await asSeller
       .post(`${base()}/${seller.sellerId}/avatar`)
       .attach("file", await photo(), "a.jpg")
@@ -178,6 +178,13 @@ describe("seller profiles", () => {
     await request(server).get(first.body.avatarUrl).expect(404);
   });
 
+  it("asks for an image when an avatar upload carries none", async () => {
+    const res = await client()
+      .post(`${base()}/${admin.sellerId}/avatar`)
+      .expect(400);
+    expect(res.body.detail).toBe("Envie uma imagem.");
+  });
+
   it("answers an avatar upload with more than one file in Portuguese", async () => {
     const res = await client()
       .post(`${base()}/${admin.sellerId}/avatar`)
@@ -209,10 +216,11 @@ describe("seller profiles", () => {
     const other = await createStoreWithAdmin(ctx, "loja-b");
     const intruder = as(ctx.app, other.cookie);
     await intruder.get(base()).expect(404);
-    await intruder
+    const unknown = await intruder
       .patch(`/stores/${other.storeId}/sellers/${admin.sellerId}`)
       .send({ displayName: "x" })
       .expect(404);
+    expect(unknown.body.detail).toBe("Vendedor não encontrado.");
     const list = await client().get(base()).expect(200);
     expect(list.body.items).toEqual([
       expect.objectContaining({

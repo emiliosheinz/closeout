@@ -16,10 +16,13 @@ const INVITE_INVALID =
   "Este convite é inválido ou expirou. Peça um novo link a quem convidou você.";
 const HAS_ACCOUNT = "Este e-mail já tem uma conta.";
 const TOO_MANY = "Muitas tentativas. Tente novamente em alguns minutos.";
+const INVITE_NOT_FOUND = "Convite não encontrado.";
 const INVALID_BODY = {
-  statusCode: 404,
-  message: INVITE_INVALID,
-  error: "Not Found",
+  type: "about:blank",
+  title: "Not Found",
+  status: 404,
+  detail: INVITE_INVALID,
+  requestId: expect.any(String),
 };
 const WEEK_MS = 168 * 60 * 60 * 1000;
 const NEW_PASSWORD = "senha-forte-123";
@@ -138,7 +141,7 @@ describe("store invites", () => {
           .post(invites())
           .send({ email, role: "seller" })
           .expect(400);
-        expect(res.body.message).toContain("Informe um e-mail válido.");
+        expect(res.body.detail).toBe("Requisição inválida.");
       }
     });
 
@@ -157,7 +160,7 @@ describe("store invites", () => {
           .post(invites())
           .send({ email, role: "seller" })
           .expect(409);
-        expect(res.body.message).toBe(HAS_ACCOUNT);
+        expect(res.body.detail).toBe(HAS_ACCOUNT);
       }
       expect(
         await count(`SELECT COUNT(*)::int AS count FROM store_invites`),
@@ -188,8 +191,14 @@ describe("store invites", () => {
       );
       const list = await asOwner().get(invites()).expect(200);
       expect(list.body.items).toEqual([]);
-      await asOwner().delete(`${invites()}/${expired.id}`).expect(404);
-      await asOwner().post(`${invites()}/${expired.id}/regenerate`).expect(404);
+      const revoked = await asOwner()
+        .delete(`${invites()}/${expired.id}`)
+        .expect(404);
+      const regenerated = await asOwner()
+        .post(`${invites()}/${expired.id}/regenerate`)
+        .expect(404);
+      expect(revoked.body.detail).toBe(INVITE_NOT_FOUND);
+      expect(regenerated.body.detail).toBe(INVITE_NOT_FOUND);
 
       await invite("nova@example.com");
       const emails = await ctx.dataSource.query(
@@ -340,6 +349,28 @@ describe("store invites", () => {
       await lookup(token).expect(404);
     });
 
+    it("tells the new member to sign in when the account exists but no session could be opened", async () => {
+      const { token } = await invite("nova@example.com");
+      await ctx.dataSource.query(`
+        CREATE FUNCTION refuse_sessions() RETURNS trigger LANGUAGE plpgsql
+          AS $$ BEGIN RAISE EXCEPTION 'sessions unavailable'; END $$;
+        CREATE TRIGGER refuse_sessions BEFORE INSERT ON sessions
+          FOR EACH ROW EXECUTE FUNCTION refuse_sessions();
+      `);
+      try {
+        const res = await accept(token).expect(500);
+        expect(res.body.detail).toBe(
+          "Sua conta foi criada, mas não foi possível entrar. Entre com seu e-mail e senha.",
+        );
+      } finally {
+        await ctx.dataSource.query(`
+          DROP TRIGGER refuse_sessions ON sessions;
+          DROP FUNCTION refuse_sessions();
+        `);
+      }
+      expect(await usersWithEmail("nova@example.com")).toBe(1);
+    });
+
     it("creates an admin without WhatsApp when none is given", async () => {
       const { token } = await invite("nova@example.com", "admin");
       await accept(token, { whatsappNumber: "" }).expect(200);
@@ -403,9 +434,11 @@ describe("store invites", () => {
           "Informe o WhatsApp com o código do país, por exemplo +55 11 99999-8888.",
         ],
       ] as const;
-      for (const [fields, message] of cases) {
+      // Field messages are not in the problem body yet; until validation
+      // reports field errors, every case gets the generic 400 copy.
+      for (const [fields] of cases) {
         const res = await accept(token, fields).expect(400);
-        expect(res.body.message).toEqual([message]);
+        expect(res.body.detail).toBe("Requisição inválida.");
       }
       expect(await usersWithEmail("nova@example.com")).toBe(0);
       await lookup(token).expect(200);
@@ -419,7 +452,7 @@ describe("store invites", () => {
       });
 
       const res = await accept(token).expect(409);
-      expect(res.body.message).toBe(HAS_ACCOUNT);
+      expect(res.body.detail).toBe(HAS_ACCOUNT);
       await lookup(token).expect(404);
       const users = await ctx.dataSource.query(
         `SELECT name FROM users WHERE email = 'nova@example.com'`,
@@ -455,9 +488,9 @@ describe("store invites", () => {
         await accept(`desconhecido-${i}`).expect(404);
       }
       const blockedLookup = await lookup(token).expect(429);
-      expect(blockedLookup.body.message).toBe(TOO_MANY);
+      expect(blockedLookup.body.detail).toBe(TOO_MANY);
       const blockedAccept = await accept(token).expect(429);
-      expect(blockedAccept.body.message).toBe(TOO_MANY);
+      expect(blockedAccept.body.detail).toBe(TOO_MANY);
       expect(await usersWithEmail("nova@example.com")).toBe(0);
 
       const elsewhere = "192.0.2.200";
@@ -473,7 +506,7 @@ describe("store invites", () => {
       await accept(token).expect(200);
       await lookup("desconhecido-9").expect(404);
       const blocked = await lookup("desconhecido-10").expect(429);
-      expect(blocked.body.message).toBe(TOO_MANY);
+      expect(blocked.body.detail).toBe(TOO_MANY);
     });
 
     it("lets a blocked client try again once 15 minutes have passed", async () => {
@@ -504,17 +537,23 @@ describe("store invites", () => {
         ],
       ] as const;
       for (const [path, body] of calls) {
-        await request(server)
+        const external = await request(server)
           .post(path)
           .set("Origin", ORIGIN)
           .set("x-client-ip", ip)
           .send(body)
           .expect(403);
-        await request(server)
+        expect(external.body.detail).toBe(
+          "Você não tem permissão para esta ação.",
+        );
+        const withoutIp = await request(server)
           .post(path)
           .set("x-internal-secret", INTERNAL_SECRET)
           .send(body)
           .expect(400);
+        expect(withoutIp.body.detail).toBe(
+          "Não foi possível identificar a origem da requisição.",
+        );
       }
       await lookup(token).expect(200);
     });

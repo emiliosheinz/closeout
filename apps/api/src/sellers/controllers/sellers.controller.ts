@@ -1,8 +1,8 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   Get,
+  HttpStatus,
   Param,
   ParseUUIDPipe,
   Patch,
@@ -17,6 +17,7 @@ import { SessionGuard } from "@/auth/guards/session.guard";
 import { InvalidImageError } from "@/media/image-processor";
 import { UploadErrorsFilter } from "@/media/upload-errors.filter";
 import { imageUploadOptions } from "@/media/upload-limits";
+import { AppException } from "@/problem/app-exception";
 import { StoreMemberGuard } from "@/stores/guards/store-member.guard";
 import {
   ANY_MEMBER,
@@ -29,6 +30,8 @@ import {
   type SellerResponse,
   SellersService,
 } from "../services/sellers.service";
+
+const NO_IMAGE = "Envie uma imagem.";
 
 /**
  * Contact profiles are created and deleted only with their member (see the
@@ -66,12 +69,12 @@ export class SellersController {
     @Param("id", new ParseUUIDPipe()) id: string,
     @UploadedFile() file: Express.Multer.File | undefined,
   ): Promise<SellerResponse> {
-    if (!file) throw new BadRequestException("Envie uma imagem.");
+    if (!file) throw new AppException(HttpStatus.BAD_REQUEST, NO_IMAGE);
     try {
       return await this.sellers.setAvatar(member, id, file.buffer);
     } catch (err) {
       if (err instanceof InvalidImageError) {
-        throw new BadRequestException(err.message);
+        throw new AppException(HttpStatus.BAD_REQUEST, err.message);
       }
       throw err;
     }

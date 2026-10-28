@@ -1,9 +1,9 @@
+import { FORBIDDEN, NO_CLIENT_IP } from "@closeout/contracts/schemas";
 import {
-  BadRequestException,
   Body,
   Controller,
-  ForbiddenException,
   HttpCode,
+  HttpStatus,
   Inject,
   Post,
   Req,
@@ -15,6 +15,7 @@ import {
   internalSecret,
 } from "@/config/config.module";
 import type { Secret } from "@/config/secret";
+import { AppException } from "@/problem/app-exception";
 import {
   isInternalRequest,
   trustedClientIp,
@@ -64,10 +65,12 @@ export class InviteAcceptController {
 }
 
 function internalClientIp(req: Request, secret: Secret): string {
-  if (!isInternalRequest(req.headers, secret)) throw new ForbiddenException();
+  if (!isInternalRequest(req.headers, secret)) {
+    throw new AppException(HttpStatus.FORBIDDEN, FORBIDDEN);
+  }
   // Without the visitor's IP every attempt would share one rate-limit
   // bucket, letting anyone lock invitees out.
   const clientIp = trustedClientIp(req.headers, secret);
-  if (!clientIp) throw new BadRequestException("Missing client IP");
+  if (!clientIp) throw new AppException(HttpStatus.BAD_REQUEST, NO_CLIENT_IP);
   return clientIp;
 }
