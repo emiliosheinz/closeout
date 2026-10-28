@@ -10,7 +10,7 @@ import { Field, inputClass } from "@/shared/ui/field";
 
 const FALLBACK_MESSAGE = "Não foi possível aceitar o convite agora.";
 
-const formSchema = acceptInviteRequestSchema.extend({
+const formSchema = acceptInviteRequestSchema.omit({ token: true }).extend({
   whatsappNumber: z.string(),
 });
 type FormValues = z.infer<typeof formSchema>;

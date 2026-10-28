@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { whatsappInputSchema } from "./whatsapp";
 
 export const sellerSchema = z.object({
   id: z.string(),
@@ -10,8 +11,21 @@ export const sellerSchema = z.object({
 });
 export type Seller = z.infer<typeof sellerSchema>;
 
-export const sellerRequestSchema = z.object({
-  displayName: z.string().trim().min(1, "Informe o nome.").max(60).optional(),
-  whatsappNumber: z.string().nullish(),
+/** A contact number as typed, stored as digits; empty or null clears it. */
+export const optionalWhatsappInputSchema = z.preprocess(
+  (input) => (typeof input === "string" && input.trim() === "" ? null : input),
+  whatsappInputSchema.nullish(),
+);
+
+const DISPLAY_NAME_MESSAGE = "Informe o nome.";
+
+export const sellerRequestSchema = z.strictObject({
+  displayName: z
+    .string(DISPLAY_NAME_MESSAGE)
+    .trim()
+    .min(1, DISPLAY_NAME_MESSAGE)
+    .max(60, "Use até 60 caracteres no nome.")
+    .optional(),
+  whatsappNumber: optionalWhatsappInputSchema,
 });
 export type SellerRequest = z.infer<typeof sellerRequestSchema>;

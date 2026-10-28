@@ -271,6 +271,7 @@ describe("request messages", () => {
     expect(
       messageFor(
         acceptInviteRequestSchema.safeParse({
+          token: "t",
           name: " ",
           password: "x".repeat(10),
         }),
@@ -279,6 +280,7 @@ describe("request messages", () => {
     expect(
       messageFor(
         acceptInviteRequestSchema.safeParse({
+          token: "t",
           name: "Ana",
           password: "x".repeat(9),
         }),
