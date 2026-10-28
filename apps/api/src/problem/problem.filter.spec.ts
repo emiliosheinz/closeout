@@ -130,6 +130,13 @@ describe("problem filter", () => {
   it.each([
     ["an error", new Error("secret internals")],
     ["a thrown string", "secret internals"],
+    [
+      "an error carrying its own detail",
+      Object.assign(new Error("secret internals"), {
+        status: 400,
+        detail: "secret internals",
+      }),
+    ],
   ])("answers %s with a generic 500", (_case, thrown) => {
     const written = write(thrown);
 
