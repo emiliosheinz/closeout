@@ -1,3 +1,4 @@
+import { acceptInviteRequestSchema } from "@closeout/contracts/schemas";
 import {
   act,
   fireEvent,
@@ -33,6 +34,12 @@ describe("InviteForm", () => {
     const init = fetchMock.mock.calls[0]?.[1] as { body: string };
     expect(JSON.parse(init.body)).toMatchObject({
       whatsappNumber: "+55 11 99999-8888",
+    });
+    expect(acceptInviteRequestSchema.parse(JSON.parse(init.body))).toEqual({
+      token: "tok",
+      name: "Ana",
+      password: "senha-longa-1",
+      whatsappNumber: "5511999998888",
     });
   });
 

@@ -1,3 +1,4 @@
+import { loginRequestSchema } from "@closeout/contracts/schemas";
 import {
   act,
   fireEvent,
@@ -36,6 +37,29 @@ describe("LoginForm", () => {
         }),
       ),
     );
+  });
+
+  it("sends the trimmed email in a body the login request schema takes", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      json: async () => problem(401, "E-mail ou senha inválidos."),
+    });
+    global.fetch = fetchMock as unknown as typeof fetch;
+    render(<LoginForm />);
+    fireEvent.change(screen.getByLabelText("E-mail"), {
+      target: { value: "  ana@loja.test " },
+    });
+    fireEvent.change(screen.getByLabelText("Senha"), {
+      target: { value: "senha-longa-1" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Entrar" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    const body = JSON.parse(
+      (fetchMock.mock.calls[0]?.[1] as { body: string }).body,
+    );
+    expect(body).toEqual({ email: "ana@loja.test", password: "senha-longa-1" });
+    expect(loginRequestSchema.safeParse(body).success).toBe(true);
   });
 
   it.each([

@@ -29,6 +29,9 @@ describe("listingContactUrl", () => {
     expect(
       listingContactUrl("+5511999998888", "Mesa", "https://x.y"),
     ).toBeNull();
+    expect(
+      listingContactUrl("+55 11 99999-8888", "Mesa", "https://x.y"),
+    ).toBeNull();
     expect(listingContactUrl("123", "Mesa", "https://x.y")).toBeNull();
   });
 });
@@ -36,6 +39,7 @@ describe("listingContactUrl", () => {
 describe("sellerContactUrl", () => {
   it("rejects malformed numbers", () => {
     expect(sellerContactUrl("abc", "Loja")).toBeNull();
+    expect(sellerContactUrl("+55 11 99999-8888", "Loja")).toBeNull();
     expect(sellerContactUrl("5511999998888", "Loja")).toMatch(
       /^https:\/\/wa\.me\/5511999998888\?text=/,
     );

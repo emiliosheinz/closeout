@@ -1,3 +1,4 @@
+import { sellerRequestSchema } from "@closeout/contracts/schemas";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { listingKeys } from "@/entities/listing";
 import { memberKeys, type TeamMember } from "@/entities/member";
@@ -373,6 +374,22 @@ describe("Member edit dialog", () => {
       ).toBe(true);
     });
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
+
+  it("sends the number as typed, in a body the seller request schema takes", async () => {
+    await openEditDialog();
+    fireEvent.change(screen.getByLabelText("WhatsApp"), {
+      target: { value: "+55 (21) 97777-1234" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
+
+    await waitFor(() => expect(apiCalls()).toHaveLength(1));
+    const body = JSON.parse(apiCalls()[0]?.body as string);
+    expect(body.whatsappNumber).toBe("+55 (21) 97777-1234");
+    expect(sellerRequestSchema.parse(body)).toEqual({
+      displayName: "Ana",
+      whatsappNumber: "5521977771234",
+    });
   });
 
   it("also changes the role when a manager picks another one", async () => {
