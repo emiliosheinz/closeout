@@ -1,4 +1,4 @@
-import { MALFORMED_BODY, PAYLOAD_TOO_LARGE } from "@closeout/contracts/schemas";
+import { MALFORMED_BODY } from "@closeout/contracts/schemas";
 import {
   type DynamicModule,
   HttpStatus,
@@ -63,18 +63,15 @@ export function appSetup(
 }
 
 /**
- * Hands body-parser failures to the problem filter as app exceptions, keyed
- * on the parser's error type: left alone, the framework turns a malformed
- * body into a 400 whose message echoes the body.
+ * Hands a malformed body to the problem filter as an app exception, keyed on
+ * the parser's error type: left alone, the framework turns it into a 400
+ * whose message echoes the body. Other parser failures (a body over the
+ * limit) reach the filter as framework HTTP errors and get their status copy.
  */
 const bodyParserFailures: ErrorRequestHandler = (err, _req, _res, next) => {
   const type = (err as { type?: unknown } | null)?.type;
   if (type === "entity.parse.failed") {
     next(new AppException(HttpStatus.BAD_REQUEST, MALFORMED_BODY));
-    return;
-  }
-  if (type === "entity.too.large") {
-    next(new AppException(HttpStatus.PAYLOAD_TOO_LARGE, PAYLOAD_TOO_LARGE));
     return;
   }
   next(err);
