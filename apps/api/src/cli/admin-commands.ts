@@ -1,19 +1,37 @@
 import type { StoreRole } from "@closeout/contracts/enums";
-import type { DataSource, EntityManager } from "typeorm";
-import { User } from "@/auth/entities/user.entity";
-import { hashPassword, MIN_PASSWORD_LENGTH } from "@/auth/services/passwords";
-import type { SessionsService } from "@/auth/services/sessions.service";
-import { normalizeWhatsAppNumber } from "@/sellers/whatsapp-number";
-import { Store } from "@/stores/entities/store.entity";
 import {
-  isLongEnoughPassword,
-  parseEmail,
-  parseName,
-} from "@/stores/member-input";
+  acceptInviteRequestSchema,
+  inviteRequestSchema,
+  parseRequest,
+  whatsappInputSchema,
+} from "@closeout/contracts/schemas";
+import type { DataSource, EntityManager } from "typeorm";
+import type { z } from "zod";
+import { User } from "@/auth/entities/user.entity";
+import { hashPassword } from "@/auth/services/passwords";
+import type { SessionsService } from "@/auth/services/sessions.service";
+import { Store } from "@/stores/entities/store.entity";
 import { provisionMember } from "@/stores/member-provisioning";
 import type { StoresService } from "@/stores/services/stores.service";
 
 export class CommandError extends Error {}
+
+/** A new member's fields, with the rules and messages the API applies. */
+const newMemberSchema = acceptInviteRequestSchema
+  .omit({ token: true })
+  .extend({ email: inviteRequestSchema.shape.email });
+
+/** Parse operator input as the API would, failing with its first message. */
+function parseInput<Schema extends z.ZodType>(
+  schema: Schema,
+  input: unknown,
+): z.output<Schema> {
+  const result = parseRequest(schema, input);
+  if (!result.success) {
+    throw new CommandError(result.error.issues[0]?.message);
+  }
+  return result.data;
+}
 
 const SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
@@ -65,15 +83,17 @@ export async function createAdmin(
   stores: StoresService,
   input: CreateAdminInput,
 ): Promise<{ userId: string; storeId: string; role: StoreRole }> {
-  const email = parseEmail(input.email);
-  const name = parseName(input.name);
-  if (!email) throw new CommandError("Invalid email.");
-  if (!name) throw new CommandError("Name is required.");
-  assertPasswordStrength(input.password);
-  const whatsappNumber =
-    input.whatsapp === undefined ? null : parseWhatsApp(input.whatsapp);
+  const { email, name, password, whatsappNumber } = parseInput(
+    newMemberSchema,
+    {
+      email: input.email,
+      name: input.name,
+      password: input.password,
+      whatsappNumber: input.whatsapp,
+    },
+  );
 
-  const passwordHash = await hashPassword(input.password);
+  const passwordHash = await hashPassword(password);
   return dataSource.transaction(async (manager) => {
     const store = await ensureStore(manager, stores, input.store);
     if (await manager.getRepository(User).exists({ where: { email } })) {
@@ -84,7 +104,7 @@ export async function createAdmin(
       email,
       name,
       passwordHash,
-      whatsappNumber,
+      whatsappNumber: whatsappNumber ?? null,
     });
     return { userId: member.userId, storeId: store.id, role: member.role };
   });
@@ -96,9 +116,12 @@ export async function resetPassword(
   sessions: SessionsService,
   input: { email: string; password: string },
 ): Promise<void> {
-  assertPasswordStrength(input.password);
+  const password = parseInput(
+    acceptInviteRequestSchema.shape.password,
+    input.password,
+  );
   const email = input.email.trim().toLowerCase();
-  const passwordHash = await hashPassword(input.password);
+  const passwordHash = await hashPassword(password);
   await dataSource.transaction(async (manager) => {
     const user = await manager
       .getRepository(User)
@@ -109,20 +132,6 @@ export async function resetPassword(
   });
 }
 
-function assertPasswordStrength(password: string): void {
-  if (!isLongEnoughPassword(password)) {
-    throw new CommandError(
-      `Password must have at least ${MIN_PASSWORD_LENGTH} characters.`,
-    );
-  }
-}
-
 export function parseWhatsApp(input: string): string {
-  const number = normalizeWhatsAppNumber(input);
-  if (!number) {
-    throw new CommandError(
-      `Invalid WhatsApp number "${input}". Include the country code, e.g. +55 11 99999-8888.`,
-    );
-  }
-  return number;
+  return parseInput(whatsappInputSchema, input);
 }
