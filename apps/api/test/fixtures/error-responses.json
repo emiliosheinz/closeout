@@ -137,7 +137,7 @@
   },
   "PATCH /stores/:storeId 400": {
     "recorded": ["property slug should not exist"],
-    "expectedDetail": "Requisição inválida.",
+    "expectedDetail": "Campo não permitido.",
     "changedBy": "request validation reports field errors"
   },
   "PATCH /stores/:storeId 403": {
@@ -192,7 +192,7 @@
   },
   "PATCH /stores/:storeId/members/:userId 400": {
     "recorded": ["role must be one of the following values: admin, seller"],
-    "expectedDetail": "Requisição inválida.",
+    "expectedDetail": ["Escolha o papel da pessoa.", "Valor inválido."],
     "changedBy": "request validation reports field errors"
   },
   "PATCH /stores/:storeId/members/:userId 403": {
@@ -207,7 +207,11 @@
     "recorded": [
       "Informe o WhatsApp com o código do país, por exemplo +55 11 99999-8888."
     ],
-    "expectedDetail": "Requisição inválida.",
+    "expectedDetail": [
+      "Campo não permitido.",
+      "Informe o WhatsApp com o código do país, por exemplo +55 11 99999-8888.",
+      "Valor inválido."
+    ],
     "changedBy": "request validation reports field errors"
   },
   "PATCH /stores/:storeId/sellers/:id 403": {
@@ -396,7 +400,11 @@
   },
   "POST /stores/:storeId/sellers/:id/avatar 400": {
     "recorded": ["Envie uma foto por vez."],
-    "expectedDetail": ["Envie uma foto por vez.", "Envie uma imagem."]
+    "expectedDetail": [
+      "Envie uma foto por vez.",
+      "Envie uma imagem.",
+      "Valor inválido."
+    ]
   },
   "POST /stores/:storeId/sellers/:id/avatar 403": {
     "recorded": ["Você não tem permissão para esta ação."],

@@ -145,16 +145,32 @@ describe("team management", () => {
         name: "Sócia",
       });
       for (const role of ["owner", "manager", ""]) {
-        await asOwner()
+        const res = await asOwner()
           .patch(`${members()}/${member.userId}`)
           .send({ role })
           .expect(400);
+        expect(res.body.errors).toEqual([
+          { pointer: "/role", detail: "Escolha o papel da pessoa." },
+        ]);
       }
       const [row] = await ctx.dataSource.query(
         `SELECT role FROM store_members WHERE user_id = $1`,
         [member.userId],
       );
       expect(row.role).toBe("admin");
+    });
+
+    it("rejects a member id that is not a UUID at its route param", async () => {
+      const invalidId = [
+        { pointer: "/params/userId", detail: "Valor inválido." },
+      ];
+      const changed = await asOwner()
+        .patch(`${members()}/socia`)
+        .send({ role: "seller" })
+        .expect(400);
+      expect(changed.body.errors).toEqual(invalidId);
+      const removed = await asOwner().delete(`${members()}/socia`).expect(400);
+      expect(removed.body.errors).toEqual(invalidId);
     });
 
     it("answers 404 for a member of another store and leaves them unchanged", async () => {

@@ -1,3 +1,4 @@
+import type { SellerRequest } from "@closeout/contracts/schemas";
 import { HttpStatus, Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import type { Repository } from "typeorm";
@@ -22,11 +23,6 @@ export interface SellerResponse {
   whatsappNumber: string | null;
   avatarUrl: string | null;
   listingCount: number;
-}
-
-export interface SellerInput {
-  displayName?: string;
-  whatsappNumber?: string | null;
 }
 
 @Injectable()
@@ -59,7 +55,7 @@ export class SellersService {
   async update(
     actor: MembershipContext,
     id: string,
-    patch: SellerInput,
+    patch: SellerRequest,
   ): Promise<SellerResponse> {
     const seller = await this.findEditable(actor, id);
     if (patch.displayName !== undefined) seller.displayName = patch.displayName;

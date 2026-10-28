@@ -1,10 +1,14 @@
 import {
+  type SellerRequest,
+  sellerRequestSchema,
+  uuidSchema,
+} from "@closeout/contracts/schemas";
+import {
   Body,
   Controller,
   Get,
   HttpStatus,
   Param,
-  ParseUUIDPipe,
   Patch,
   Post,
   UploadedFile,
@@ -28,7 +32,6 @@ import {
   type MembershipContext,
   Roles,
 } from "@/stores/membership";
-import { UpdateSellerDto } from "../dto/seller.dto";
 import {
   type SellerResponse,
   SellersService,
@@ -57,8 +60,8 @@ export class SellersController {
   @Roles(ANY_MEMBER)
   update(
     @CurrentMember() member: MembershipContext,
-    @Param("id", new ParseUUIDPipe()) id: string,
-    @Body() body: UpdateSellerDto,
+    @Param("id", { schema: uuidSchema }) id: string,
+    @Body({ schema: sellerRequestSchema }) body: SellerRequest,
   ): Promise<SellerResponse> {
     return this.sellers.update(member, id, body);
   }
@@ -69,7 +72,7 @@ export class SellersController {
   @UseInterceptors(FileInterceptor("file", imageUploadOptions(1)))
   async avatar(
     @CurrentMember() member: MembershipContext,
-    @Param("id", new ParseUUIDPipe()) id: string,
+    @Param("id", { schema: uuidSchema }) id: string,
     @UploadedFile() file: Express.Multer.File | undefined,
   ): Promise<SellerResponse> {
     if (!file) throw new AppException(HttpStatus.BAD_REQUEST, NO_IMAGE);

@@ -36,6 +36,11 @@ describe("seller profiles", () => {
       whatsappNumber: "5511999998888",
       avatarUrl: null,
     });
+    const [row] = await ctx.dataSource.query(
+      `SELECT whatsapp_number FROM sellers WHERE id = $1`,
+      [admin.sellerId],
+    );
+    expect(row.whatsapp_number).toBe("5511999998888");
   });
 
   it("rejects numbers without a country code and plain text", async () => {
@@ -49,8 +54,38 @@ describe("seller profiles", () => {
         .patch(`${base()}/${admin.sellerId}`)
         .send({ displayName: "Ana", whatsappNumber })
         .expect(400);
-      expect(res.body.detail).toBe("Requisição inválida.");
+      expect(res.body.errors).toEqual([
+        {
+          pointer: "/whatsappNumber",
+          detail:
+            "Informe o WhatsApp com o código do país, por exemplo +55 11 99999-8888.",
+        },
+      ]);
     }
+  });
+
+  it("rejects unknown fields in the profile body", async () => {
+    const res = await client()
+      .patch(`${base()}/${admin.sellerId}`)
+      .send({ displayName: "Ana", userId: admin.sellerId })
+      .expect(400);
+    expect(res.body.errors).toEqual([
+      { pointer: "/userId", detail: "Campo não permitido." },
+    ]);
+  });
+
+  it("rejects a profile id that is not a UUID at its route param", async () => {
+    const invalidId = [{ pointer: "/params/id", detail: "Valor inválido." }];
+    const update = await client()
+      .patch(`${base()}/ana`)
+      .send({ displayName: "Ana" })
+      .expect(400);
+    expect(update.body.errors).toEqual(invalidId);
+    const avatar = await client()
+      .post(`${base()}/ana/avatar`)
+      .attach("file", await photo(), "a.jpg")
+      .expect(400);
+    expect(avatar.body.errors).toEqual(invalidId);
   });
 
   it("links public listings to the seller's updated number", async () => {

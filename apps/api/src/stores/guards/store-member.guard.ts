@@ -1,5 +1,9 @@
 import type { StoreRole } from "@closeout/contracts/enums";
-import { NOT_FOUND } from "@closeout/contracts/schemas";
+import {
+  NOT_FOUND,
+  parseRequest,
+  uuidSchema,
+} from "@closeout/contracts/schemas";
 import {
   type CanActivate,
   type ExecutionContext,
@@ -8,7 +12,6 @@ import {
 } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import { InjectDataSource } from "@nestjs/typeorm";
-import { isUUID } from "class-validator";
 import type { DataSource } from "typeorm";
 import {
   type RequestWithPrincipal,
@@ -39,8 +42,9 @@ export class StoreMemberGuard implements CanActivate {
         RequestWithPrincipal &
           RequestWithMembership & { params: Record<string, string> }
       >();
-    const storeId = request.params.storeId;
-    if (!storeId || !isUUID(storeId)) throw notFound();
+    const storeIdParam = parseRequest(uuidSchema, request.params.storeId);
+    if (!storeIdParam.success) throw notFound();
+    const storeId = storeIdParam.data;
 
     const { userId } = requirePrincipal(request);
     const [member] = await this.dataSource.query<
