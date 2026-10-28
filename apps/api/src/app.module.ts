@@ -13,6 +13,7 @@ import { MediaModule } from "./media/media.module";
 import { ProblemFilter } from "./problem/problem.filter";
 import { SellersModule } from "./sellers/sellers.module";
 import { StoresModule } from "./stores/stores.module";
+import { ContractPipe } from "./validation/contract.pipe";
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { StoresModule } from "./stores/stores.module";
         transform: true,
       }),
     },
+    { provide: APP_PIPE, useClass: ContractPipe },
   ],
 })
 export class AppModule {}
