@@ -1,8 +1,9 @@
 import { randomBytes } from "node:crypto";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { DataSource } from "typeorm";
+import { compareWithFixture } from "./error-recorder";
 
 /**
  * Creates a throwaway database on the compose Postgres for this run and
@@ -22,6 +23,16 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
   process.env.HOST = "127.0.0.1";
   process.env.PUBLIC_BASE_URL = "http://storefront.test";
   process.env.INTERNAL_API_SECRET = "integration-test-secret-0123456789abcdef";
+  // ERROR_FIXTURE=compare checks every error response against the fixture
+  // of the copy users saw before error bodies became problem documents.
+  const observedErrors =
+    process.env.ERROR_FIXTURE === "compare"
+      ? path.join(mediaDir, "..", `${database}-errors.jsonl`)
+      : undefined;
+  if (observedErrors) {
+    await writeFile(observedErrors, "");
+    process.env.ERROR_FIXTURE_OBSERVED = observedErrors;
+  }
 
   const dataSource = new DataSource({
     type: "postgres",
@@ -38,6 +49,14 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
   return async () => {
     await runOnServer(`DROP DATABASE IF EXISTS "${database}" WITH (FORCE)`);
     await rm(mediaDir, { recursive: true, force: true });
+    if (!observedErrors) return;
+    const problems = compareWithFixture(observedErrors);
+    await rm(observedErrors, { force: true });
+    if (problems.length > 0) {
+      throw new Error(
+        `Error responses differ from the fixture:\n${problems.join("\n")}`,
+      );
+    }
   };
 }
 

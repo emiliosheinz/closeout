@@ -17,7 +17,7 @@ import { parseEnv } from "@/config/report";
 import { appSetup } from "@/configure-app";
 import { Roles } from "@/stores/membership";
 import { StoresService } from "@/stores/services/stores.service";
-import { installErrorRecorder } from "./error-recorder";
+import { installErrorObserver } from "./error-recorder";
 
 export const ORIGIN = "http://storefront.test";
 export const INTERNAL_SECRET = "integration-test-secret-0123456789abcdef";
@@ -46,7 +46,8 @@ export async function createTestApp(
     imports: [setup.module, ...extraModules],
   }).compile();
   const app = moduleRef.createNestApplication(setup.options);
-  if (process.env.ERROR_FIXTURE === "record") installErrorRecorder(app);
+  const observedErrors = process.env.ERROR_FIXTURE_OBSERVED;
+  if (observedErrors) installErrorObserver(app, observedErrors);
   setup.configure(app);
   await app.init();
   return { app, dataSource: app.get(DataSource) };

@@ -1,218 +1,401 @@
 {
-  "DELETE /stores/:storeId/invites/:id 403": [
-    "Você não tem permissão para esta ação."
-  ],
-  "DELETE /stores/:storeId/invites/:id 404": [
-    "Convite não encontrado.",
-    "Not Found"
-  ],
-  "DELETE /stores/:storeId/listings/:id 404": [
-    "Anúncio não encontrado.",
-    "Not Found"
-  ],
-  "DELETE /stores/:storeId/listings/:id/images/:imageId 404": [
-    "Anúncio não encontrado.",
-    "Not Found"
-  ],
-  "DELETE /stores/:storeId/listings/:id/images/:imageId 422": [
-    "Um anúncio publicado precisa de ao menos uma foto. Adicione outra antes de remover esta."
-  ],
-  "DELETE /stores/:storeId/members/:userId 403": [
-    "Você não tem permissão para esta ação."
-  ],
-  "DELETE /stores/:storeId/members/:userId 404": [
-    "Membro não encontrado.",
-    "Not Found"
-  ],
-  "DELETE /stores/:storeId/members/:userId 409": [
-    "Reatribua o 1 anúncio em que esta pessoa é a única vendedora antes de removê-la.",
-    "Reatribua os 3 anúncios em que esta pessoa é a única vendedora antes de removê-la."
-  ],
-  "DELETE <unmatched /stores/:uuid/sellers/:uuid> 404": [
-    "Cannot DELETE /stores/:uuid/sellers/:uuid"
-  ],
-  "GET /me 401": ["Unauthorized"],
-  "GET /media/:file 404": ["Not Found"],
-  "GET /public/stores/:storeSlug/listings 400": [
-    "maxPrice must not be greater than 100000000",
-    "minPrice must be an integer number",
-    "minPrice must not be greater than 100000000",
-    "minPrice must not be less than 0",
-    "page must not be less than 1",
-    "sort must be one of the following values: recent, price_asc, price_desc"
-  ],
-  "GET /public/stores/:storeSlug/listings 404": ["Not Found"],
-  "GET /public/stores/:storeSlug/listings/:listingSlug 404": ["Not Found"],
-  "GET /stores/:storeId 404": ["Not Found"],
-  "GET /stores/:storeId/categories 404": ["Not Found"],
-  "GET /stores/:storeId/dashboard 404": ["Not Found"],
-  "GET /stores/:storeId/invites 403": [
-    "Você não tem permissão para esta ação."
-  ],
-  "GET /stores/:storeId/invites 404": ["Not Found"],
-  "GET /stores/:storeId/listings 401": ["Unauthorized"],
-  "GET /stores/:storeId/listings 404": ["Not Found"],
-  "GET /stores/:storeId/listings/:id 404": [
-    "Anúncio não encontrado.",
-    "Not Found"
-  ],
-  "GET /stores/:storeId/listings/:id/preview 401": ["Unauthorized"],
-  "GET /stores/:storeId/listings/:id/preview 404": [
-    "Anúncio não encontrado.",
-    "Not Found"
-  ],
-  "GET /stores/:storeId/members 403": [
-    "Você não tem permissão para esta ação."
-  ],
-  "GET /stores/:storeId/members 404": ["Not Found"],
-  "GET /stores/:storeId/sellers 404": ["Not Found"],
-  "GET /stores/:storeId/undeclared 403": [
-    "Você não tem permissão para esta ação."
-  ],
-  "GET /stores/:storeId/undeclared 404": ["Not Found"],
-  "PATCH /stores/:storeId 400": ["property slug should not exist"],
-  "PATCH /stores/:storeId 403": ["Você não tem permissão para esta ação."],
-  "PATCH /stores/:storeId 404": ["Not Found"],
-  "PATCH /stores/:storeId/listings/:id 400": [
-    "All sellerIds's elements must be unique",
-    "property storeId should not exist",
-    "sellerIds must contain at least 1 elements"
-  ],
-  "PATCH /stores/:storeId/listings/:id 403": [
-    "Você não tem permissão para esta ação."
-  ],
-  "PATCH /stores/:storeId/listings/:id 404": [
-    "Anúncio não encontrado.",
-    "Not Found"
-  ],
-  "PATCH /stores/:storeId/listings/:id 422": [
-    "Categoria inválida.",
-    "Vendedor inválido."
-  ],
-  "PATCH /stores/:storeId/listings/:id/status 400": [
-    "availability must be one of the following values: available, reserved, sold"
-  ],
-  "PATCH /stores/:storeId/listings/:id/status 404": [
-    "Anúncio não encontrado.",
-    "Not Found"
-  ],
-  "PATCH /stores/:storeId/listings/:id/status 422": [
-    "Adicione ao menos uma foto antes de publicar."
-  ],
-  "PATCH /stores/:storeId/members/:userId 400": [
-    "role must be one of the following values: admin, seller"
-  ],
-  "PATCH /stores/:storeId/members/:userId 403": [
-    "Você não tem permissão para esta ação."
-  ],
-  "PATCH /stores/:storeId/members/:userId 404": [
-    "Membro não encontrado.",
-    "Not Found"
-  ],
-  "PATCH /stores/:storeId/sellers/:id 400": [
-    "Informe o WhatsApp com o código do país, por exemplo +55 11 99999-8888."
-  ],
-  "PATCH /stores/:storeId/sellers/:id 403": [
-    "Forbidden",
-    "Você não tem permissão para esta ação."
-  ],
-  "PATCH /stores/:storeId/sellers/:id 404": [
-    "Not Found",
-    "Vendedor não encontrado."
-  ],
-  "POST /auth/invites/accept 400": [
-    "A senha precisa ter pelo menos 10 caracteres.",
-    "Informe o WhatsApp com o código do país, por exemplo +55 11 99999-8888.",
-    "Informe seu nome.",
-    "Missing client IP"
-  ],
-  "POST /auth/invites/accept 403": ["Forbidden"],
-  "POST /auth/invites/accept 404": [
-    "Este convite é inválido ou expirou. Peça um novo link a quem convidou você."
-  ],
-  "POST /auth/invites/accept 409": ["Este e-mail já tem uma conta."],
-  "POST /auth/invites/accept 429": [
-    "Muitas tentativas. Tente novamente em alguns minutos."
-  ],
-  "POST /auth/invites/lookup 400": ["Missing client IP"],
-  "POST /auth/invites/lookup 403": ["Forbidden"],
-  "POST /auth/invites/lookup 404": [
-    "Este convite é inválido ou expirou. Peça um novo link a quem convidou você."
-  ],
-  "POST /auth/invites/lookup 429": [
-    "Muitas tentativas. Tente novamente em alguns minutos."
-  ],
-  "POST /auth/login 400": ["Missing client IP"],
-  "POST /auth/login 401": ["E-mail ou senha inválidos."],
-  "POST /auth/login 403": ["Forbidden"],
-  "POST /auth/login 429": [
-    "Muitas tentativas. Tente novamente em alguns minutos."
-  ],
-  "POST /stores/:storeId/invites 400": [
-    "Informe um e-mail válido.",
-    "role must be one of the following values: admin, seller"
-  ],
-  "POST /stores/:storeId/invites 403": [
-    "Você não tem permissão para esta ação."
-  ],
-  "POST /stores/:storeId/invites 404": ["Not Found"],
-  "POST /stores/:storeId/invites 409": ["Este e-mail já tem uma conta."],
-  "POST /stores/:storeId/invites/:id/regenerate 403": [
-    "Você não tem permissão para esta ação."
-  ],
-  "POST /stores/:storeId/invites/:id/regenerate 404": [
-    "Convite não encontrado.",
-    "Not Found"
-  ],
-  "POST /stores/:storeId/listings 400": [
-    "Escolha ao menos um vendedor.",
-    "categoryId must be a UUID",
-    "condition must be one of the following values: new, like_new, good, fair, for_parts",
-    "priceCents must not be less than 0",
-    "title should not be empty"
-  ],
-  "POST /stores/:storeId/listings 404": ["Not Found"],
-  "POST /stores/:storeId/listings 422": [
-    "Categoria inválida.",
-    "Vendedor inválido."
-  ],
-  "POST /stores/:storeId/listings/:id/duplicate 404": [
-    "Anúncio não encontrado.",
-    "Not Found"
-  ],
-  "POST /stores/:storeId/listings/:id/images 400": [
-    "A imagem tem resolução grande demais.",
-    "Arquivo não é uma imagem válida.",
-    "Envie apenas fotos, sem outros campos.",
-    "Envie até 8 fotos por vez."
-  ],
-  "POST /stores/:storeId/listings/:id/images 404": [
-    "Anúncio não encontrado.",
-    "Not Found"
-  ],
-  "POST /stores/:storeId/listings/:id/images 413": [
-    "Cada foto pode ter até 10 MB."
-  ],
-  "POST /stores/:storeId/listings/:id/images 422": [
-    "Cada anúncio pode ter até 20 fotos."
-  ],
-  "POST /stores/:storeId/sellers/:id/avatar 400": ["Envie uma foto por vez."],
-  "POST /stores/:storeId/sellers/:id/avatar 403": [
-    "Você não tem permissão para esta ação."
-  ],
-  "POST /stores/:storeId/sellers/:id/avatar 404": [
-    "Not Found",
-    "Vendedor não encontrado."
-  ],
-  "POST <unmatched /stores/:uuid/sellers> 403": ["Forbidden"],
-  "POST <unmatched /stores/:uuid/sellers> 404": [
-    "Cannot POST /stores/:uuid/sellers"
-  ],
-  "PUT /stores/:storeId/listings/:id/images/order 404": [
-    "Anúncio não encontrado.",
-    "Not Found"
-  ],
-  "PUT /stores/:storeId/listings/:id/images/order 422": [
-    "A nova ordem precisa conter todas as fotos do anúncio."
-  ]
+  "DELETE /stores/:storeId/invites/:id 403": {
+    "recorded": ["Você não tem permissão para esta ação."],
+    "expectedDetail": "Você não tem permissão para esta ação."
+  },
+  "DELETE /stores/:storeId/invites/:id 404": {
+    "recorded": ["Convite não encontrado.", "Not Found"],
+    "expectedDetail": ["Convite não encontrado.", "Não encontrado."]
+  },
+  "DELETE /stores/:storeId/listings/:id 404": {
+    "recorded": ["Anúncio não encontrado.", "Not Found"],
+    "expectedDetail": ["Anúncio não encontrado.", "Não encontrado."]
+  },
+  "DELETE /stores/:storeId/listings/:id/images/:imageId 404": {
+    "recorded": ["Anúncio não encontrado.", "Not Found"],
+    "expectedDetail": [
+      "Anúncio não encontrado.",
+      "Foto não encontrada.",
+      "Não encontrado."
+    ]
+  },
+  "DELETE /stores/:storeId/listings/:id/images/:imageId 422": {
+    "recorded": [
+      "Um anúncio publicado precisa de ao menos uma foto. Adicione outra antes de remover esta."
+    ],
+    "expectedDetail": "Um anúncio publicado precisa de ao menos uma foto. Adicione outra antes de remover esta."
+  },
+  "DELETE /stores/:storeId/members/:userId 403": {
+    "recorded": ["Você não tem permissão para esta ação."],
+    "expectedDetail": "Você não tem permissão para esta ação."
+  },
+  "DELETE /stores/:storeId/members/:userId 404": {
+    "recorded": ["Membro não encontrado.", "Not Found"],
+    "expectedDetail": ["Membro não encontrado.", "Não encontrado."]
+  },
+  "DELETE /stores/:storeId/members/:userId 409": {
+    "recorded": [
+      "Reatribua o 1 anúncio em que esta pessoa é a única vendedora antes de removê-la.",
+      "Reatribua os 3 anúncios em que esta pessoa é a única vendedora antes de removê-la."
+    ],
+    "expectedDetail": [
+      "Reatribua o 1 anúncio em que esta pessoa é a única vendedora antes de removê-la.",
+      "Reatribua os 3 anúncios em que esta pessoa é a única vendedora antes de removê-la."
+    ]
+  },
+  "DELETE <unmatched /stores/:uuid/sellers/:uuid> 404": {
+    "recorded": ["Cannot DELETE /stores/:uuid/sellers/:uuid"],
+    "expectedDetail": "Não encontrado."
+  },
+  "GET /me 401": {
+    "recorded": ["Unauthorized"],
+    "expectedDetail": "Entre para continuar."
+  },
+  "GET /media/:file 404": {
+    "recorded": ["Not Found"],
+    "expectedDetail": "Não encontrado."
+  },
+  "GET /public/stores/:storeSlug/listings 400": {
+    "recorded": [
+      "maxPrice must not be greater than 100000000",
+      "minPrice must be an integer number",
+      "minPrice must not be greater than 100000000",
+      "minPrice must not be less than 0",
+      "page must not be less than 1",
+      "sort must be one of the following values: recent, price_asc, price_desc"
+    ],
+    "expectedDetail": "Requisição inválida.",
+    "changedBy": "request validation reports field errors"
+  },
+  "GET /public/stores/:storeSlug/listings 404": {
+    "recorded": ["Not Found"],
+    "expectedDetail": "Não encontrado."
+  },
+  "GET /public/stores/:storeSlug/listings/:listingSlug 404": {
+    "recorded": ["Not Found"],
+    "expectedDetail": "Não encontrado."
+  },
+  "GET /stores/:storeId 404": {
+    "recorded": ["Not Found"],
+    "expectedDetail": "Não encontrado."
+  },
+  "GET /stores/:storeId/categories 404": {
+    "recorded": ["Not Found"],
+    "expectedDetail": "Não encontrado."
+  },
+  "GET /stores/:storeId/dashboard 404": {
+    "recorded": ["Not Found"],
+    "expectedDetail": "Não encontrado."
+  },
+  "GET /stores/:storeId/invites 403": {
+    "recorded": ["Você não tem permissão para esta ação."],
+    "expectedDetail": "Você não tem permissão para esta ação."
+  },
+  "GET /stores/:storeId/invites 404": {
+    "recorded": ["Not Found"],
+    "expectedDetail": "Não encontrado."
+  },
+  "GET /stores/:storeId/listings 401": {
+    "recorded": ["Unauthorized"],
+    "expectedDetail": "Entre para continuar."
+  },
+  "GET /stores/:storeId/listings 404": {
+    "recorded": ["Not Found"],
+    "expectedDetail": "Não encontrado."
+  },
+  "GET /stores/:storeId/listings/:id 404": {
+    "recorded": ["Anúncio não encontrado.", "Not Found"],
+    "expectedDetail": ["Anúncio não encontrado.", "Não encontrado."]
+  },
+  "GET /stores/:storeId/listings/:id/preview 401": {
+    "recorded": ["Unauthorized"],
+    "expectedDetail": "Entre para continuar."
+  },
+  "GET /stores/:storeId/listings/:id/preview 404": {
+    "recorded": ["Anúncio não encontrado.", "Not Found"],
+    "expectedDetail": ["Anúncio não encontrado.", "Não encontrado."]
+  },
+  "GET /stores/:storeId/members 403": {
+    "recorded": ["Você não tem permissão para esta ação."],
+    "expectedDetail": "Você não tem permissão para esta ação."
+  },
+  "GET /stores/:storeId/members 404": {
+    "recorded": ["Not Found"],
+    "expectedDetail": "Não encontrado."
+  },
+  "GET /stores/:storeId/sellers 404": {
+    "recorded": ["Not Found"],
+    "expectedDetail": "Não encontrado."
+  },
+  "GET /stores/:storeId/undeclared 403": {
+    "recorded": ["Você não tem permissão para esta ação."],
+    "expectedDetail": "Você não tem permissão para esta ação."
+  },
+  "GET /stores/:storeId/undeclared 404": {
+    "recorded": ["Not Found"],
+    "expectedDetail": "Não encontrado."
+  },
+  "PATCH /stores/:storeId 400": {
+    "recorded": ["property slug should not exist"],
+    "expectedDetail": "Requisição inválida.",
+    "changedBy": "request validation reports field errors"
+  },
+  "PATCH /stores/:storeId 403": {
+    "recorded": ["Você não tem permissão para esta ação."],
+    "expectedDetail": "Você não tem permissão para esta ação."
+  },
+  "PATCH /stores/:storeId 404": {
+    "recorded": ["Not Found"],
+    "expectedDetail": "Não encontrado."
+  },
+  "PATCH /stores/:storeId/listings/:id 400": {
+    "recorded": [
+      "All sellerIds's elements must be unique",
+      "property storeId should not exist",
+      "sellerIds must contain at least 1 elements"
+    ],
+    "expectedDetail": "Requisição inválida.",
+    "changedBy": "request validation reports field errors"
+  },
+  "PATCH /stores/:storeId/listings/:id 403": {
+    "recorded": ["Você não tem permissão para esta ação."],
+    "expectedDetail": "Você não tem permissão para esta ação."
+  },
+  "PATCH /stores/:storeId/listings/:id 404": {
+    "recorded": ["Anúncio não encontrado.", "Not Found"],
+    "expectedDetail": ["Anúncio não encontrado.", "Não encontrado."]
+  },
+  "PATCH /stores/:storeId/listings/:id 422": {
+    "recorded": ["Categoria inválida.", "Vendedor inválido."],
+    "expectedDetail": ["Categoria inválida.", "Vendedor inválido."]
+  },
+  "PATCH /stores/:storeId/listings/:id/status 400": {
+    "recorded": [
+      "availability must be one of the following values: available, reserved, sold"
+    ],
+    "expectedDetail": "Requisição inválida.",
+    "changedBy": "request validation reports field errors"
+  },
+  "PATCH /stores/:storeId/listings/:id/status 404": {
+    "recorded": ["Anúncio não encontrado.", "Not Found"],
+    "expectedDetail": ["Anúncio não encontrado.", "Não encontrado."]
+  },
+  "PATCH /stores/:storeId/listings/:id/status 422": {
+    "recorded": ["Adicione ao menos uma foto antes de publicar."],
+    "expectedDetail": "Adicione ao menos uma foto antes de publicar."
+  },
+  "PATCH /stores/:storeId/members/:userId 400": {
+    "recorded": ["role must be one of the following values: admin, seller"],
+    "expectedDetail": "Requisição inválida.",
+    "changedBy": "request validation reports field errors"
+  },
+  "PATCH /stores/:storeId/members/:userId 403": {
+    "recorded": ["Você não tem permissão para esta ação."],
+    "expectedDetail": "Você não tem permissão para esta ação."
+  },
+  "PATCH /stores/:storeId/members/:userId 404": {
+    "recorded": ["Membro não encontrado.", "Not Found"],
+    "expectedDetail": ["Membro não encontrado.", "Não encontrado."]
+  },
+  "PATCH /stores/:storeId/sellers/:id 400": {
+    "recorded": [
+      "Informe o WhatsApp com o código do país, por exemplo +55 11 99999-8888."
+    ],
+    "expectedDetail": "Requisição inválida.",
+    "changedBy": "request validation reports field errors"
+  },
+  "PATCH /stores/:storeId/sellers/:id 403": {
+    "recorded": ["Forbidden", "Você não tem permissão para esta ação."],
+    "expectedDetail": [
+      "Origem não permitida.",
+      "Você não tem permissão para esta ação."
+    ]
+  },
+  "PATCH /stores/:storeId/sellers/:id 404": {
+    "recorded": ["Not Found", "Vendedor não encontrado."],
+    "expectedDetail": ["Não encontrado.", "Vendedor não encontrado."]
+  },
+  "POST /auth/invites/accept 400": {
+    "recorded": [
+      "A senha precisa ter pelo menos 10 caracteres.",
+      "Informe o WhatsApp com o código do país, por exemplo +55 11 99999-8888.",
+      "Informe seu nome.",
+      "Missing client IP"
+    ],
+    "expectedDetail": [
+      "Não foi possível identificar a origem da requisição.",
+      "Requisição inválida."
+    ],
+    "changedBy": "request validation reports field errors"
+  },
+  "POST /auth/invites/accept 403": {
+    "recorded": ["Forbidden"],
+    "expectedDetail": "Você não tem permissão para esta ação."
+  },
+  "POST /auth/invites/accept 404": {
+    "recorded": [
+      "Este convite é inválido ou expirou. Peça um novo link a quem convidou você."
+    ],
+    "expectedDetail": "Este convite é inválido ou expirou. Peça um novo link a quem convidou você."
+  },
+  "POST /auth/invites/accept 409": {
+    "recorded": ["Este e-mail já tem uma conta."],
+    "expectedDetail": "Este e-mail já tem uma conta."
+  },
+  "POST /auth/invites/accept 429": {
+    "recorded": ["Muitas tentativas. Tente novamente em alguns minutos."],
+    "expectedDetail": "Muitas tentativas. Tente novamente em alguns minutos."
+  },
+  "POST /auth/invites/accept 500": {
+    "recorded": [
+      "Sua conta foi criada, mas não foi possível entrar. Entre com seu e-mail e senha."
+    ],
+    "expectedDetail": "Sua conta foi criada, mas não foi possível entrar. Entre com seu e-mail e senha."
+  },
+  "POST /auth/invites/lookup 400": {
+    "recorded": ["Missing client IP"],
+    "expectedDetail": "Não foi possível identificar a origem da requisição."
+  },
+  "POST /auth/invites/lookup 403": {
+    "recorded": ["Forbidden"],
+    "expectedDetail": "Você não tem permissão para esta ação."
+  },
+  "POST /auth/invites/lookup 404": {
+    "recorded": [
+      "Este convite é inválido ou expirou. Peça um novo link a quem convidou você."
+    ],
+    "expectedDetail": "Este convite é inválido ou expirou. Peça um novo link a quem convidou você."
+  },
+  "POST /auth/invites/lookup 429": {
+    "recorded": ["Muitas tentativas. Tente novamente em alguns minutos."],
+    "expectedDetail": "Muitas tentativas. Tente novamente em alguns minutos."
+  },
+  "POST /auth/login 400": {
+    "recorded": ["Missing client IP"],
+    "expectedDetail": [
+      "Não foi possível identificar a origem da requisição.",
+      "Não foi possível ler os dados enviados."
+    ]
+  },
+  "POST /auth/login 401": {
+    "recorded": ["E-mail ou senha inválidos."],
+    "expectedDetail": "E-mail ou senha inválidos."
+  },
+  "POST /auth/login 403": {
+    "recorded": ["Forbidden"],
+    "expectedDetail": [
+      "Origem não permitida.",
+      "Você não tem permissão para esta ação."
+    ]
+  },
+  "POST /auth/login 429": {
+    "recorded": ["Muitas tentativas. Tente novamente em alguns minutos."],
+    "expectedDetail": "Muitas tentativas. Tente novamente em alguns minutos."
+  },
+  "POST /stores/:storeId/invites 400": {
+    "recorded": [
+      "Informe um e-mail válido.",
+      "role must be one of the following values: admin, seller"
+    ],
+    "expectedDetail": "Requisição inválida.",
+    "changedBy": "request validation reports field errors"
+  },
+  "POST /stores/:storeId/invites 403": {
+    "recorded": ["Você não tem permissão para esta ação."],
+    "expectedDetail": "Você não tem permissão para esta ação."
+  },
+  "POST /stores/:storeId/invites 404": {
+    "recorded": ["Not Found"],
+    "expectedDetail": "Não encontrado."
+  },
+  "POST /stores/:storeId/invites 409": {
+    "recorded": ["Este e-mail já tem uma conta."],
+    "expectedDetail": "Este e-mail já tem uma conta."
+  },
+  "POST /stores/:storeId/invites/:id/regenerate 403": {
+    "recorded": ["Você não tem permissão para esta ação."],
+    "expectedDetail": "Você não tem permissão para esta ação."
+  },
+  "POST /stores/:storeId/invites/:id/regenerate 404": {
+    "recorded": ["Convite não encontrado.", "Not Found"],
+    "expectedDetail": ["Convite não encontrado.", "Não encontrado."]
+  },
+  "POST /stores/:storeId/listings 400": {
+    "recorded": [
+      "Escolha ao menos um vendedor.",
+      "categoryId must be a UUID",
+      "condition must be one of the following values: new, like_new, good, fair, for_parts",
+      "priceCents must not be less than 0",
+      "title should not be empty"
+    ],
+    "expectedDetail": ["Escolha ao menos um vendedor.", "Requisição inválida."],
+    "changedBy": "request validation reports field errors"
+  },
+  "POST /stores/:storeId/listings 404": {
+    "recorded": ["Not Found"],
+    "expectedDetail": "Não encontrado."
+  },
+  "POST /stores/:storeId/listings 422": {
+    "recorded": ["Categoria inválida.", "Vendedor inválido."],
+    "expectedDetail": ["Categoria inválida.", "Vendedor inválido."]
+  },
+  "POST /stores/:storeId/listings/:id/duplicate 404": {
+    "recorded": ["Anúncio não encontrado.", "Not Found"],
+    "expectedDetail": ["Anúncio não encontrado.", "Não encontrado."]
+  },
+  "POST /stores/:storeId/listings/:id/images 400": {
+    "recorded": [
+      "A imagem tem resolução grande demais.",
+      "Arquivo não é uma imagem válida.",
+      "Envie apenas fotos, sem outros campos.",
+      "Envie até 8 fotos por vez."
+    ],
+    "expectedDetail": [
+      "A imagem tem resolução grande demais.",
+      "Arquivo não é uma imagem válida.",
+      "Envie ao menos uma foto.",
+      "Envie apenas fotos, sem outros campos.",
+      "Envie até 8 fotos por vez."
+    ]
+  },
+  "POST /stores/:storeId/listings/:id/images 404": {
+    "recorded": ["Anúncio não encontrado.", "Not Found"],
+    "expectedDetail": ["Anúncio não encontrado.", "Não encontrado."]
+  },
+  "POST /stores/:storeId/listings/:id/images 413": {
+    "recorded": ["Cada foto pode ter até 10 MB."],
+    "expectedDetail": "Cada foto pode ter até 10 MB."
+  },
+  "POST /stores/:storeId/listings/:id/images 422": {
+    "recorded": ["Cada anúncio pode ter até 20 fotos."],
+    "expectedDetail": "Cada anúncio pode ter até 20 fotos."
+  },
+  "POST /stores/:storeId/sellers/:id/avatar 400": {
+    "recorded": ["Envie uma foto por vez."],
+    "expectedDetail": ["Envie uma foto por vez.", "Envie uma imagem."]
+  },
+  "POST /stores/:storeId/sellers/:id/avatar 403": {
+    "recorded": ["Você não tem permissão para esta ação."],
+    "expectedDetail": "Você não tem permissão para esta ação."
+  },
+  "POST /stores/:storeId/sellers/:id/avatar 404": {
+    "recorded": ["Not Found", "Vendedor não encontrado."],
+    "expectedDetail": ["Não encontrado.", "Vendedor não encontrado."]
+  },
+  "POST <unmatched /stores/:uuid/sellers> 403": {
+    "recorded": ["Forbidden"],
+    "expectedDetail": "Origem não permitida."
+  },
+  "POST <unmatched /stores/:uuid/sellers> 404": {
+    "recorded": ["Cannot POST /stores/:uuid/sellers"],
+    "expectedDetail": "Não encontrado."
+  },
+  "PUT /stores/:storeId/listings/:id/images/order 404": {
+    "recorded": ["Anúncio não encontrado.", "Not Found"],
+    "expectedDetail": ["Anúncio não encontrado.", "Não encontrado."]
+  },
+  "PUT /stores/:storeId/listings/:id/images/order 422": {
+    "recorded": ["A nova ordem precisa conter todas as fotos do anúncio."],
+    "expectedDetail": "A nova ordem precisa conter todas as fotos do anúncio."
+  }
 }

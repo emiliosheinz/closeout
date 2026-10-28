@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { appendFileSync, readFileSync } from "node:fs";
 import path from "node:path";
 import type { INestApplication } from "@nestjs/common";
 import type { NextFunction, Request, Response } from "express";
@@ -7,13 +7,29 @@ import { registeredRoutes } from "./helpers";
 const FIXTURE = path.join(__dirname, "fixtures", "error-responses.json");
 
 /**
- * Records every error response the suites provoke as
- * `{"<METHOD> <route pattern> <status>": [messages]}`, merged into the
- * fixture file, so later changes to the error body can be compared with the
- * messages the API sends today. Installed ahead of every other middleware so
- * requests rejected before routing (origin check) are recorded too.
+ * One error response the API sent before error bodies became problem
+ * documents, keyed `"<METHOD> <route pattern> <status>"`. `recorded` holds
+ * the messages captured then; `expectedDetail` is the `detail` every
+ * response under the key must carry now (a list when several throw sites
+ * share the key). `changedBy` names the behaviour change that moved the
+ * outcome away from the recording.
  */
-export function installErrorRecorder(app: INestApplication): void {
+interface FixtureEntry {
+  recorded: string[];
+  expectedDetail: string | string[];
+  changedBy?: string;
+}
+
+/**
+ * Appends the `detail` of every error response the suites provoke to
+ * `observedFile`, one JSON line per response. Installed ahead of every
+ * other middleware so requests rejected before routing (origin check) are
+ * observed too.
+ */
+export function installErrorObserver(
+  app: INestApplication,
+  observedFile: string,
+): void {
   app.use((req: Request, res: Response, next: NextFunction) => {
     let body: unknown;
     const json = res.json.bind(res);
@@ -23,20 +39,56 @@ export function installErrorRecorder(app: INestApplication): void {
     };
     res.on("finish", () => {
       if (res.statusCode < 400) return;
-      const pattern = req.route
-        ? `${req.baseUrl}${req.route.path}`
-        : matchRoute(app, req.method, req.path);
-      record(`${req.method} ${pattern} ${res.statusCode}`, messagesOf(body));
+      // Nest answers unknown routes from a catch-all `{/*splat}` route.
+      const pattern =
+        req.route && !String(req.route.path).includes("*")
+          ? `${req.baseUrl}${req.route.path}`
+          : matchRoute(app, req.method, req.path);
+      const key = `${req.method} ${pattern} ${res.statusCode}`.replace(
+        UUID,
+        ":uuid",
+      );
+      const detail = (body as { detail?: unknown } | undefined)?.detail;
+      appendFileSync(
+        observedFile,
+        `${JSON.stringify({ key, detail: typeof detail === "string" ? detail : `<no detail: ${JSON.stringify(body)}>` })}\n`,
+      );
     });
     next();
   });
 }
 
-function messagesOf(body: unknown): string[] {
-  const message = (body as { message?: unknown } | undefined)?.message;
-  if (typeof message === "string") return [message];
-  if (Array.isArray(message)) return message.map(String);
-  return [body === undefined ? "<no JSON body>" : JSON.stringify(body)];
+/**
+ * Compares the observed responses with the fixture. Returns one line per
+ * problem: an entry never observed (unless a behaviour change accounts for
+ * it) or a key whose observed details differ from its expected ones.
+ */
+export function compareWithFixture(observedFile: string): string[] {
+  const fixture: Record<string, FixtureEntry> = JSON.parse(
+    readFileSync(FIXTURE, "utf8"),
+  );
+  const observed = new Map<string, Set<string>>();
+  for (const line of readFileSync(observedFile, "utf8").split("\n")) {
+    if (!line) continue;
+    const { key, detail } = JSON.parse(line) as { key: string; detail: string };
+    observed.set(key, (observed.get(key) ?? new Set()).add(detail));
+  }
+  const problems: string[] = [];
+  for (const [key, entry] of Object.entries(fixture)) {
+    const seen = observed.get(key);
+    if (!seen) {
+      if (!entry.changedBy) problems.push(`${key}: never observed`);
+      continue;
+    }
+    const expected = [entry.expectedDetail].flat().sort();
+    const actual = [...seen].sort();
+    if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+      problems.push(
+        `${key}: expected ${JSON.stringify(expected)}, observed ${JSON.stringify(actual)}`,
+      );
+    }
+  }
+  return problems;
 }
 
 /** Requests rejected before routing carry no `req.route`; match them by path. */
@@ -61,18 +113,3 @@ function matchRoute(
 }
 
 const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/g;
-
-/** Per-run ids would make every recording differ; keep the shape only. */
-function record(rawKey: string, rawMessages: string[]): void {
-  const key = rawKey.replace(UUID, ":uuid");
-  const messages = rawMessages.map((message) => message.replace(UUID, ":uuid"));
-  const fixture: Record<string, string[]> = existsSync(FIXTURE)
-    ? JSON.parse(readFileSync(FIXTURE, "utf8"))
-    : {};
-  fixture[key] = [...new Set([...(fixture[key] ?? []), ...messages])].sort();
-  const sorted = Object.fromEntries(
-    Object.entries(fixture).sort(([a], [b]) => a.localeCompare(b)),
-  );
-  mkdirSync(path.dirname(FIXTURE), { recursive: true });
-  writeFileSync(FIXTURE, `${JSON.stringify(sorted, null, 2)}\n`);
-}
