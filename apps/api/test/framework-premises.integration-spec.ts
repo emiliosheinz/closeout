@@ -18,23 +18,13 @@ import { APP_FILTER, APP_PIPE } from "@nestjs/core";
 import { Test } from "@nestjs/testing";
 import type { NextFunction, Request, Response } from "express";
 import request from "supertest";
+import { z } from "zod";
 import { createTestApp, ORIGIN, type TestContext } from "./helpers";
 
-type Schema = NonNullable<ArgumentMetadata["schema"]>;
-
-function passThroughSchema(): Schema {
-  return {
-    "~standard": {
-      version: 1,
-      vendor: "test",
-      validate: (value: unknown) => ({ value }),
-    },
-  };
-}
-
-const bodySchema = passThroughSchema();
-const querySchema = passThroughSchema();
-const idSchema = passThroughSchema();
+// Zod, as the app's own pipe accepts only contracts (Zod) schemas.
+const bodySchema = z.unknown();
+const querySchema = z.unknown();
+const idSchema = z.unknown();
 
 @Controller("premises")
 class PremisesController {
