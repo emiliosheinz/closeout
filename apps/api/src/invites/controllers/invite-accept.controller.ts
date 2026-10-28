@@ -1,4 +1,11 @@
-import { FORBIDDEN, NO_CLIENT_IP } from "@closeout/contracts/schemas";
+import {
+  type AcceptInviteRequest,
+  acceptInviteRequestSchema,
+  FORBIDDEN,
+  type InviteLookupRequest,
+  inviteLookupRequestSchema,
+  NO_CLIENT_IP,
+} from "@closeout/contracts/schemas";
 import {
   Body,
   Controller,
@@ -20,7 +27,6 @@ import {
   isInternalRequest,
   trustedClientIp,
 } from "@/security/internal-request";
-import { AcceptInviteDto, InviteTokenDto } from "../dto/invite.dto";
 import {
   type InviteDetails,
   InvitesService,
@@ -42,7 +48,7 @@ export class InviteAcceptController {
   @HttpCode(200)
   lookup(
     @Req() req: Request,
-    @Body() body: InviteTokenDto,
+    @Body({ schema: inviteLookupRequestSchema }) body: InviteLookupRequest,
   ): Promise<InviteDetails> {
     return this.invites.lookup(
       body.token,
@@ -54,7 +60,7 @@ export class InviteAcceptController {
   @HttpCode(200)
   async accept(
     @Req() req: Request,
-    @Body() body: AcceptInviteDto,
+    @Body({ schema: acceptInviteRequestSchema }) body: AcceptInviteRequest,
   ): Promise<{ sessionToken: string; expiresAt: string }> {
     const { sessionToken, expiresAt } = await this.invites.accept(
       body,

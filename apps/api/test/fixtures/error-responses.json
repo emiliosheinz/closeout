@@ -223,8 +223,11 @@
       "Missing client IP"
     ],
     "expectedDetail": [
+      "A senha precisa ter pelo menos 10 caracteres.",
+      "Informe o WhatsApp com o código do país, por exemplo +55 11 99999-8888.",
+      "Informe seu nome.",
       "Não foi possível identificar a origem da requisição.",
-      "Requisição inválida."
+      "Valor inválido."
     ],
     "changedBy": "request validation reports field errors"
   },
@@ -254,7 +257,10 @@
   },
   "POST /auth/invites/lookup 400": {
     "recorded": ["Missing client IP"],
-    "expectedDetail": "Não foi possível identificar a origem da requisição."
+    "expectedDetail": [
+      "Não foi possível identificar a origem da requisição.",
+      "Valor inválido."
+    ]
   },
   "POST /auth/invites/lookup 403": {
     "recorded": ["Forbidden"],
@@ -273,6 +279,7 @@
   "POST /auth/login 400": {
     "recorded": ["Missing client IP"],
     "expectedDetail": [
+      "Informe um e-mail válido.",
       "Não foi possível identificar a origem da requisição.",
       "Não foi possível ler os dados enviados."
     ]
@@ -297,7 +304,10 @@
       "Informe um e-mail válido.",
       "role must be one of the following values: admin, seller"
     ],
-    "expectedDetail": "Requisição inválida.",
+    "expectedDetail": [
+      "Escolha o papel da pessoa.",
+      "Informe um e-mail válido."
+    ],
     "changedBy": "request validation reports field errors"
   },
   "POST /stores/:storeId/invites 403": {

@@ -1,5 +1,8 @@
 import type { AssignableRole } from "@closeout/contracts/enums";
-import { TOO_MANY_ATTEMPTS } from "@closeout/contracts/schemas";
+import {
+  type AcceptInviteRequest,
+  TOO_MANY_ATTEMPTS,
+} from "@closeout/contracts/schemas";
 import { HttpStatus, Inject, Injectable, Logger } from "@nestjs/common";
 import { InjectDataSource } from "@nestjs/typeorm";
 import { DataSource, QueryFailedError } from "typeorm";
@@ -48,15 +51,6 @@ export interface InviteDetails {
   storeName: string;
   email: string;
   role: AssignableRole;
-}
-
-export interface AcceptInput {
-  token: string;
-  /** Already trimmed and non-empty. */
-  name: string;
-  password: string;
-  /** International digits, or null/undefined for none. */
-  whatsappNumber?: string | null;
 }
 
 interface InviteRow {
@@ -209,7 +203,7 @@ export class InvitesService {
    * created; the others see an invalid link.
    */
   async accept(
-    input: AcceptInput,
+    input: AcceptInviteRequest,
     clientIp: string,
   ): Promise<{ sessionToken: string; expiresAt: Date }> {
     this.beginAttempt(clientIp);
@@ -260,7 +254,7 @@ export class InvitesService {
    */
   private async consumeOrHasAccount(
     tokenHash: string,
-    input: AcceptInput,
+    input: AcceptInviteRequest,
     passwordHash: string,
   ): Promise<AcceptOutcome> {
     try {
@@ -277,7 +271,7 @@ export class InvitesService {
 
   private consume(
     tokenHash: string,
-    input: AcceptInput,
+    input: AcceptInviteRequest,
     passwordHash: string,
   ): Promise<AcceptOutcome> {
     return this.dataSource.transaction(async (manager) => {

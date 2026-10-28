@@ -1,11 +1,15 @@
 import {
+  type InviteRequest,
+  inviteRequestSchema,
+  uuidSchema,
+} from "@closeout/contracts/schemas";
+import {
   Body,
   Controller,
   Delete,
   Get,
   HttpCode,
   Param,
-  ParseUUIDPipe,
   Post,
   UseGuards,
 } from "@nestjs/common";
@@ -17,7 +21,6 @@ import {
   type MembershipContext,
   Roles,
 } from "@/stores/membership";
-import { CreateInviteDto } from "../dto/invite.dto";
 import {
   type InviteSummary,
   InvitesService,
@@ -34,7 +37,7 @@ export class InvitesController {
   @HttpCode(201)
   create(
     @CurrentMember() member: MembershipContext,
-    @Body() body: CreateInviteDto,
+    @Body({ schema: inviteRequestSchema }) body: InviteRequest,
   ): Promise<IssuedInvite> {
     return this.invites.create(member, body.email, body.role);
   }
@@ -52,7 +55,7 @@ export class InvitesController {
   @HttpCode(204)
   revoke(
     @CurrentMember() member: MembershipContext,
-    @Param("id", new ParseUUIDPipe()) id: string,
+    @Param("id", { schema: uuidSchema }) id: string,
   ): Promise<void> {
     return this.invites.revoke(member, id);
   }
@@ -62,7 +65,7 @@ export class InvitesController {
   @HttpCode(200)
   regenerate(
     @CurrentMember() member: MembershipContext,
-    @Param("id", new ParseUUIDPipe()) id: string,
+    @Param("id", { schema: uuidSchema }) id: string,
   ): Promise<IssuedInvite> {
     return this.invites.regenerate(member, id);
   }

@@ -1,4 +1,9 @@
-import { FORBIDDEN, NO_CLIENT_IP } from "@closeout/contracts/schemas";
+import {
+  FORBIDDEN,
+  type LoginRequest,
+  loginRequestSchema,
+  NO_CLIENT_IP,
+} from "@closeout/contracts/schemas";
 import {
   Body,
   Controller,
@@ -20,7 +25,6 @@ import {
   isInternalRequest,
   trustedClientIp,
 } from "@/security/internal-request";
-import { LoginDto } from "./dto/login.dto";
 import {
   type RequestWithPrincipal,
   requirePrincipal,
@@ -45,7 +49,7 @@ export class AuthController {
   @HttpCode(200)
   async login(
     @Req() req: Request,
-    @Body() body: LoginDto,
+    @Body({ schema: loginRequestSchema }) body: LoginRequest,
   ): Promise<{ sessionToken: string; expiresAt: string }> {
     const secret = internalSecret(this.config);
     if (!isInternalRequest(req.headers, secret)) {

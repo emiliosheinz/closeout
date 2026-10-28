@@ -104,6 +104,30 @@ describe("admin authentication", () => {
       .expect(403);
   });
 
+  it("rejects a malformed email without counting it against the client", async () => {
+    await createStoreWithAdmin(ctx, "formato");
+    const tooLong = `${"a".repeat(243)}@example.com`;
+    for (let i = 0; i < 15; i++) {
+      const long = await attempt(` ${tooLong} `, "wrong").expect(400);
+      expect(long.body.errors).toEqual([
+        { pointer: "/email", detail: "Informe um e-mail válido." },
+      ]);
+      const spaced = await attempt('"a b"@x.com', "wrong").expect(400);
+      expect(spaced.body.errors).toEqual([
+        { pointer: "/email", detail: "Informe um e-mail válido." },
+      ]);
+    }
+    await attempt("formato@example.com", PASSWORD).expect(200);
+  });
+
+  it("counts a short but well-formed email like any failed login", async () => {
+    for (let i = 0; i < 10; i++) {
+      const res = await attempt("a@b.c", "wrong").expect(401);
+      expect(res.body.detail).toBe("E-mail ou senha inválidos.");
+    }
+    await attempt("a@b.c", "wrong").expect(429);
+  });
+
   it("does not count a successful login against the limit", async () => {
     await createStoreWithAdmin(ctx, "perdoa");
     for (let i = 0; i < 9; i++) {

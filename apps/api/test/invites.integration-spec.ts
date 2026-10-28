@@ -141,8 +141,22 @@ describe("store invites", () => {
           .post(invites())
           .send({ email, role: "seller" })
           .expect(400);
-        expect(res.body.detail).toBe("Requisição inválida.");
+        expect(res.body.errors).toEqual([
+          { pointer: "/email", detail: "Informe um e-mail válido." },
+        ]);
       }
+    });
+
+    it("reports every required field of an empty invite", async () => {
+      const res = await asOwner()
+        .post(invites())
+        .set("Content-Type", "application/json")
+        .expect(400);
+      expect(res.body.detail).toBe("Informe um e-mail válido.");
+      expect(res.body.errors).toEqual([
+        { pointer: "/email", detail: "Informe um e-mail válido." },
+        { pointer: "/role", detail: "Escolha o papel da pessoa." },
+      ]);
     });
 
     it("refuses emails that already have an account, wherever it belongs", async () => {
@@ -295,6 +309,25 @@ describe("store invites", () => {
       }
     });
 
+    it("answers an unmatched token of up to 200 characters as an invalid link", async () => {
+      const unmatched = "x".repeat(200);
+      expect((await lookup(unmatched).expect(404)).body).toEqual(INVALID_BODY);
+      expect((await accept(unmatched).expect(404)).body).toEqual(INVALID_BODY);
+    });
+
+    it("rejects an empty or over-long token as malformed", async () => {
+      for (const token of ["", "x".repeat(201)]) {
+        const opened = await lookup(token).expect(400);
+        expect(opened.body.errors).toEqual([
+          { pointer: "/token", detail: "Valor inválido." },
+        ]);
+        const submitted = await accept(token).expect(400);
+        expect(submitted.body.errors).toEqual([
+          { pointer: "/token", detail: "Valor inválido." },
+        ]);
+      }
+    });
+
     it("treats a link as invalid from the moment it expires", async () => {
       const { id, token } = await invite("nova@example.com");
       await ctx.dataSource.query(
@@ -434,11 +467,11 @@ describe("store invites", () => {
           "Informe o WhatsApp com o código do país, por exemplo +55 11 99999-8888.",
         ],
       ] as const;
-      // Field messages are not in the problem body yet; until validation
-      // reports field errors, every case gets the generic 400 copy.
-      for (const [fields] of cases) {
+      for (const [fields, message] of cases) {
         const res = await accept(token, fields).expect(400);
-        expect(res.body.detail).toBe("Requisição inválida.");
+        expect(res.body.errors).toEqual([
+          { pointer: `/${Object.keys(fields)[0]}`, detail: message },
+        ]);
       }
       expect(await usersWithEmail("nova@example.com")).toBe(0);
       await lookup(token).expect(200);
