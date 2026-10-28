@@ -210,9 +210,9 @@ describe("other response schemas", () => {
 describe("request messages", () => {
   const listing = {
     title: "Bike",
-    categoryId: "c",
+    categoryId: "0b6f1b44-6f3c-4b7a-8d3c-1f0a1c2d3e4f",
     condition: "good",
-    sellerIds: ["s"],
+    sellerIds: ["5f0c2b1e-3a4d-4e5f-8a6b-7c8d9e0f1a2b"],
   };
 
   it("asks for a listing title", () => {
