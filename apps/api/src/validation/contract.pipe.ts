@@ -57,7 +57,9 @@ export class ContractPipe implements PipeTransform {
     const location = POINTER_ROOT[type];
     if (!schema || location === undefined) return value;
     if (schema["~standard"].vendor !== "zod") {
-      throw new Error("Route schemas must come from @closeout/contracts");
+      throw new Error(
+        "Route schemas must be Zod schemas (parsed through parseRequest)",
+      );
     }
     const input = type === "body" && !data && value === undefined ? {} : value;
     stripProtoKeys(input);
