@@ -72,4 +72,36 @@ describe("LoginRateLimiter", () => {
     }
     expect(limiter.isBlocked("x@x.com", "9.9.9.9", 0)).toBe(false);
   });
+
+  it("shares counts between emails that differ only in case", () => {
+    const limiter = new LoginRateLimiter();
+    for (let i = 0; i < 10; i++) {
+      limiter.recordFailure(i % 2 ? "Ana@X.com" : "ana@x.com", "ip", 0);
+    }
+    expect(limiter.isBlocked("ANA@x.COM", "ip", 0)).toBe(true);
+  });
+
+  it("tells a blocked client to retry when its oldest counted failure expires", () => {
+    const limiter = new LoginRateLimiter();
+    limiter.recordFailure("a@x.com", "ip", 0);
+    for (let i = 0; i < 9; i++) {
+      limiter.recordFailure("a@x.com", "ip", 2 * MINUTE);
+    }
+    expect(limiter.retryAfterSeconds("a@x.com", "ip", 5 * MINUTE)).toBe(600);
+    expect(limiter.retryAfterSeconds("a@x.com", "ip", 15 * MINUTE - 1)).toBe(1);
+  });
+
+  it("waits for the slowest of several exceeded limits", () => {
+    const limiter = new LoginRateLimiter();
+    for (let i = 0; i < 30; i++) {
+      limiter.recordFailure("early@x.com", `10.0.0.${i}`, 0);
+      limiter.recordFailure(`u${i}@x.com`, "9.9.9.9", 5 * MINUTE);
+      limiter.recordFailure("late@x.com", `10.0.1.${i}`, 5 * MINUTE);
+      limiter.recordFailure(`v${i}@x.com`, "8.8.8.8", 0);
+    }
+    const now = 5 * MINUTE;
+    expect(limiter.retryAfterSeconds("early@x.com", "7.7.7.7", now)).toBe(600);
+    expect(limiter.retryAfterSeconds("early@x.com", "9.9.9.9", now)).toBe(900);
+    expect(limiter.retryAfterSeconds("late@x.com", "8.8.8.8", now)).toBe(900);
+  });
 });
