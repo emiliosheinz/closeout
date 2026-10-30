@@ -63,7 +63,10 @@ beforeAll(async () => {
     bucketRequests.push(`${req.method} ${req.url}`);
     req.resume();
     req.on("end", () => {
-      if (!bucketFails) return res.writeHead(200, { etag: '"stub"' }).end();
+      if (!bucketFails) {
+        res.writeHead(200, { etag: '"stub"' }).end();
+        return;
+      }
       res
         .writeHead(500, { "content-type": "application/xml" })
         .end(
