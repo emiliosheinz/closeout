@@ -3,6 +3,10 @@ import type {
   Condition,
   Publication,
 } from "@closeout/contracts/enums";
+import type {
+  AdminImage,
+  PublicListingDetail,
+} from "@closeout/contracts/schemas";
 import { HttpStatus, Injectable } from "@nestjs/common";
 import { InjectDataSource, InjectRepository } from "@nestjs/typeorm";
 import {
@@ -23,7 +27,7 @@ import {
   isManager,
   type MembershipContext,
 } from "@/stores/membership";
-import { type AdminImage, toAdminImage } from "../admin-mappers";
+import { toAdminImage } from "../admin-mappers";
 import { Listing } from "../entities/listing.entity";
 import { ListingImage } from "../entities/listing-image.entity";
 import { ListingSeller } from "../entities/listing-seller.entity";
@@ -34,15 +38,9 @@ import {
   sellersForNewListing,
 } from "../listing-rules";
 import type { ListingAttribute } from "../listing-types";
-import {
-  listingSellers,
-  type PublicListingDetail,
-  toPublicDetail,
-} from "../public-mappers";
+import { listingSellers, toPublicDetail } from "../public-mappers";
 import { listingSlug } from "../slug";
 import { escapeLike } from "../sql";
-
-export type { AdminImage };
 
 export interface DashboardCounts {
   published: number;

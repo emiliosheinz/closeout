@@ -1,4 +1,5 @@
 import {
+  type AdminImage,
   type AdminListingsQuery,
   adminListingsQuerySchema,
   type ListingRequest,
@@ -7,6 +8,7 @@ import {
   listingRequestSchema,
   listingStatusRequestSchema,
   listingUpdateRequestSchema,
+  type PublicListingDetail,
   type ReorderImagesRequest,
   reorderImagesRequestSchema,
   uuidSchema,
@@ -48,10 +50,8 @@ import {
   Roles,
 } from "@/stores/membership";
 import { AssignedListingGuard } from "../guards/assigned-listing.guard";
-import type { PublicListingDetail } from "../public-mappers";
 import { ListingImagesService } from "../services/listing-images.service";
 import {
-  type AdminImage,
   type AdminListingDetail,
   type AdminListingSummary,
   ListingsService,

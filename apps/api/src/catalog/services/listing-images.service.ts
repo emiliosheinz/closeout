@@ -1,10 +1,11 @@
+import type { AdminImage } from "@closeout/contracts/schemas";
 import { HttpStatus, Injectable } from "@nestjs/common";
 import { InjectDataSource } from "@nestjs/typeorm";
 import type { DataSource, EntityManager } from "typeorm";
 import { MediaService, type StoredImage } from "@/media/media.service";
 import { MAX_IMAGES_PER_LISTING } from "@/media/upload-limits";
 import { AppException } from "@/problem/app-exception";
-import { type AdminImage, toAdminImage } from "../admin-mappers";
+import { toAdminImage } from "../admin-mappers";
 import { Listing } from "../entities/listing.entity";
 import { ListingImage } from "../entities/listing-image.entity";
 import { canRemovePhoto, PUBLISHED_KEEPS_A_PHOTO } from "../listing-rules";

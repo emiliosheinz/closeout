@@ -1,4 +1,9 @@
-import { type CatalogQuery, NOT_FOUND } from "@closeout/contracts/schemas";
+import {
+  type CatalogQuery,
+  NOT_FOUND,
+  type PublicListingDetail,
+  type PublicListingSummary,
+} from "@closeout/contracts/schemas";
 import { HttpStatus, Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import {
@@ -15,12 +20,7 @@ import { Category } from "@/stores/entities/category.entity";
 import { Store } from "@/stores/entities/store.entity";
 import { Listing } from "../entities/listing.entity";
 import { ListingImage } from "../entities/listing-image.entity";
-import {
-  type PublicListingDetail,
-  type PublicListingSummary,
-  toPublicDetail,
-  toPublicSummary,
-} from "../public-mappers";
+import { toPublicDetail, toPublicSummary } from "../public-mappers";
 import { escapeLike } from "../sql";
 
 const RELATED_LIMIT = 4;

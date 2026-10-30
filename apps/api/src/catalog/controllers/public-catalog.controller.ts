@@ -1,10 +1,10 @@
 import {
   type CatalogQuery,
   catalogQuerySchema,
+  type PublicListingDetail,
   routeNameSchema,
 } from "@closeout/contracts/schemas";
 import { Controller, Get, Param, Query } from "@nestjs/common";
-import type { PublicListingDetail } from "../public-mappers";
 import {
   PublicCatalogService,
   type PublicListingPage,
