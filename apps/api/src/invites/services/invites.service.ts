@@ -4,7 +4,6 @@ import {
   type InviteDetails,
   type IssuedInvite,
   type PendingInvite,
-  TOO_MANY_ATTEMPTS,
 } from "@closeout/contracts/schemas";
 import { HttpStatus, Inject, Injectable, Logger } from "@nestjs/common";
 import { InjectDataSource } from "@nestjs/typeorm";
@@ -18,6 +17,7 @@ import {
 } from "@/auth/services/sessions.service";
 import { APP_CONFIG, type AppModuleConfig } from "@/config/config.module";
 import { AppException } from "@/problem/app-exception";
+import { TooManyAttempts } from "@/problem/too-many-attempts";
 import { SlidingWindowCounter } from "@/security/sliding-window";
 import {
   type ProvisionedMember,
@@ -298,11 +298,12 @@ export class InvitesService {
    * the limit while the first ones run; valid outcomes give it back.
    */
   private beginAttempt(clientIp: string): void {
-    if (this.attempts.count(clientIp) >= MAX_INVALID_ATTEMPTS) {
+    const now = Date.now();
+    if (this.attempts.count(clientIp, now) >= MAX_INVALID_ATTEMPTS) {
       this.logger.warn({ ip: clientIp }, "Invite attempts rate limited");
-      throw new AppException(HttpStatus.TOO_MANY_REQUESTS, TOO_MANY_ATTEMPTS);
+      throw new TooManyAttempts(this.attempts.retryAfterSeconds(clientIp, now));
     }
-    this.attempts.record(clientIp);
+    this.attempts.record(clientIp, now);
   }
 }
 

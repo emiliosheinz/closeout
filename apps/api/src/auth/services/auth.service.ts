@@ -1,8 +1,8 @@
-import { TOO_MANY_ATTEMPTS } from "@closeout/contracts/schemas";
 import { HttpStatus, Injectable, Logger } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import type { Repository } from "typeorm";
 import { AppException } from "@/problem/app-exception";
+import { TooManyAttempts } from "@/problem/too-many-attempts";
 import { User } from "../entities/user.entity";
 import { LoginRateLimiter } from "./login-rate-limiter";
 import {
@@ -36,9 +36,12 @@ export class AuthService {
     password: string,
     clientIp: string,
   ): Promise<{ sessionToken: string; expiresAt: Date }> {
-    if (this.limiter.isBlocked(email, clientIp)) {
+    const now = Date.now();
+    if (this.limiter.isBlocked(email, clientIp, now)) {
       this.logger.warn({ ip: clientIp }, "Login rate limited");
-      throw new AppException(HttpStatus.TOO_MANY_REQUESTS, TOO_MANY_ATTEMPTS);
+      throw new TooManyAttempts(
+        this.limiter.retryAfterSeconds(email, clientIp, now),
+      );
     }
 
     this.limiter.recordFailure(email, clientIp);

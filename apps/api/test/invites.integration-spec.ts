@@ -559,6 +559,60 @@ describe("store invites", () => {
       }
     });
 
+    it("tells a blocked client when to retry", async () => {
+      const minute = 60 * 1000;
+      const start = Date.now();
+      const clock = vi.spyOn(Date, "now").mockReturnValue(start);
+      try {
+        const { token } = await invite("nova@example.com");
+        for (let i = 0; i < 10; i++) {
+          await lookup(`desconhecido-${i}`).expect(404);
+        }
+        clock.mockReturnValue(start + 5 * minute);
+        const blockedLookup = await lookup(token).expect(429);
+        expect(blockedLookup.headers["retry-after"]).toBe("600");
+        expect(blockedLookup.body.detail).toBe(TOO_MANY);
+        clock.mockReturnValue(start + 15 * minute - 1);
+        const blockedAccept = await accept(token).expect(429);
+        expect(blockedAccept.headers["retry-after"]).toBe("1");
+        expect(blockedAccept.body.detail).toBe(TOO_MANY);
+      } finally {
+        clock.mockRestore();
+      }
+    });
+
+    it("counts only invalid links, not accepted, existing-account or sign-in-failed outcomes", async () => {
+      const existing = await invite("existente@example.com");
+      await addMember(ctx, owner, {
+        email: "existente@example.com",
+        name: "Pela CLI",
+      });
+      const valid = await invite("nova@example.com");
+      const unlucky = await invite("azar@example.com");
+      for (let i = 0; i < 9; i++) await lookup(`desconhecido-${i}`).expect(404);
+
+      await accept(existing.token).expect(409);
+      await accept(valid.token).expect(200);
+      await ctx.dataSource.query(`
+        CREATE FUNCTION refuse_sessions() RETURNS trigger LANGUAGE plpgsql
+          AS $$ BEGIN RAISE EXCEPTION 'sessions unavailable'; END $$;
+        CREATE TRIGGER refuse_sessions BEFORE INSERT ON sessions
+          FOR EACH ROW EXECUTE FUNCTION refuse_sessions();
+      `);
+      try {
+        await accept(unlucky.token).expect(500);
+      } finally {
+        await ctx.dataSource.query(`
+          DROP TRIGGER refuse_sessions ON sessions;
+          DROP FUNCTION refuse_sessions();
+        `);
+      }
+
+      await lookup("desconhecido-9").expect(404);
+      const blocked = await lookup("desconhecido-10").expect(429);
+      expect(blocked.body.detail).toBe(TOO_MANY);
+    });
+
     it("answers only internal calls that carry the visitor's IP", async () => {
       const { token } = await invite("nova@example.com");
       const server = ctx.app.getHttpServer();

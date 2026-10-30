@@ -78,6 +78,46 @@ describe("admin authentication", () => {
     await attempt("limite@example.com", PASSWORD, "198.51.100.1").expect(200);
   });
 
+  it("tells a blocked client when to retry and still refuses the right password", async () => {
+    const minute = 60 * 1000;
+    const start = Date.now();
+    const clock = vi.spyOn(Date, "now").mockReturnValue(start);
+    try {
+      await createStoreWithAdmin(ctx, "espera");
+      for (let i = 0; i < 10; i++) {
+        await attempt("espera@example.com", "wrong").expect(401);
+      }
+      clock.mockReturnValue(start + 5 * minute);
+      const blocked = await attempt("espera@example.com", PASSWORD).expect(429);
+      expect(blocked.headers["retry-after"]).toBe("600");
+      expect(blocked.body.detail).toBe(
+        "Muitas tentativas. Tente novamente em alguns minutos.",
+      );
+      clock.mockReturnValue(start + 15 * minute - 1);
+      const lastMoment = await attempt("espera@example.com", PASSWORD).expect(
+        429,
+      );
+      expect(lastMoment.headers["retry-after"]).toBe("1");
+      clock.mockReturnValue(start + 15 * minute);
+      await attempt("espera@example.com", PASSWORD).expect(200);
+    } finally {
+      clock.mockRestore();
+    }
+  });
+
+  it("counts emails that differ only in case or surrounding spaces together", async () => {
+    await createStoreWithAdmin(ctx, "caixa");
+    const spellings = [
+      "caixa@example.com",
+      " CAIXA@example.com ",
+      "Caixa@Example.COM",
+    ];
+    for (let i = 0; i < 10; i++) {
+      await attempt(spellings[i % 3] ?? "", "wrong").expect(401);
+    }
+    await attempt("caixa@example.com", PASSWORD).expect(429);
+  });
+
   it("returns 429 to an IP after thirty failures across rotating emails, even with valid credentials", async () => {
     await createStoreWithAdmin(ctx, "rotacao");
     for (let i = 0; i < 30; i++) {
