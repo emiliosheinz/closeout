@@ -6,6 +6,7 @@ allowBuilds:
   '@nestjs/core': true
   '@swc/core': true
   esbuild: true
+  protobufjs: false
   sharp: true
   unrs-resolver: true
 
