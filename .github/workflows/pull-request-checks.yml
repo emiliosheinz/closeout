@@ -181,6 +181,19 @@ jobs:
           file: apps/${{ matrix.app }}/Dockerfile
           target: prod
           cache-from: type=gha,scope=image-${{ matrix.app }}
+          load: ${{ matrix.app == 'api' }}
+          tags: closeout-${{ matrix.app }}:ci
+
+      # A misconfigured API must refuse to boot and say which variable is missing.
+      - name: Check the API image refuses to boot without INTERNAL_API_SECRET
+        if: ${{ matrix.app == 'api' }}
+        run: |
+          set +e
+          err=$(docker run --rm -e PORT=8080 -e HOST=0.0.0.0 closeout-api:ci 2>&1 >/dev/null)
+          status=$?
+          set -e
+          test "$status" -ne 0
+          printf '%s' "$err" | grep -q INTERNAL_API_SECRET
 
   e2e:
     name: End-to-end tests
