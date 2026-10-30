@@ -37,11 +37,10 @@ export class AuthService {
     clientIp: string,
   ): Promise<{ sessionToken: string; expiresAt: Date }> {
     const now = Date.now();
-    if (this.limiter.isBlocked(email, clientIp, now)) {
+    const retryAfter = this.limiter.blockedFor(email, clientIp, now);
+    if (retryAfter !== undefined) {
       this.logger.warn({ ip: clientIp }, "Login rate limited");
-      throw new TooManyAttempts(
-        this.limiter.retryAfterSeconds(email, clientIp, now),
-      );
+      throw new TooManyAttempts(retryAfter);
     }
 
     this.limiter.recordFailure(email, clientIp);
