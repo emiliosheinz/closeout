@@ -1,4 +1,10 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import {
+  type CatalogQuery,
+  NOT_FOUND,
+  type PublicListingDetail,
+  type PublicListingSummary,
+} from "@closeout/contracts/schemas";
+import { HttpStatus, Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import {
   In,
@@ -8,24 +14,17 @@ import {
   type SelectQueryBuilder,
 } from "typeorm";
 import { mediaUrls } from "@/media/media-urls";
+import { AppException } from "@/problem/app-exception";
 import { Seller } from "@/sellers/entities/seller.entity";
 import { Category } from "@/stores/entities/category.entity";
 import { Store } from "@/stores/entities/store.entity";
-import {
-  type CatalogQueryDto,
-  DEFAULT_PAGE_SIZE,
-} from "../dto/catalog-query.dto";
 import { Listing } from "../entities/listing.entity";
 import { ListingImage } from "../entities/listing-image.entity";
-import {
-  type PublicListingDetail,
-  type PublicListingSummary,
-  toPublicDetail,
-  toPublicSummary,
-} from "../public-mappers";
+import { toPublicDetail, toPublicSummary } from "../public-mappers";
 import { escapeLike } from "../sql";
 
 const RELATED_LIMIT = 4;
+const DEFAULT_PAGE_SIZE = 24;
 
 /** Exactly what toPublicSummary reads, plus the id used to attach covers. */
 const SUMMARY_COLUMNS = [
@@ -150,7 +149,7 @@ export class PublicCatalogService {
 
   async listListings(
     storeSlug: string,
-    query: CatalogQueryDto,
+    query: CatalogQuery,
   ): Promise<PublicListingPage> {
     const store = await this.findStore(storeSlug);
     const page = query.page ?? 1;
@@ -194,7 +193,7 @@ export class PublicCatalogService {
       relations: { category: true, sellers: { seller: true }, images: true },
       order: { images: { position: "ASC" } },
     });
-    if (!listing) throw new NotFoundException();
+    if (!listing) throw new AppException(HttpStatus.NOT_FOUND, NOT_FOUND);
     return toPublicDetail(listing, await this.related(listing));
   }
 
@@ -235,14 +234,14 @@ export class PublicCatalogService {
 
   private async findStore(slug: string): Promise<Store> {
     const store = await this.stores.findOne({ where: { slug } });
-    if (!store) throw new NotFoundException();
+    if (!store) throw new AppException(HttpStatus.NOT_FOUND, NOT_FOUND);
     return store;
   }
 }
 
 function applyFilters(
   builder: SelectQueryBuilder<Listing>,
-  query: CatalogQueryDto,
+  query: CatalogQuery,
 ): void {
   const availability = query.availability ?? "listed";
   if (availability === "listed") {
@@ -281,7 +280,7 @@ function applyFilters(
 
 function applySort(
   builder: SelectQueryBuilder<Listing>,
-  sort: NonNullable<CatalogQueryDto["sort"]>,
+  sort: NonNullable<CatalogQuery["sort"]>,
 ): void {
   if (sort === "price_asc") {
     builder.orderBy("l.priceCents", "ASC", "NULLS LAST");

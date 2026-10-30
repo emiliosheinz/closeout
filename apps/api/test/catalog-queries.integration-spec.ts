@@ -22,6 +22,18 @@ describe("admin listing summaries", () => {
   });
   afterAll(() => ctx.app.close());
 
+  it("rejects unknown or over-long filters on the admin listing table", async () => {
+    const client = as(ctx.app, admin.cookie);
+    const unknown = await client.get(`${base()}?status=draft`).expect(400);
+    expect(unknown.body.errors).toEqual([
+      { pointer: "/query/status", detail: "Campo não permitido." },
+    ]);
+    const long = await client.get(`${base()}?q=${"a".repeat(101)}`).expect(400);
+    expect(long.body.errors).toEqual([
+      { pointer: "/query/q", detail: "Valor inválido." },
+    ]);
+  });
+
   it("reports the cover and photo count for listings with 0, 1 and several photos", async () => {
     const client = as(ctx.app, admin.cookie);
     const ids: string[] = [];

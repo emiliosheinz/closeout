@@ -1,8 +1,9 @@
 import { z } from "zod";
 import { ASSIGNABLE_ROLES } from "../enums";
-import { emailSchema } from "./email";
+import { emailSchema, INVALID_EMAIL } from "./email";
+import { optionalWhatsappInputSchema } from "./whatsapp";
 
-// Mirrors the API password minimum; the API cannot import schemas.
+// The one password minimum, shared by the API, the CLI and the web.
 export const MIN_PASSWORD_LENGTH = 10;
 
 export const pendingInviteSchema = z.object({
@@ -26,20 +27,34 @@ export const inviteDetailsSchema = z.object({
 });
 export type InviteDetails = z.infer<typeof inviteDetailsSchema>;
 
-export const inviteRequestSchema = z.object({
-  email: emailSchema,
-  role: z.enum(ASSIGNABLE_ROLES),
+/** Stored lowercased, so one person has one invite per store. */
+export const inviteRequestSchema = z.strictObject({
+  email: emailSchema.max(254, INVALID_EMAIL).toLowerCase(),
+  role: z.enum(ASSIGNABLE_ROLES, "Escolha o papel da pessoa."),
 });
 export type InviteRequest = z.infer<typeof inviteRequestSchema>;
 
-export const acceptInviteRequestSchema = z.object({
-  name: z.string().trim().min(1, "Informe seu nome.").max(60),
+const inviteTokenSchema = z.string().min(1).max(200);
+
+export const inviteLookupRequestSchema = z.strictObject({
+  token: inviteTokenSchema,
+});
+export type InviteLookupRequest = z.infer<typeof inviteLookupRequestSchema>;
+
+const NAME_MESSAGE = "Informe seu nome.";
+const PASSWORD_MESSAGE = `A senha precisa ter pelo menos ${MIN_PASSWORD_LENGTH} caracteres.`;
+
+export const acceptInviteRequestSchema = z.strictObject({
+  token: inviteTokenSchema,
+  name: z
+    .string(NAME_MESSAGE)
+    .trim()
+    .min(1, NAME_MESSAGE)
+    .max(60, "Use até 60 caracteres no nome."),
   password: z
-    .string()
-    .min(
-      MIN_PASSWORD_LENGTH,
-      `A senha precisa ter pelo menos ${MIN_PASSWORD_LENGTH} caracteres.`,
-    )
-    .max(200),
+    .string(PASSWORD_MESSAGE)
+    .min(MIN_PASSWORD_LENGTH, PASSWORD_MESSAGE)
+    .max(200, "Use até 200 caracteres na senha."),
+  whatsappNumber: optionalWhatsappInputSchema,
 });
 export type AcceptInviteRequest = z.infer<typeof acceptInviteRequestSchema>;

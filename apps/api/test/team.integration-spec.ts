@@ -97,7 +97,7 @@ describe("team management", () => {
         .patch(settings)
         .send({ headline: "Depois" })
         .expect(403);
-      expect(refused.body.message).toBe(FORBIDDEN);
+      expect(refused.body.detail).toBe(FORBIDDEN);
 
       await asOwner()
         .patch(`${members()}/${member.userId}`)
@@ -121,17 +121,17 @@ describe("team management", () => {
         .patch(`${members()}/${ownerUser.user_id}`)
         .send({ role: "admin" })
         .expect(403);
-      expect(onOwner.body.message).toBe(FORBIDDEN);
+      expect(onOwner.body.detail).toBe(FORBIDDEN);
       const onSelf = await as(ctx.app, admin.cookie)
         .patch(`${members()}/${admin.userId}`)
         .send({ role: "seller" })
         .expect(403);
-      expect(onSelf.body.message).toBe(FORBIDDEN);
+      expect(onSelf.body.detail).toBe(FORBIDDEN);
       const ownerOnSelf = await asOwner()
         .patch(`${members()}/${ownerUser.user_id}`)
         .send({ role: "admin" })
         .expect(403);
-      expect(ownerOnSelf.body.message).toBe(FORBIDDEN);
+      expect(ownerOnSelf.body.detail).toBe(FORBIDDEN);
 
       const roles = await ctx.dataSource.query(
         `SELECT role FROM store_members ORDER BY created_at`,
@@ -145,10 +145,13 @@ describe("team management", () => {
         name: "Sócia",
       });
       for (const role of ["owner", "manager", ""]) {
-        await asOwner()
+        const res = await asOwner()
           .patch(`${members()}/${member.userId}`)
           .send({ role })
           .expect(400);
+        expect(res.body.errors).toEqual([
+          { pointer: "/role", detail: "Escolha o papel da pessoa." },
+        ]);
       }
       const [row] = await ctx.dataSource.query(
         `SELECT role FROM store_members WHERE user_id = $1`,
@@ -157,20 +160,35 @@ describe("team management", () => {
       expect(row.role).toBe("admin");
     });
 
+    it("rejects a member id that is not a UUID at its route param", async () => {
+      const invalidId = [
+        { pointer: "/params/userId", detail: "Valor inválido." },
+      ];
+      const changed = await asOwner()
+        .patch(`${members()}/socia`)
+        .send({ role: "seller" })
+        .expect(400);
+      expect(changed.body.errors).toEqual(invalidId);
+      const removed = await asOwner().delete(`${members()}/socia`).expect(400);
+      expect(removed.body.errors).toEqual(invalidId);
+    });
+
     it("answers 404 for a member of another store and leaves them unchanged", async () => {
       const other = await createStoreWithAdmin(ctx, "loja-b");
       const outsider = await addMember(ctx, other, {
         email: "fora@example.com",
         name: "Fora",
       });
-      await asOwner()
+      const foreign = await asOwner()
         .patch(`${members()}/${outsider.userId}`)
         .send({ role: "seller" })
         .expect(404);
-      await asOwner()
+      const unknown = await asOwner()
         .patch(`${members()}/00000000-0000-4000-8000-000000000000`)
         .send({ role: "seller" })
         .expect(404);
+      expect(foreign.body.detail).toBe("Membro não encontrado.");
+      expect(unknown.body.detail).toBe("Membro não encontrado.");
       const [row] = await ctx.dataSource.query(
         `SELECT role FROM store_members WHERE user_id = $1`,
         [outsider.userId],
@@ -199,7 +217,7 @@ describe("team management", () => {
       const res = await asOwner()
         .delete(`${members()}/${member.userId}`)
         .expect(409);
-      expect(res.body.message).toBe(
+      expect(res.body.detail).toBe(
         "Reatribua os 3 anúncios em que esta pessoa é a única vendedora antes de removê-la.",
       );
       expect(await exists("users", "id", member.userId)).toBe(true);
@@ -223,7 +241,7 @@ describe("team management", () => {
       const res = await asOwner()
         .delete(`${members()}/${member.userId}`)
         .expect(409);
-      expect(res.body.message).toBe(
+      expect(res.body.detail).toBe(
         "Reatribua o 1 anúncio em que esta pessoa é a única vendedora antes de removê-la.",
       );
       expect(await exists("users", "id", member.userId)).toBe(true);
@@ -327,7 +345,7 @@ describe("team management", () => {
         const res = await as(ctx.app, cookie)
           .delete(`${members()}/${target}`)
           .expect(403);
-        expect(res.body.message).toBe(FORBIDDEN);
+        expect(res.body.detail).toBe(FORBIDDEN);
       }
       const [{ count }] = await ctx.dataSource.query(
         `SELECT COUNT(*)::int AS count FROM users`,

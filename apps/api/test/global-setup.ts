@@ -1,23 +1,42 @@
 import { randomBytes } from "node:crypto";
-import { mkdtemp } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { DataSource } from "typeorm";
+import type { TestProject } from "vitest/node";
+import { compareWithFixture } from "./error-fixture";
 
 /**
  * Creates a throwaway database on the compose Postgres for this run and
  * applies the real migrations to it, so integration tests exercise the
- * production schema without touching development data.
+ * production schema without touching development data. Returns the teardown
+ * that drops it again.
  */
-export default async function globalSetup(): Promise<void> {
+export default async function globalSetup(
+  project: TestProject,
+): Promise<() => Promise<void>> {
   const database = `closeout_test_${randomBytes(4).toString("hex")}`;
   await runOnServer(`CREATE DATABASE "${database}"`);
 
   process.env.POSTGRES_DB = database;
-  process.env.CLOSEOUT_TEST_DATABASE = database;
-  process.env.MEDIA_DIR = await mkdtemp(path.join(tmpdir(), "closeout-media-"));
+  const mediaDir = await mkdtemp(path.join(tmpdir(), "closeout-media-"));
+  process.env.MEDIA_DIR = mediaDir;
+  // The server scope's listen address; the harness never binds it.
+  process.env.PORT = "3000";
+  process.env.HOST = "127.0.0.1";
   process.env.PUBLIC_BASE_URL = "http://storefront.test";
   process.env.INTERNAL_API_SECRET = "integration-test-secret-0123456789abcdef";
+  // Every error response is checked against the fixture of the copy users
+  // saw before error bodies became problem documents; ERROR_FIXTURE=off
+  // skips the check for one debugging run.
+  const observedErrors =
+    process.env.ERROR_FIXTURE === "off"
+      ? undefined
+      : path.join(mediaDir, "..", `${database}-errors.jsonl`);
+  if (observedErrors) {
+    await writeFile(observedErrors, "");
+    process.env.ERROR_FIXTURE_OBSERVED = observedErrors;
+  }
 
   const dataSource = new DataSource({
     type: "postgres",
@@ -30,6 +49,27 @@ export default async function globalSetup(): Promise<void> {
   await dataSource.initialize();
   await dataSource.runMigrations();
   await dataSource.destroy();
+
+  return async () => {
+    await runOnServer(`DROP DATABASE IF EXISTS "${database}" WITH (FORCE)`);
+    await rm(mediaDir, { recursive: true, force: true });
+    if (!observedErrors) return;
+    const fullRun = await ranEveryTest(project);
+    const problems = fullRun ? compareWithFixture(observedErrors) : [];
+    await rm(observedErrors, { force: true });
+    if (problems.length > 0) {
+      throw new Error(
+        `Error responses differ from the fixture:\n${problems.join("\n")}`,
+      );
+    }
+  };
+}
+
+/** A run limited to some files or tests cannot observe every fixture key. */
+async function ranEveryTest(project: TestProject): Promise<boolean> {
+  if (project.vitest.config.testNamePattern) return false;
+  const { testFiles } = await project.globTestFiles();
+  return project.vitest.state.getFiles().length === testFiles.length;
 }
 
 export function connection(database: string | undefined) {

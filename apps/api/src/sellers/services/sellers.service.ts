@@ -1,9 +1,14 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import type {
+  SellerRequest,
+  Seller as SellerResponse,
+} from "@closeout/contracts/schemas";
+import { HttpStatus, Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import type { Repository } from "typeorm";
 import { ListingSeller } from "@/catalog/entities/listing-seller.entity";
 import { MediaService } from "@/media/media.service";
 import { mediaUrls } from "@/media/media-urls";
+import { AppException } from "@/problem/app-exception";
 import {
   forbidden,
   isManager,
@@ -11,20 +16,7 @@ import {
 } from "@/stores/membership";
 import { Seller } from "../entities/seller.entity";
 
-export interface SellerResponse {
-  id: string;
-  /** The member this profile represents. */
-  userId: string;
-  displayName: string;
-  whatsappNumber: string | null;
-  avatarUrl: string | null;
-  listingCount: number;
-}
-
-export interface SellerInput {
-  displayName?: string;
-  whatsappNumber?: string | null;
-}
+const SELLER_NOT_FOUND = "Vendedor não encontrado.";
 
 @Injectable()
 export class SellersService {
@@ -56,7 +48,7 @@ export class SellersService {
   async update(
     actor: MembershipContext,
     id: string,
-    patch: SellerInput,
+    patch: SellerRequest,
   ): Promise<SellerResponse> {
     const seller = await this.findEditable(actor, id);
     if (patch.displayName !== undefined) seller.displayName = patch.displayName;
@@ -94,7 +86,9 @@ export class SellersService {
     const seller = await this.sellers.findOne({
       where: { id, storeId: actor.storeId },
     });
-    if (!seller) throw new NotFoundException("Vendedor não encontrado.");
+    if (!seller) {
+      throw new AppException(HttpStatus.NOT_FOUND, SELLER_NOT_FOUND);
+    }
     return seller;
   }
 

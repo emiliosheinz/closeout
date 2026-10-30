@@ -1,23 +1,23 @@
 import type { AssignableRole } from "@closeout/contracts/enums";
 import {
-  ConflictException,
-  HttpException,
-  HttpStatus,
-  Injectable,
-  InternalServerErrorException,
-  Logger,
-  NotFoundException,
-} from "@nestjs/common";
+  type AcceptInviteRequest,
+  type InviteDetails,
+  type IssuedInvite,
+  type PendingInvite,
+} from "@closeout/contracts/schemas";
+import { HttpStatus, Inject, Injectable, Logger } from "@nestjs/common";
 import { InjectDataSource } from "@nestjs/typeorm";
 import { DataSource, QueryFailedError } from "typeorm";
 import { User } from "@/auth/entities/user.entity";
-import { TOO_MANY_ATTEMPTS } from "@/auth/services/auth.service";
 import { hashPassword } from "@/auth/services/passwords";
 import {
   hashToken,
   newRawToken,
   SessionsService,
 } from "@/auth/services/sessions.service";
+import { APP_CONFIG, type AppModuleConfig } from "@/config/config.module";
+import { AppException } from "@/problem/app-exception";
+import { TooManyAttempts } from "@/problem/too-many-attempts";
 import { SlidingWindowCounter } from "@/security/sliding-window";
 import {
   type ProvisionedMember,
@@ -36,34 +36,6 @@ const INVITE_INVALID =
 const INVITE_NOT_FOUND = "Convite não encontrado.";
 const SIGN_IN_INSTEAD =
   "Sua conta foi criada, mas não foi possível entrar. Entre com seu e-mail e senha.";
-
-export interface InviteSummary {
-  id: string;
-  email: string;
-  role: AssignableRole;
-  expiresAt: string;
-}
-
-/** The raw link exists only in this response; the API keeps its hash. */
-export interface IssuedInvite {
-  invite: InviteSummary;
-  link: string;
-}
-
-export interface InviteDetails {
-  storeName: string;
-  email: string;
-  role: AssignableRole;
-}
-
-export interface AcceptInput {
-  token: string;
-  /** Already trimmed and non-empty. */
-  name: string;
-  password: string;
-  /** International digits, or null/undefined for none. */
-  whatsappNumber?: string | null;
-}
 
 interface InviteRow {
   id: string;
@@ -93,6 +65,7 @@ export class InvitesService {
   constructor(
     @InjectDataSource() private readonly dataSource: DataSource,
     private readonly sessions: SessionsService,
+    @Inject(APP_CONFIG) private readonly config: AppModuleConfig,
   ) {}
 
   /** `email` is already parsed. Replaces any pending invite for it. */
@@ -104,7 +77,7 @@ export class InvitesService {
     if (
       await this.dataSource.getRepository(User).exists({ where: { email } })
     ) {
-      throw new ConflictException(HAS_ACCOUNT);
+      throw new AppException(HttpStatus.CONFLICT, HAS_ACCOUNT);
     }
     await this.dataSource.query(
       `DELETE FROM store_invites WHERE store_id = $1 AND expires_at <= now()`,
@@ -124,13 +97,20 @@ export class InvitesService {
     );
     if (!row) throw new Error("Invite upsert returned no row");
     this.logger.log(
-      `Invite ${row.id} for ${email} as ${role} created in store ${actor.storeId} by ${actor.userId}`,
+      {
+        inviteId: row.id,
+        email,
+        role,
+        storeId: actor.storeId,
+        actorId: actor.userId,
+      },
+      "Invite created",
     );
-    return { invite: toSummary(row), link: inviteLink(token) };
+    return { invite: toSummary(row), link: this.inviteLink(token) };
   }
 
   /** Pending, unexpired invites; never their links. */
-  async list(storeId: string): Promise<InviteSummary[]> {
+  async list(storeId: string): Promise<PendingInvite[]> {
     const rows = await this.dataSource.query<InviteRow[]>(
       `SELECT ${RETURNING} FROM store_invites
         WHERE store_id = $1 AND expires_at > now()
@@ -148,9 +128,15 @@ export class InvitesService {
       [id, actor.storeId],
     );
     const [row] = rows;
-    if (!row) throw new NotFoundException(INVITE_NOT_FOUND);
+    if (!row) throw new AppException(HttpStatus.NOT_FOUND, INVITE_NOT_FOUND);
     this.logger.log(
-      `Invite ${row.id} for ${row.email} revoked in store ${actor.storeId} by ${actor.userId}`,
+      {
+        inviteId: row.id,
+        email: row.email,
+        storeId: actor.storeId,
+        actorId: actor.userId,
+      },
+      "Invite revoked",
     );
   }
 
@@ -168,11 +154,17 @@ export class InvitesService {
       [id, actor.storeId, hashToken(token), INVITE_LIFETIME],
     );
     const [row] = rows;
-    if (!row) throw new NotFoundException(INVITE_NOT_FOUND);
+    if (!row) throw new AppException(HttpStatus.NOT_FOUND, INVITE_NOT_FOUND);
     this.logger.log(
-      `Invite ${row.id} for ${row.email} regenerated in store ${actor.storeId} by ${actor.userId}`,
+      {
+        inviteId: row.id,
+        email: row.email,
+        storeId: actor.storeId,
+        actorId: actor.userId,
+      },
+      "Invite regenerated",
     );
-    return { invite: toSummary(row), link: inviteLink(token) };
+    return { invite: toSummary(row), link: this.inviteLink(token) };
   }
 
   /** What the accept page shows for a valid link. */
@@ -184,7 +176,7 @@ export class InvitesService {
         WHERE i.token_hash = $1 AND i.expires_at > now()`,
       [hashToken(token)],
     );
-    if (!details) throw new NotFoundException(INVITE_INVALID);
+    if (!details) throw inviteInvalid();
     this.attempts.forgetLatest(clientIp);
     return details;
   }
@@ -195,7 +187,7 @@ export class InvitesService {
    * created; the others see an invalid link.
    */
   async accept(
-    input: AcceptInput,
+    input: AcceptInviteRequest,
     clientIp: string,
   ): Promise<{ sessionToken: string; expiresAt: Date }> {
     this.beginAttempt(clientIp);
@@ -205,7 +197,7 @@ export class InvitesService {
       `SELECT 1 FROM store_invites WHERE token_hash = $1 AND expires_at > now()`,
       [tokenHash],
     );
-    if (!pending) throw new NotFoundException(INVITE_INVALID);
+    if (!pending) throw inviteInvalid();
 
     const passwordHash = await hashPassword(input.password);
     const outcome = await this.consumeOrHasAccount(
@@ -213,12 +205,19 @@ export class InvitesService {
       input,
       passwordHash,
     );
-    if (outcome === "invalid") throw new NotFoundException(INVITE_INVALID);
+    if (outcome === "invalid") throw inviteInvalid();
     this.attempts.forgetLatest(clientIp);
-    if (outcome === "has-account") throw new ConflictException(HAS_ACCOUNT);
+    if (outcome === "has-account") {
+      throw new AppException(HttpStatus.CONFLICT, HAS_ACCOUNT);
+    }
 
     this.logger.log(
-      `Invite accepted: user ${outcome.userId} joined store ${outcome.storeId} as ${outcome.role}`,
+      {
+        userId: outcome.userId,
+        storeId: outcome.storeId,
+        role: outcome.role,
+      },
+      "Invite accepted",
     );
     // Minted after commit: the sessions service writes on its own
     // connection, which could not see the uncommitted user.
@@ -226,8 +225,8 @@ export class InvitesService {
       const { rawToken, expiresAt } = await this.sessions.mint(outcome.userId);
       return { sessionToken: rawToken, expiresAt };
     } catch (err) {
-      this.logger.error(`Session mint failed for user ${outcome.userId}`, err);
-      throw new InternalServerErrorException(SIGN_IN_INSTEAD);
+      this.logger.error({ err, userId: outcome.userId }, "Session mint failed");
+      throw new AppException(HttpStatus.INTERNAL_SERVER_ERROR, SIGN_IN_INSTEAD);
     }
   }
 
@@ -239,7 +238,7 @@ export class InvitesService {
    */
   private async consumeOrHasAccount(
     tokenHash: string,
-    input: AcceptInput,
+    input: AcceptInviteRequest,
     passwordHash: string,
   ): Promise<AcceptOutcome> {
     try {
@@ -256,7 +255,7 @@ export class InvitesService {
 
   private consume(
     tokenHash: string,
-    input: AcceptInput,
+    input: AcceptInviteRequest,
     passwordHash: string,
   ): Promise<AcceptOutcome> {
     return this.dataSource.transaction(async (manager) => {
@@ -289,26 +288,30 @@ export class InvitesService {
     });
   }
 
+  private inviteLink(token: string): string {
+    const base = this.config.http.publicBaseUrl.replace(/\/+$/, "");
+    return `${base}/invite/${token}`;
+  }
+
   /**
    * Counts the attempt as invalid up front, so a burst cannot slip past
    * the limit while the first ones run; valid outcomes give it back.
    */
   private beginAttempt(clientIp: string): void {
-    if (this.attempts.count(clientIp) >= MAX_INVALID_ATTEMPTS) {
-      this.logger.warn(`Invite attempts rate limited for ${clientIp}`);
-      throw new HttpException(TOO_MANY_ATTEMPTS, HttpStatus.TOO_MANY_REQUESTS);
+    const now = Date.now();
+    if (this.attempts.count(clientIp, now) >= MAX_INVALID_ATTEMPTS) {
+      this.logger.warn({ ip: clientIp }, "Invite attempts rate limited");
+      throw new TooManyAttempts(this.attempts.retryAfterSeconds(clientIp, now));
     }
-    this.attempts.record(clientIp);
+    this.attempts.record(clientIp, now);
   }
 }
 
-function inviteLink(token: string): string {
-  const base = process.env.PUBLIC_BASE_URL;
-  if (!base) throw new Error("PUBLIC_BASE_URL must be set");
-  return `${base.replace(/\/+$/, "")}/invite/${token}`;
+function inviteInvalid(): AppException {
+  return new AppException(HttpStatus.NOT_FOUND, INVITE_INVALID);
 }
 
-function toSummary(row: InviteRow): InviteSummary {
+function toSummary(row: InviteRow): PendingInvite {
   return {
     id: row.id,
     email: row.email,

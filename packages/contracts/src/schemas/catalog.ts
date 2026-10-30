@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { AVAILABILITIES, CONDITIONS } from "../enums";
 import { publicImageSchema } from "./image";
-import { listingAttributeSchema } from "./listing";
+import { listingAttributeSchema, MAX_PRICE_CENTS } from "./listing";
 
 export const publicListingSummarySchema = z.object({
   slug: z.string(),
@@ -70,3 +70,34 @@ export const publicStoreIndexSchema = z.object({
   items: z.array(z.object({ slug: z.string() })),
 });
 export type PublicStoreIndex = z.infer<typeof publicStoreIndexSchema>;
+
+export const CATALOG_SORTS = ["recent", "price_asc", "price_desc"] as const;
+export type CatalogSort = (typeof CATALOG_SORTS)[number];
+
+/** `listed`, the default, means available or reserved. */
+export const AVAILABILITY_FILTERS = [
+  "listed",
+  "available",
+  "reserved",
+  "sold",
+  "all",
+] as const;
+export type AvailabilityFilter = (typeof AVAILABILITY_FILTERS)[number];
+
+/** A whole number in a query string, within bounds. */
+const queryInteger = (min: number, max: number) =>
+  z.coerce.number().int().min(min).max(max).optional();
+
+/** Public catalog filters, sort and page. Prices are integer cents. */
+export const catalogQuerySchema = z.strictObject({
+  q: z.string().trim().max(100).optional(),
+  category: z.string().max(60).optional(),
+  condition: z.enum(CONDITIONS).optional(),
+  availability: z.enum(AVAILABILITY_FILTERS).optional(),
+  minPrice: queryInteger(0, MAX_PRICE_CENTS),
+  maxPrice: queryInteger(0, MAX_PRICE_CENTS),
+  sort: z.enum(CATALOG_SORTS).optional(),
+  page: queryInteger(1, 1000),
+  pageSize: queryInteger(1, 100),
+});
+export type CatalogQuery = z.infer<typeof catalogQuerySchema>;

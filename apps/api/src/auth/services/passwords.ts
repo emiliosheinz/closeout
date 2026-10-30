@@ -6,8 +6,6 @@ const PARALLELIZATION = 3;
 const KEY_LENGTH = 64;
 const SALT_BYTES = 16;
 
-export const MIN_PASSWORD_LENGTH = 10;
-
 function derive(
   password: string,
   salt: Buffer,

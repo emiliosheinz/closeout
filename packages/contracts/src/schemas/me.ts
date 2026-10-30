@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { STORE_ROLES } from "../enums";
-import { emailSchema } from "./email";
+import { emailSchema, INVALID_EMAIL } from "./email";
 import { storeSettingsSchema } from "./store";
 
 export const meSchema = z.object({
@@ -15,8 +15,13 @@ export const meSchema = z.object({
 });
 export type Me = z.infer<typeof meSchema>;
 
-export const loginRequestSchema = z.object({
-  email: emailSchema,
-  password: z.string().min(1, "Informe sua senha.").max(200),
+const PASSWORD_MESSAGE = "Informe sua senha.";
+
+export const loginRequestSchema = z.strictObject({
+  email: emailSchema.max(254, INVALID_EMAIL),
+  password: z
+    .string(PASSWORD_MESSAGE)
+    .min(1, PASSWORD_MESSAGE)
+    .max(200, "Use até 200 caracteres na senha."),
 });
 export type LoginRequest = z.infer<typeof loginRequestSchema>;

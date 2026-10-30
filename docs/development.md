@@ -10,6 +10,8 @@
 | `PUBLIC_BASE_URL` | Origin visitors use. Drives canonical URLs, link previews, WhatsApp messages and the Origin check on writes. Set it to the public HTTPS origin in production. |
 | `INTERNAL_API_SECRET` | Shared secret for web-to-api server calls (login, client IP forwarding). At least 32 characters; the API refuses to start otherwise. |
 | `MEDIA_DIR` | Where the API stores image files (a Docker volume in development). |
+| `LOG_LEVEL` | API log level: `fatal`, `error`, `warn`, `info` (default), `debug` or `trace`. Anything else stops the API at boot. |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | API tracing. Unset (the default), the API exports nothing. Set to an `http(s)` URL, it exports traces there. On Railway the platform sets it. |
 | `POSTGRES_*` | Database connection. `POSTGRES_HOST_PORT` publishes Postgres on `127.0.0.1` for database tools. |
 
 The API port is not published; the browser reaches it only through the web app's
@@ -27,6 +29,28 @@ docker compose down           # stop; data stays in the db-data and media-data v
 Startup order is enforced by Compose: `setup` installs dependencies, `migration`
 applies pending migrations once Postgres is healthy, then `api` starts, then `web`
 once the API is healthy. Both apps hot-reload from the bind-mounted source.
+
+### Logs, health and tracing
+
+The API writes one JSON line per event to stdout. With `NODE_ENV=development` (the
+Compose setup) lines are pretty-printed instead; production never is. Every request
+gets an id, taken from a valid incoming `x-request-id` or generated, echoed on the
+response and carried as `reqId` on each line logged while handling it, so one request
+is found with `docker compose logs api | grep <id>`. One line is written when a
+request completes, except for `/health`. Lines inside a traced request also carry
+`trace_id`. Passwords, tokens, invite links and the internal secret never reach a
+line, and driver errors are reduced to their SQLSTATE code and object names because
+their messages echo bound values.
+
+`GET /health` on the API runs `SELECT 1` and returns 200 `{"status":"ok"}` with the
+database check, or 503 when Postgres does not answer within 3 seconds. It checks the
+database only: it is the Compose and Railway readiness probe, and a failure logs only
+its outcome. The web `GET /health` returns 200, or 503 naming the required variables
+that are missing or unusable (never their values).
+
+Tracing is off unless `OTEL_EXPORTER_OTLP_ENDPOINT` is set. Then the API exports HTTP,
+Postgres and S3 spans over OTLP, keeping an allow-list of attributes: no query strings,
+client addresses, user agents, request data, span events or error messages.
 
 `bin/closeout` with no arguments opens a shell in the `workspace` container; with
 arguments it runs them there (`bin/closeout pnpm add -F web some-package`).
@@ -87,8 +111,8 @@ shows "contato indisponível" instead of a WhatsApp button.
 
 | Command | What runs |
 | --- | --- |
-| `bin/closeout pnpm test` | Unit tests for api (Jest) and web (Vitest) |
-| `bin/closeout pnpm --filter api test:integration` | API integration suites. Each run creates a throwaway `closeout_test_*` database on the compose Postgres, applies the real migrations and drops it at the end. |
+| `bin/closeout pnpm test` | Unit tests for api and web (both Vitest) |
+| `bin/closeout pnpm turbo test:integration --filter=api` | API integration suites. Each run creates a throwaway `closeout_test_*` database on the compose Postgres, applies the real migrations and drops it at the end. |
 | `bin/closeout e2e` | Playwright against an isolated `closeout-e2e` Compose project with its own database, media and two fixture stores with their members; torn down afterwards. |
 | `bin/closeout pnpm check && bin/closeout pnpm typecheck` | Biome lint + format over the whole repo (warnings fail) and `tsc --noEmit` per package |
 | `bin/closeout db migration:check` | Fails when entities differ from the migrated schema |
@@ -117,7 +141,7 @@ The commands below are exactly what CI runs.
 | `Lint and format` | `bin/closeout pnpm check` (Biome lint rules, import order and formatting, whole repo; warnings fail too) |
 | `Type check` | `bin/closeout pnpm typecheck` |
 | `Unit tests` | `bin/closeout pnpm test` |
-| `Integration tests` | `bin/closeout pnpm --filter api test:integration` |
+| `Integration tests` | `bin/closeout pnpm turbo test:integration --filter=api` |
 | `Migration drift` | `bin/closeout db migration:run && bin/closeout db migration:check` (fails and prints the SQL when entities and migrations disagree) |
 | `Commit messages` | `git log -1 --format=%B <sha> \| bin/closeout pnpm --silent commitlint`, per commit. CI lints every non-merge commit in the PR |
 | `Workflow files` | `docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.12@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667` |
@@ -215,6 +239,17 @@ Dashboard edits are staged: nothing is live until you click **Deploy Changes**.
    choose **Deploy commit** (redeploy would rebuild an older commit).
 10. Check: a plan reports no changes, `/health` and `/api/v1/health` answer 200.
     Create the first store and its owner with `admin:create`.
+
+### Tracing
+
+The `api` service has Railway tracing enabled in `railway.ts`, and it sets no
+`OTEL_*` variable of its own: on the next deploy Railway injects the OTLP endpoint
+and auth header. Tracing is a Railway preview feature and must be turned on for the
+account first (the `TRACING` beta feature) by an operator, before the first plan
+that includes it; the apply does not do it. Traces show on the service's Traces
+page. Railway accepts 1,000 spans per 10 seconds per replica and rejects the rest.
+The Railway auto-instrumentation stays off, because it would bypass the attribute
+allow-list.
 
 ### Operator CLI
 

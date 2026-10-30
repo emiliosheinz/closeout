@@ -14,7 +14,7 @@ const BUCKET = "media";
 /** In-memory stand-in for the bucket, behind the S3 client's `send`. */
 function fakeBucket() {
   const objects = new Map<string, Buffer>();
-  const send = jest.fn(async (command: unknown) => {
+  const send = vi.fn(async (command: unknown) => {
     if (command instanceof PutObjectCommand) {
       const { Bucket, Key, Body } = command.input;
       objects.set(`${Bucket}/${Key}`, Buffer.from(Body as Buffer));

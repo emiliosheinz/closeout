@@ -1,18 +1,23 @@
 import type { StoreRole } from "@closeout/contracts/enums";
 import {
+  NOT_FOUND,
+  parseRequest,
+  uuidSchema,
+} from "@closeout/contracts/schemas";
+import {
   type CanActivate,
   type ExecutionContext,
+  HttpStatus,
   Injectable,
-  NotFoundException,
 } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import { InjectDataSource } from "@nestjs/typeorm";
-import { isUUID } from "class-validator";
 import type { DataSource } from "typeorm";
 import {
   type RequestWithPrincipal,
   requirePrincipal,
 } from "@/auth/guards/session.guard";
+import { AppException } from "@/problem/app-exception";
 import { forbidden, type RequestWithMembership, Roles } from "../membership";
 
 /**
@@ -37,8 +42,9 @@ export class StoreMemberGuard implements CanActivate {
         RequestWithPrincipal &
           RequestWithMembership & { params: Record<string, string> }
       >();
-    const storeId = request.params.storeId;
-    if (!storeId || !isUUID(storeId)) throw new NotFoundException();
+    const storeIdParam = parseRequest(uuidSchema, request.params.storeId);
+    if (!storeIdParam.success) throw notFound();
+    const storeId = storeIdParam.data;
 
     const { userId } = requirePrincipal(request);
     const [member] = await this.dataSource.query<
@@ -50,7 +56,7 @@ export class StoreMemberGuard implements CanActivate {
         WHERE m.store_id = $1 AND m.user_id = $2`,
       [storeId, userId],
     );
-    if (!member) throw new NotFoundException();
+    if (!member) throw notFound();
 
     const allowed = this.reflector.get(Roles, context.getHandler());
     if (!allowed?.includes(member.role)) throw forbidden();
@@ -58,4 +64,8 @@ export class StoreMemberGuard implements CanActivate {
     request.membership = { storeId, userId, ...member };
     return true;
   }
+}
+
+function notFound(): AppException {
+  return new AppException(HttpStatus.NOT_FOUND, NOT_FOUND);
 }

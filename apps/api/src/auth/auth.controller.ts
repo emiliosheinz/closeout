@@ -1,19 +1,21 @@
 import {
-  BadRequestException,
+  type LoginRequest,
+  loginRequestSchema,
+  type SessionResponse,
+} from "@closeout/contracts/schemas";
+import {
   Body,
   Controller,
-  ForbiddenException,
   HttpCode,
   Post,
   Req,
   UseGuards,
 } from "@nestjs/common";
-import type { Request } from "express";
 import {
-  isInternalRequest,
-  trustedClientIp,
-} from "@/security/internal-request";
-import { LoginDto } from "./dto/login.dto";
+  InternalRequestGuard,
+  type RequestWithClientIp,
+  requireClientIp,
+} from "@/security/internal-request.guard";
 import {
   type RequestWithPrincipal,
   requirePrincipal,
@@ -33,21 +35,17 @@ export class AuthController {
    * Called only by the apps/web login route handler, which owns the session
    * cookie and forwards the visitor's IP for rate limiting.
    */
+  @UseGuards(InternalRequestGuard)
   @Post("login")
   @HttpCode(200)
   async login(
-    @Req() req: Request,
-    @Body() body: LoginDto,
-  ): Promise<{ sessionToken: string; expiresAt: string }> {
-    if (!isInternalRequest(req.headers)) throw new ForbiddenException();
-    // Without the visitor's IP every attempt would share one rate-limit
-    // bucket, letting anyone lock the admins out.
-    const clientIp = trustedClientIp(req.headers);
-    if (!clientIp) throw new BadRequestException("Missing client IP");
+    @Req() req: RequestWithClientIp,
+    @Body({ schema: loginRequestSchema }) body: LoginRequest,
+  ): Promise<SessionResponse> {
     const { sessionToken, expiresAt } = await this.auth.login(
       body.email,
       body.password,
-      clientIp,
+      requireClientIp(req),
     );
     return { sessionToken, expiresAt: expiresAt.toISOString() };
   }

@@ -12,7 +12,7 @@ import {
 } from "@testing-library/react";
 import { listingKeys, tabCounts } from "@/entities/listing";
 import { renderWithFeedback } from "@/test/feedback-harness";
-import { listingSummary } from "@/test/fixtures";
+import { listingSummary, problemResponse } from "@/test/fixtures";
 import { useListings } from "../../model/use-listings";
 import { ListingRowActions, ListingStatusControls } from "../listing-rows";
 
@@ -249,9 +249,7 @@ describe("listing row cells", () => {
 
       await pick(status("Disponibilidade", "Item a"), "Reservado");
       await pick(status("Disponibilidade", "Item b"), "Vendido");
-      first.resolve(
-        Response.json({ message: "Servidor indisponível." }, { status: 500 }),
-      );
+      first.resolve(problemResponse(500, "Servidor indisponível."));
 
       expect(await screen.findByRole("alert")).toHaveTextContent(
         "Servidor indisponível.",
@@ -540,9 +538,7 @@ describe("listing row cells", () => {
         await screen.findByRole("button", { name: "Duplicar anúncio" }),
       );
       await waitFor(() => expect(button).toBeDisabled());
-      gate.resolve(
-        Response.json({ message: "Servidor indisponível." }, { status: 500 }),
-      );
+      gate.resolve(problemResponse(500, "Servidor indisponível."));
 
       expect(await screen.findByRole("alert")).toHaveTextContent(
         "Servidor indisponível.",
@@ -578,10 +574,7 @@ describe("listing row cells", () => {
     it("toasts the error once and keeps the dialog open when the deletion fails", async () => {
       handler = (method) =>
         method === "DELETE"
-          ? Response.json(
-              { message: "Servidor indisponível." },
-              { status: 500 },
-            )
+          ? problemResponse(500, "Servidor indisponível.")
           : new Response(null, { status: 204 });
       renderRows([row("a")]);
 

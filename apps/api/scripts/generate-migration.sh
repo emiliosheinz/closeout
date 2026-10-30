@@ -8,4 +8,4 @@ if [ -z "$name" ]; then
   exit 1
 fi
 
-tsx node_modules/typeorm/cli.js migration:generate -d src/database/connection.ts src/database/migrations/"$name"
+tsx node_modules/typeorm/cli.js migration:generate -d src/database/data-source.ts src/database/migrations/"$name"

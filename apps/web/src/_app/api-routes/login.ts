@@ -1,8 +1,14 @@
-import { sessionResponseSchema } from "@closeout/contracts/schemas";
+import {
+  LOGIN_FAILED,
+  LOGIN_INVALID,
+  sessionResponseSchema,
+} from "@closeout/contracts/schemas";
 import { type NextRequest, NextResponse } from "next/server";
 import {
+  problem,
   readJsonObject,
   refuseCrossOrigin,
+  relayProblem,
 } from "@/_app/api-routes/auth-route";
 import { apiUrl, internalAuthHeaders } from "@/shared/api/index.server";
 import { setSessionCookie } from "@/shared/lib/session-cookie";
@@ -32,26 +38,13 @@ export async function POST(request: NextRequest) {
     cache: "no-store",
   });
 
-  if (!response.ok) {
-    const body = (await response.json().catch(() => ({}))) as {
-      message?: string | string[];
-    };
-    const message =
-      response.status === 400
-        ? "Informe um e-mail válido e a senha."
-        : typeof body.message === "string"
-          ? body.message
-          : "Não foi possível entrar agora.";
-    return NextResponse.json({ message }, { status: response.status });
-  }
+  if (response.status === 400) return problem(400, LOGIN_INVALID);
+  if (!response.ok) return relayProblem(response, LOGIN_FAILED);
 
   const session = sessionResponseSchema.safeParse(await response.json());
   if (!session.success) {
     console.error("Session response failed its schema", session.error);
-    return NextResponse.json(
-      { message: "Não foi possível entrar agora." },
-      { status: 502 },
-    );
+    return problem(502, LOGIN_FAILED);
   }
   const { sessionToken, expiresAt } = session.data;
   const result = NextResponse.json({ ok: true });

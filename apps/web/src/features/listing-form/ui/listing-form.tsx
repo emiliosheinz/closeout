@@ -229,9 +229,11 @@ function ListingFormBody({
     mutationFn: ({
       values,
       publish,
+      files,
     }: {
       values: FormValues;
       publish: boolean;
+      files: File[];
     }): Promise<SaveOutcome> => {
       const fields: ListingFields = {
         title: values.title,
@@ -264,8 +266,10 @@ function ListingFormBody({
   });
 
   function submit(values: FormValues, publish: boolean) {
+    // Files travel with the call: the mutation picks up a new mutationFn only
+    // after an effect, so a closure over `files` can lag a fresh drop.
     save.mutate(
-      { values, publish },
+      { values, publish, files },
       {
         onSuccess: ({ id, notice }) => {
           if (id === null) {

@@ -1,4 +1,5 @@
 import { execFile } from "node:child_process";
+import { once } from "node:events";
 import path from "node:path";
 import { promisify } from "node:util";
 import { SessionsService } from "@/auth/services/sessions.service";
@@ -7,9 +8,11 @@ import { ListingsService } from "@/catalog/services/listings.service";
 import { CommandError, createAdmin, resetPassword } from "@/cli/admin-commands";
 import { DEMO_PASSWORD, seedDemo } from "@/cli/seed-demo";
 import { StoresService } from "@/stores/services/stores.service";
+import { type BuiltProcess, runInApi } from "./child-process";
 import {
   as,
   createTestApp,
+  internalPost,
   login,
   PASSWORD,
   resetDatabase,
@@ -154,11 +157,15 @@ describe("operator commands", () => {
     it("rejects weak passwords, bad emails, invalid numbers and slugs before writing", async () => {
       await expect(
         admin("a@example.com", { password: "short" }),
-      ).rejects.toThrow(/at least 10/);
-      await expect(admin("not-an-email")).rejects.toThrow(/Invalid email/);
+      ).rejects.toThrow("A senha precisa ter pelo menos 10 caracteres.");
+      await expect(admin("not-an-email")).rejects.toThrow(
+        "Informe um e-mail válido.",
+      );
       await expect(
         admin("a@example.com", { whatsapp: "11 99999-8888" }),
-      ).rejects.toThrow(/country code/);
+      ).rejects.toThrow(
+        "Informe o WhatsApp com o código do país, por exemplo +55 11 99999-8888.",
+      );
       await expect(
         admin("a@example.com", { store: { slug: "Bad Slug", name: "x" } }),
       ).rejects.toThrow(/Invalid store slug/);
@@ -169,20 +176,20 @@ describe("operator commands", () => {
     });
   });
 
+  // The built CLI, as `pnpm cli` runs it: tsx emits no decorator metadata,
+  // which Nest needs to inject the app's providers.
   describe("command line", () => {
     const run = (...args: string[]) =>
-      promisify(execFile)("pnpm", ["exec", "tsx", "src/cli/main.ts", ...args], {
+      promisify(execFile)(process.execPath, ["dist/cli/main.js", ...args], {
         cwd: path.join(__dirname, ".."),
         timeout: 30_000,
       });
 
     it("creates a store and its owner from the command line", async () => {
       const { stdout } = await promisify(execFile)(
-        "pnpm",
+        process.execPath,
         [
-          "exec",
-          "tsx",
-          "src/cli/main.ts",
+          "dist/cli/main.js",
           "admin:create",
           "--store",
           "loja-cli",
@@ -209,6 +216,227 @@ describe("operator commands", () => {
       expect(await members("loja-cli")).toEqual([
         { email: "cli@example.com", role: "owner", profiles: 1 },
       ]);
+    });
+
+    it("boots without the server's port, host or internal secret", async () => {
+      const { stdout } = await promisify(execFile)(
+        process.execPath,
+        [
+          "dist/cli/main.js",
+          "admin:create",
+          "--store",
+          "loja-operador",
+          "--store-name",
+          "Loja do Operador",
+          "--email",
+          "operador@example.com",
+          "--name",
+          "Operador",
+        ],
+        {
+          cwd: path.join(__dirname, ".."),
+          timeout: 30_000,
+          env: {
+            ...process.env,
+            PORT: undefined,
+            HOST: undefined,
+            INTERNAL_API_SECRET: undefined,
+            CLOSEOUT_PASSWORD: PASSWORD,
+          },
+        },
+      );
+      expect(stdout).toContain(
+        "Created owner operador@example.com for store loja-operador.",
+      );
+    });
+
+    /** Run the built CLI; with no `CLOSEOUT_PASSWORD`, answer its prompts on a fake TTY. */
+    const cli = async (
+      args: string[],
+      password: { env: string } | { typed: string },
+    ) => {
+      const proc: BuiltProcess = runInApi(
+        process.execPath,
+        [
+          "--import",
+          "data:text/javascript,process.stdin.isTTY=true",
+          "dist/cli/main.js",
+          ...args,
+        ],
+        { CLOSEOUT_PASSWORD: "env" in password ? password.env : undefined },
+      );
+      if ("typed" in password) {
+        let answered = 0;
+        proc.child.stdout?.on("data", () => {
+          const prompts = proc.stdout().split("assword: ").length - 1;
+          for (; answered < prompts; answered++) {
+            proc.child.stdin?.write(`${password.typed}\n`);
+          }
+          // Both prompts answered: the operator's terminal has nothing more to send.
+          if (answered === 2) proc.child.stdin?.end();
+        });
+      }
+      const [code] = await once(proc.child, "close");
+      return { code, output: proc.stdout() + proc.stderr() };
+    };
+    const createArgs = (fields: Record<string, string> = {}) =>
+      Object.entries({
+        store: "loja-cli",
+        "store-name": "Loja da CLI",
+        email: "cli@example.com",
+        name: "Pela CLI",
+        ...fields,
+      }).flatMap(([flag, value]) => [`--${flag}`, value]);
+
+    // The API's message for the same field: login checks the email, invite
+    // acceptance the name, password and WhatsApp number of a new account.
+    const apiMessage = async (field: string, value: string) => {
+      const res =
+        field === "email"
+          ? await internalPost(ctx.app, "/auth/login", "192.0.2.40").send({
+              email: value,
+              password: PASSWORD,
+            })
+          : await internalPost(
+              ctx.app,
+              "/auth/invites/accept",
+              "192.0.2.40",
+            ).send({
+              token: "any-token",
+              name: "Nova Pessoa",
+              password: PASSWORD,
+              [field]: value,
+            });
+      expect(res.status).toBe(400);
+      const error = res.body.errors.find(
+        (e: { pointer: string }) => e.pointer === `/${field}`,
+      );
+      return error.detail as string;
+    };
+
+    const flags: Record<string, string> = {
+      email: "email",
+      name: "name",
+      whatsappNumber: "whatsapp",
+    };
+
+    it.each([
+      ["email", "not-an-email"],
+      ["name", "   "],
+      ["password", "short-pw"],
+      ["whatsappNumber", "11 99999-8888"],
+    ])("refuses an invalid %s with the API's message", async (field, value) => {
+      const message = await apiMessage(field, value);
+      const flag = flags[field];
+
+      const result = await cli(
+        ["admin:create", ...createArgs(flag ? { [flag]: value } : {})],
+        { env: field === "password" ? value : PASSWORD },
+      );
+
+      expect(result.code).not.toBe(0);
+      expect(result.output).toContain(message);
+      const [{ count }] = await ctx.dataSource.query(
+        `SELECT COUNT(*)::int AS count FROM users`,
+      );
+      expect(count).toBe(0);
+    });
+
+    it("reports only the first message when several fields are invalid", async () => {
+      const result = await cli(
+        ["admin:create", ...createArgs({ name: "  " })],
+        { env: "short-pw" },
+      );
+
+      expect(result.code).not.toBe(0);
+      expect(result.output).toContain("Informe seu nome.");
+      expect(result.output).not.toContain(
+        "A senha precisa ter pelo menos 10 caracteres.",
+      );
+    });
+
+    it("refuses a blank name with the API's message", async () => {
+      const result = await cli(
+        ["admin:create", ...createArgs({ name: "  " })],
+        {
+          env: PASSWORD,
+        },
+      );
+
+      expect(result.code).not.toBe(0);
+      expect(result.output).toContain("Informe seu nome.");
+    });
+
+    it("refuses a name over 60 characters and a password over 200", async () => {
+      const longName = await cli(
+        ["admin:create", ...createArgs({ name: "n".repeat(61) })],
+        { env: PASSWORD },
+      );
+      const longPassword = await cli(["admin:create", ...createArgs()], {
+        env: "p".repeat(201),
+      });
+
+      expect(longName.code).not.toBe(0);
+      expect(longName.output).toContain("Use até 60 caracteres no nome.");
+      expect(longPassword.code).not.toBe(0);
+      expect(longPassword.output).toContain("Use até 200 caracteres na senha.");
+    });
+
+    it("does not echo a refused WhatsApp number", async () => {
+      const typed = "21 91234-5678";
+      const result = await cli(
+        ["admin:create", ...createArgs({ whatsapp: typed })],
+        { env: PASSWORD },
+      );
+
+      expect(result.code).not.toBe(0);
+      expect(result.output).toContain(
+        "Informe o WhatsApp com o código do país, por exemplo +55 11 99999-8888.",
+      );
+      expect(result.output).not.toContain(typed);
+    });
+
+    it("creates the member without a number when --whatsapp is empty", async () => {
+      const result = await cli(
+        ["admin:create", ...createArgs({ whatsapp: "" })],
+        { env: PASSWORD },
+      );
+
+      expect(result.code).toBe(0);
+      const sellers = await ctx.dataSource.query(
+        `SELECT whatsapp_number FROM sellers`,
+      );
+      expect(sellers).toEqual([{ whatsapp_number: null }]);
+    });
+
+    it.each([
+      ["from the environment", "env"],
+      ["typed at the prompt", "typed"],
+    ] as const)("never prints a password %s", async (_, source) => {
+      const valid = "sentinel-valid-password";
+      const invalid = "Xq7-short";
+      const password = (value: string) =>
+        source === "env" ? { env: value } : { typed: value };
+
+      const created = await cli(
+        ["admin:create", ...createArgs()],
+        password(valid),
+      );
+      const refused = await cli(
+        ["admin:create", ...createArgs({ email: "outra@example.com" })],
+        password(invalid),
+      );
+
+      expect(created.code).toBe(0);
+      expect(created.output).toContain(
+        "Created owner cli@example.com for store loja-cli.",
+      );
+      expect(refused.code).not.toBe(0);
+      expect(refused.output).toContain(
+        "A senha precisa ter pelo menos 10 caracteres.",
+      );
+      expect(created.output).not.toContain(valid);
+      expect(refused.output).not.toContain(invalid);
     });
 
     it.each([
@@ -238,6 +466,24 @@ describe("operator commands", () => {
       });
 
       await as(ctx.app, oldCookie).get("/me").expect(401);
+      await login(ctx.app, "emilio@example.com", "a brand new passphrase");
+    });
+
+    it("refuses a malformed email with the API's message", async () => {
+      await expect(
+        resetPassword(ctx.dataSource, ctx.app.get(SessionsService), {
+          email: "not-an-email",
+          password: PASSWORD,
+        }),
+      ).rejects.toThrow(new CommandError("Informe um e-mail válido."));
+    });
+
+    it("finds the user whatever the email's case or padding", async () => {
+      await admin("emilio@example.com");
+      await resetPassword(ctx.dataSource, ctx.app.get(SessionsService), {
+        email: " Emilio@Example.com ",
+        password: "a brand new passphrase",
+      });
       await login(ctx.app, "emilio@example.com", "a brand new passphrase");
     });
 

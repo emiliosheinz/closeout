@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { type AdminImage, listingKeys, listingReads } from "@/entities/listing";
 import { readQuery } from "@/shared/api";
 import { renderWithFeedback } from "@/test/feedback-harness";
+import { problemResponse } from "@/test/fixtures";
 import { PhotoManager } from "../photo-manager";
 
 const image = (id: string): AdminImage => ({
@@ -73,7 +74,7 @@ beforeEach(() => {
     if (method === "POST") {
       await holdPosts;
       if (++posts >= failPostsFrom) {
-        return Response.json({ message: "Imagem inválida." }, { status: 422 });
+        return problemResponse(422, "Imagem inválida.");
       }
       const count = (init?.body as FormData).getAll("files").length;
       for (let i = 0; i < count; i++) server.push(image(`n${posts}-${i}`));

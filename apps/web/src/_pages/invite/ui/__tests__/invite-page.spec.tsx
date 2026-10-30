@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { Mock } from "vitest";
 import { getQueryClient } from "@/shared/api";
+import { problem } from "@/test/fixtures";
 import { InvitePage } from "../invite-page";
 
 vi.mock("next/headers", () => ({
@@ -163,7 +164,12 @@ describe("invite page", () => {
     const whatsapp =
       "Informe o WhatsApp com o código do país, por exemplo +55 11 99999-8888.";
     (global.fetch as Mock).mockResolvedValue(
-      respond({ message: [whatsapp] }, 400),
+      respond(
+        problem(400, whatsapp, [
+          { pointer: "/whatsappNumber", detail: whatsapp },
+        ]),
+        400,
+      ),
     );
     fireEvent.change(screen.getByLabelText("Seu nome"), {
       target: { value: "Duda" },
@@ -198,7 +204,7 @@ describe("invite page", () => {
     lookupResponse = valid();
     await renderPage();
     (global.fetch as Mock).mockResolvedValue(
-      respond({ message: "Este e-mail já tem uma conta." }, 409),
+      respond(problem(409, "Este e-mail já tem uma conta."), 409),
     );
     fireEvent.change(screen.getByLabelText("Seu nome"), {
       target: { value: "Duda" },

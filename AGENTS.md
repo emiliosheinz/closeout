@@ -11,14 +11,14 @@ HTTP: server-side with `API_BASE_URL`, from the browser through the `/api/v1/*` 
 
 # Commands
 
-All compute runs inside containers. Never run pnpm, jest, turbo or nest on the host.
+All compute runs inside containers. Never run pnpm, vitest, turbo or nest on the host.
 
 ```bash
 ./scripts/setup-env.sh && docker compose up -d --wait
 bin/closeout pnpm check && bin/closeout pnpm typecheck  # must be clean
 bin/closeout pnpm turbo check:fix                  # auto-fix formatting
 bin/closeout pnpm test                             # unit tests
-bin/closeout pnpm --filter api test:integration    # real Postgres, per-run database
+bin/closeout pnpm turbo test:integration --filter=api   # real Postgres, per-run database
 bin/closeout e2e                                   # Playwright, isolated compose project
 bin/closeout db migration:generate <Name>          # then re-run: must say "No changes"
 bin/closeout cli admin:create --store <slug> --store-name <name> --email ... --name ... [--whatsapp "+55 ..."]
@@ -52,15 +52,15 @@ apps/web/src/
   entities/    listing, member, invite, session: types, API reads, display pieces; index.server.ts holds server-only code
   shared/      api (http client, server fetcher), ui (shadcn primitives, dialogs), lib (format, money, site, whatsapp), config
 apps/web/e2e-tests/   Playwright journeys
-packages/contracts/   enums entry (no imports; used by api and web) and zod schemas entry (web, api tests)
+packages/contracts/   enums entry (no imports) and zod schemas entry, both used by api and web
 ```
 
 # Conventions
 
 - Biome is the formatter and linter; run `check:fix` before committing.
 - Only `apps/api` touches the database. The web app never imports from the API. Shared
-  enums and wire schemas live in `packages/contracts`; the API imports only its `enums`
-  entry, and the schemas only in tests.
+  enums and wire schemas live in `packages/contracts`; both apps import its
+  `enums` and `schemas` entries.
 - Entities use `declare field: T`. Migrations are generated from the entity diff and
   reviewed; extensions are the only hand-written SQL.
 - Every admin route lives under `/stores/:storeId/*` behind `SessionGuard` and
@@ -82,7 +82,8 @@ packages/contracts/   enums entry (no imports; used by api and web) and zod sche
   each (or the new field stays optional on the web for one release). Both services deploy
   from one commit and the API waits on its migration, so for a moment the web runs against
   the old API. A new field ships API first; a new enum value ships web first.
-- Use `Logger` in the API and `console.error` on the web side for diagnostics.
+- Diagnostics: the Nest `Logger` in the API (it writes the structured pino lines) and
+  `console.error` on the web side. Never log secrets, bodies or driver error messages.
 - Tests assert behavior: API integration tests hit a real database, no mocks of the
   app's own collaborators.
 - Conventional Commits; no AI co-author trailers.

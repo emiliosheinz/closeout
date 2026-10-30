@@ -4,17 +4,21 @@ import {
   GUARDS_METADATA,
   METHOD_METADATA,
   PATH_METADATA,
+  ROUTE_ARGS_METADATA,
 } from "@nestjs/common/constants";
 import { ModulesContainer } from "@nestjs/core";
 import { Test } from "@nestjs/testing";
+import type { DestinationStream } from "pino";
 import sharp from "sharp";
 import request from "supertest";
 import { DataSource } from "typeorm";
-import { AppModule } from "@/app.module";
 import { createAdmin } from "@/cli/admin-commands";
-import { configureApp } from "@/configure-app";
+import { serverScope } from "@/config/config";
+import { parseEnv } from "@/config/report";
+import { appSetup } from "@/configure-app";
 import { Roles } from "@/stores/membership";
 import { StoresService } from "@/stores/services/stores.service";
+import { installErrorObserver } from "./error-fixture";
 
 export const ORIGIN = "http://storefront.test";
 export const INTERNAL_SECRET = "integration-test-secret-0123456789abcdef";
@@ -25,15 +29,27 @@ export interface TestContext {
   dataSource: DataSource;
 }
 
-/** `extraModules` lets a suite mount test-only controllers next to the app. */
+const DISCARD: DestinationStream = { write: () => {} };
+
+/**
+ * Boots the app the way the server entry point does. `extraModules` lets a
+ * suite mount test-only controllers next to the app; log lines go to `logs`,
+ * discarded by default.
+ */
 export async function createTestApp(
   extraModules: Type[] = [],
+  logs: DestinationStream = DISCARD,
 ): Promise<TestContext> {
+  const parsed = parseEnv(serverScope, process.env);
+  if (!parsed.ok) throw new Error(parsed.problems.join("\n"));
+  const setup = appSetup(parsed.config, logs);
   const moduleRef = await Test.createTestingModule({
-    imports: [AppModule, ...extraModules],
+    imports: [setup.module, ...extraModules],
   }).compile();
-  const app = moduleRef.createNestApplication({ logger: false });
-  configureApp(app);
+  const app = moduleRef.createNestApplication(setup.options);
+  const observedErrors = process.env.ERROR_FIXTURE_OBSERVED;
+  if (observedErrors) installErrorObserver(app, observedErrors);
+  setup.configure(app);
   await app.init();
   return { app, dataSource: app.get(DataSource) };
 }
@@ -242,6 +258,8 @@ interface Route {
   guarded: boolean;
   /** Roles the handler declares with `@Roles`, if any. */
   roles: readonly StoreRole[] | undefined;
+  /** The handler's arguments, keyed `<RouteParamtypes>:<index>`. */
+  args: Record<string, { data?: unknown; schema?: unknown }>;
 }
 
 /** Every route the app registers, read from Nest's controller metadata. */
@@ -271,6 +289,8 @@ export function registeredRoutes(app: INestApplication): Route[] {
             guardedClass ||
             (Reflect.getMetadata(GUARDS_METADATA, handler) ?? []).length > 0,
           roles: Reflect.getMetadata(Roles.KEY, handler),
+          args:
+            Reflect.getMetadata(ROUTE_ARGS_METADATA, controller, name) ?? {},
         });
       }
     }

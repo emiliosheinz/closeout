@@ -3,6 +3,7 @@
 import { NextRequest } from "next/server";
 import { POST } from "@/_app/api-routes/login";
 import oracle from "@/test/copy-oracle.json";
+import { expectProblem, problem, problemResponse } from "@/test/fixtures";
 
 beforeEach(() => {
   vi.spyOn(console, "warn").mockImplementation(() => undefined);
@@ -35,7 +36,7 @@ describe("login route body cap", () => {
     const res = await login(
       JSON.stringify({ email: "a@b.co", password: "x".repeat(5000) }),
     );
-    expect(res.status).toBe(413);
+    await expectProblem(res, 413, "Requisição grande demais.");
   });
 
   it("rejects a lying content-length", async () => {
@@ -88,15 +89,19 @@ describe("login route body cap", () => {
     const res = await login(
       JSON.stringify({ email: "a@b.co", password: "senha" }),
     );
-    expect(res.status).toBe(502);
-    expect(await res.json()).toEqual({ message: oracle.loginFallback });
+    await expectProblem(res, 502, oracle.loginFallback);
     expect(res.headers.get("set-cookie")).toBeNull();
     expect(logged).toHaveBeenCalled();
   });
 
   it("answers 400 to a body that is not JSON", async () => {
     const res = await login("not json");
-    expect(res.status).toBe(400);
+    await expectProblem(res, 400, "Requisição inválida.");
+  });
+
+  it("refuses a request from another site", async () => {
+    const res = await login("{}", { origin: "https://evil.example" });
+    await expectProblem(res, 403, "Origem não permitida.");
   });
 });
 
@@ -110,12 +115,7 @@ describe("login route client IP", () => {
     process.env.INTERNAL_API_SECRET = "secret";
     const fetchMock = vi
       .spyOn(global, "fetch")
-      .mockResolvedValue(
-        Response.json(
-          { message: "E-mail ou senha inválidos." },
-          { status: 401 },
-        ),
-      );
+      .mockResolvedValue(problemResponse(401, "E-mail ou senha inválidos."));
     await login(JSON.stringify({ email: "a@b.co", password: "wrong" }), {
       "x-real-ip": "179.129.216.37",
       "x-forwarded-for": "6.6.6.6, 46.151.194.130",
@@ -123,5 +123,74 @@ describe("login route client IP", () => {
     const headers = new Headers(fetchMock.mock.calls[0]?.[1]?.headers);
     expect(headers.get("x-client-ip")).toBe("179.129.216.37");
     fetchMock.mockRestore();
+  });
+});
+
+describe("login route API failures", () => {
+  const credentials = JSON.stringify({ email: "a@b.co", password: "senha" });
+
+  beforeEach(() => {
+    process.env.PUBLIC_BASE_URL = "http://web:3000";
+    process.env.API_BASE_URL = "http://api:3001";
+    process.env.INTERNAL_API_SECRET = "secret";
+  });
+
+  it("passes the API's problem through with its status and sets no cookie", async () => {
+    vi.spyOn(global, "fetch").mockResolvedValue(
+      problemResponse(401, "E-mail ou senha inválidos."),
+    );
+    const res = await login(credentials);
+    expect(res.status).toBe(401);
+    expect(res.headers.get("content-type")).toBe("application/problem+json");
+    expect(await res.json()).toEqual(
+      problem(401, "E-mail ou senha inválidos."),
+    );
+    expect(res.headers.get("set-cookie")).toBeNull();
+  });
+
+  it("passes a rate limit through with its Retry-After", async () => {
+    const tooMany = "Muitas tentativas. Tente novamente em alguns minutos.";
+    vi.spyOn(global, "fetch").mockResolvedValue(
+      Response.json(problem(429, tooMany), {
+        status: 429,
+        headers: { "Retry-After": "120" },
+      }),
+    );
+    const res = await login(credentials);
+    expect(res.status).toBe(429);
+    expect(res.headers.get("retry-after")).toBe("120");
+    expect(await res.json()).toEqual(problem(429, tooMany));
+  });
+
+  it("words an API 400 as the login form's own copy", async () => {
+    vi.spyOn(global, "fetch").mockResolvedValue(
+      problemResponse(400, "Informe um e-mail válido.", [
+        { pointer: "/email", detail: "Informe um e-mail válido." },
+      ]),
+    );
+    await expectProblem(
+      await login(credentials),
+      400,
+      "Informe um e-mail válido e a senha.",
+    );
+  });
+
+  it("keeps the status and answers today's copy when the API body is not a problem", async () => {
+    vi.spyOn(global, "fetch").mockResolvedValue(
+      new Response("<html>Bad Gateway</html>", { status: 503 }),
+    );
+    await expectProblem(
+      await login(credentials),
+      503,
+      "Não foi possível entrar agora.",
+    );
+    vi.spyOn(global, "fetch").mockResolvedValue(
+      Response.json({ message: "Bad Request" }, { status: 400 }),
+    );
+    await expectProblem(
+      await login(credentials),
+      400,
+      "Informe um e-mail válido e a senha.",
+    );
   });
 });

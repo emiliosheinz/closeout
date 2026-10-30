@@ -5,21 +5,10 @@
   "description": "Shared configuration for the closeout monorepo",
   "license": "MIT",
   "scripts": {
-    "build": "tsup",
-    "typecheck": "tsc --noEmit"
+    "build": "rm -rf dist && mkdir dist && cp base/*.json dist/"
   },
   "exports": {
     "./biome": "./dist/biome.json",
-    "./typescript": "./dist/tsconfig.json",
-    "./jest": {
-      "types": "./dist/jest.config.d.ts",
-      "import": "./dist/jest.config.mjs",
-      "require": "./dist/jest.config.js"
-    }
-  },
-  "devDependencies": {
-    "jest": "catalog:",
-    "tsup": "9.0.0",
-    "typescript": "catalog:"
+    "./typescript": "./dist/tsconfig.json"
   }
 }

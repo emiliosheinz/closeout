@@ -1,3 +1,4 @@
+import type { DashboardCounts } from "@closeout/contracts/schemas";
 import { Controller, Get, UseGuards } from "@nestjs/common";
 import { SessionGuard } from "@/auth/guards/session.guard";
 import { StoreMemberGuard } from "@/stores/guards/store-member.guard";
@@ -7,10 +8,7 @@ import {
   type MembershipContext,
   Roles,
 } from "@/stores/membership";
-import {
-  type DashboardCounts,
-  ListingsService,
-} from "../services/listings.service";
+import { ListingsService } from "../services/listings.service";
 
 @Controller("stores/:storeId/dashboard")
 @UseGuards(SessionGuard, StoreMemberGuard)

@@ -16,7 +16,7 @@
     "rootDir": ".",
     "outDir": "./dist",
     "paths": { "@/*": ["./src/*"] },
-    "types": ["node", "jest", "multer"]
+    "types": ["node", "vitest/globals", "multer"]
   },
   "exclude": ["dist", "scripts"]
 }

@@ -1,46 +1,19 @@
-import type { Availability, Condition } from "@closeout/contracts/enums";
-import { type ImageUrls, mediaUrls } from "@/media/media-urls";
+import type {
+  PublicImage,
+  PublicListingDetail,
+  PublicListingSummary,
+} from "@closeout/contracts/schemas";
+import { mediaUrls } from "@/media/media-urls";
 import type { Seller } from "@/sellers/entities/seller.entity";
 import type { Listing } from "./entities/listing.entity";
 import type { ListingImage } from "./entities/listing-image.entity";
 import { canContact } from "./listing-rules";
-import type { ListingAttribute } from "./listing-types";
 
 /*
  * Public payloads are assembled field by field from an allow-list. Entities
  * are never serialized directly, so publication state, storage keys, user
  * ids and timestamps of drafts cannot leak by accident.
  */
-
-export interface PublicImage extends ImageUrls {
-  width: number;
-  height: number;
-}
-
-export interface PublicListingSummary {
-  slug: string;
-  title: string;
-  priceCents: number | null;
-  condition: Condition;
-  availability: Availability;
-  category: { slug: string; name: string };
-  cover: PublicImage | null;
-}
-
-export interface PublicListingDetail extends PublicListingSummary {
-  description: string;
-  attributes: ListingAttribute[];
-  images: PublicImage[];
-  sellers: {
-    name: string;
-    avatarUrl: string | null;
-    whatsappNumber: string | null;
-  }[];
-  canContact: boolean;
-  publishedAt: string | null;
-  updatedAt: string;
-  related: PublicListingSummary[];
-}
 
 export function toPublicImage(image: ListingImage): PublicImage {
   return {

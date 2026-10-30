@@ -51,17 +51,18 @@ describe("admin authentication", () => {
     const unknownEmail = await attempt("ghost@example.com", PASSWORD).expect(
       401,
     );
-    expect(wrongPassword.body.message).toBe("E-mail ou senha inválidos.");
-    expect(unknownEmail.body.message).toBe("E-mail ou senha inválidos.");
+    expect(wrongPassword.body.detail).toBe("E-mail ou senha inválidos.");
+    expect(unknownEmail.body.detail).toBe("E-mail ou senha inválidos.");
   });
 
   it("refuses login calls that do not come from the web server", async () => {
     await createStoreWithAdmin(ctx, "loja-a");
-    await request(server())
+    const res = await request(server())
       .post("/auth/login")
       .set("Origin", ORIGIN)
       .send({ email: "loja-a@example.com", password: PASSWORD })
       .expect(403);
+    expect(res.body.detail).toBe("Você não tem permissão para esta ação.");
   });
 
   it("returns 429 on the 11th attempt after ten failures, even with the right password", async () => {
@@ -71,8 +72,70 @@ describe("admin authentication", () => {
       await attempt("limite@example.com", "wrong").expect(401);
     }
     const blocked = await attempt("limite@example.com", PASSWORD).expect(429);
-    expect(blocked.body.message).toMatch(/Muitas tentativas/);
+    expect(blocked.body.detail).toBe(
+      "Muitas tentativas. Tente novamente em alguns minutos.",
+    );
     await attempt("limite@example.com", PASSWORD, "198.51.100.1").expect(200);
+  });
+
+  it("tells a blocked client when to retry and still refuses the right password", async () => {
+    const minute = 60 * 1000;
+    const start = Date.now();
+    const clock = vi.spyOn(Date, "now").mockReturnValue(start);
+    try {
+      await createStoreWithAdmin(ctx, "espera");
+      for (let i = 0; i < 10; i++) {
+        await attempt("espera@example.com", "wrong").expect(401);
+      }
+      clock.mockReturnValue(start + 5 * minute);
+      const blocked = await attempt("espera@example.com", PASSWORD).expect(429);
+      expect(blocked.headers["retry-after"]).toBe("600");
+      expect(blocked.body.detail).toBe(
+        "Muitas tentativas. Tente novamente em alguns minutos.",
+      );
+      clock.mockReturnValue(start + 15 * minute - 1);
+      const lastMoment = await attempt("espera@example.com", PASSWORD).expect(
+        429,
+      );
+      expect(lastMoment.headers["retry-after"]).toBe("1");
+      clock.mockReturnValue(start + 15 * minute);
+      await attempt("espera@example.com", PASSWORD).expect(200);
+    } finally {
+      clock.mockRestore();
+    }
+  });
+
+  it("does not count refused attempts, so a blocked client is let back in when its failures expire", async () => {
+    const minute = 60 * 1000;
+    const start = Date.now();
+    const clock = vi.spyOn(Date, "now").mockReturnValue(start);
+    try {
+      await createStoreWithAdmin(ctx, "insiste");
+      for (let i = 0; i < 10; i++) {
+        await attempt("insiste@example.com", "wrong").expect(401);
+      }
+      clock.mockReturnValue(start + 5 * minute);
+      for (let i = 0; i < 10; i++) {
+        await attempt("insiste@example.com", PASSWORD).expect(429);
+      }
+      clock.mockReturnValue(start + 15 * minute);
+      await attempt("insiste@example.com", PASSWORD).expect(200);
+    } finally {
+      clock.mockRestore();
+    }
+  });
+
+  it("counts emails that differ only in case or surrounding spaces together", async () => {
+    await createStoreWithAdmin(ctx, "caixa");
+    const spellings = [
+      "caixa@example.com",
+      " CAIXA@example.com ",
+      "Caixa@Example.COM",
+    ];
+    for (let i = 0; i < 10; i++) {
+      await attempt(spellings[i % 3] ?? "", "wrong").expect(401);
+    }
+    await attempt("caixa@example.com", PASSWORD).expect(429);
   });
 
   it("returns 429 to an IP after thirty failures across rotating emails, even with valid credentials", async () => {
@@ -101,6 +164,30 @@ describe("admin authentication", () => {
       .expect(403);
   });
 
+  it("rejects a malformed email without counting it against the client", async () => {
+    await createStoreWithAdmin(ctx, "formato");
+    const tooLong = `${"a".repeat(243)}@example.com`;
+    for (let i = 0; i < 15; i++) {
+      const long = await attempt(` ${tooLong} `, "wrong").expect(400);
+      expect(long.body.errors).toEqual([
+        { pointer: "/email", detail: "Informe um e-mail válido." },
+      ]);
+      const spaced = await attempt('"a b"@x.com', "wrong").expect(400);
+      expect(spaced.body.errors).toEqual([
+        { pointer: "/email", detail: "Informe um e-mail válido." },
+      ]);
+    }
+    await attempt("formato@example.com", PASSWORD).expect(200);
+  });
+
+  it("counts a short but well-formed email like any failed login", async () => {
+    for (let i = 0; i < 10; i++) {
+      const res = await attempt("a@b.c", "wrong").expect(401);
+      expect(res.body.detail).toBe("E-mail ou senha inválidos.");
+    }
+    await attempt("a@b.c", "wrong").expect(429);
+  });
+
   it("does not count a successful login against the limit", async () => {
     await createStoreWithAdmin(ctx, "perdoa");
     for (let i = 0; i < 9; i++) {
@@ -124,11 +211,14 @@ describe("admin authentication", () => {
 
   it("requires the forwarded client IP on internal login calls", async () => {
     await createStoreWithAdmin(ctx, "loja-a");
-    await request(server())
+    const res = await request(server())
       .post("/auth/login")
       .set("x-internal-secret", INTERNAL_SECRET)
       .send({ email: "loja-a@example.com", password: PASSWORD })
       .expect(400);
+    expect(res.body.detail).toBe(
+      "Não foi possível identificar a origem da requisição.",
+    );
   });
 
   it("does not let a burst of concurrent guesses exceed the limit", async () => {
@@ -145,11 +235,13 @@ describe("admin authentication", () => {
 
   it("rejects admin endpoints without a valid session", async () => {
     const admin = await createStoreWithAdmin(ctx, "loja-a");
-    await request(server()).get("/me").expect(401);
-    await request(server())
+    const missing = await request(server()).get("/me").expect(401);
+    const forged = await request(server())
       .get(`/stores/${admin.storeId}/listings`)
       .set("Cookie", "closeout_session=forged")
       .expect(401);
+    expect(missing.body.detail).toBe("Entre para continuar.");
+    expect(forged.body.detail).toBe("Entre para continuar.");
   });
 
   it("revokes the session on logout", async () => {
@@ -180,7 +272,7 @@ describe("admin authentication", () => {
       .expect(200);
   });
 
-  it("guards every route except the public catalog, media, health, login and invite acceptance", () => {
+  it("guards every route except the public catalog, media and health", () => {
     const open = registeredRoutes(ctx.app)
       .filter((route) => !route.guarded)
       .map((route) => `${route.method} ${route.path}`)
@@ -192,9 +284,6 @@ describe("admin authentication", () => {
       "GET /public/stores/:storeSlug",
       "GET /public/stores/:storeSlug/listings",
       "GET /public/stores/:storeSlug/listings/:listingSlug",
-      "POST /auth/invites/accept",
-      "POST /auth/invites/lookup",
-      "POST /auth/login",
     ]);
   });
 

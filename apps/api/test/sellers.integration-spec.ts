@@ -36,6 +36,11 @@ describe("seller profiles", () => {
       whatsappNumber: "5511999998888",
       avatarUrl: null,
     });
+    const [row] = await ctx.dataSource.query(
+      `SELECT whatsapp_number FROM sellers WHERE id = $1`,
+      [admin.sellerId],
+    );
+    expect(row.whatsapp_number).toBe("5511999998888");
   });
 
   it("rejects numbers without a country code and plain text", async () => {
@@ -49,8 +54,38 @@ describe("seller profiles", () => {
         .patch(`${base()}/${admin.sellerId}`)
         .send({ displayName: "Ana", whatsappNumber })
         .expect(400);
-      expect(res.body.message.join(" ")).toMatch(/código do país/);
+      expect(res.body.errors).toEqual([
+        {
+          pointer: "/whatsappNumber",
+          detail:
+            "Informe o WhatsApp com o código do país, por exemplo +55 11 99999-8888.",
+        },
+      ]);
     }
+  });
+
+  it("rejects unknown fields in the profile body", async () => {
+    const res = await client()
+      .patch(`${base()}/${admin.sellerId}`)
+      .send({ displayName: "Ana", userId: admin.sellerId })
+      .expect(400);
+    expect(res.body.errors).toEqual([
+      { pointer: "/userId", detail: "Campo não permitido." },
+    ]);
+  });
+
+  it("rejects a profile id that is not a UUID at its route param", async () => {
+    const invalidId = [{ pointer: "/params/id", detail: "Valor inválido." }];
+    const update = await client()
+      .patch(`${base()}/ana`)
+      .send({ displayName: "Ana" })
+      .expect(400);
+    expect(update.body.errors).toEqual(invalidId);
+    const avatar = await client()
+      .post(`${base()}/ana/avatar`)
+      .attach("file", await photo(), "a.jpg")
+      .expect(400);
+    expect(avatar.body.errors).toEqual(invalidId);
   });
 
   it("links public listings to the seller's updated number", async () => {
@@ -92,12 +127,12 @@ describe("seller profiles", () => {
       .patch(`${base()}/${admin.sellerId}`)
       .send({ displayName: "Trocado" })
       .expect(403);
-    expect(other.body.message).toBe("Você não tem permissão para esta ação.");
+    expect(other.body.detail).toBe("Você não tem permissão para esta ação.");
     const avatar = await asSeller
       .post(`${base()}/${admin.sellerId}/avatar`)
       .attach("file", await photo(), "a.jpg")
       .expect(403);
-    expect(avatar.body.message).toBe("Você não tem permissão para esta ação.");
+    expect(avatar.body.detail).toBe("Você não tem permissão para esta ação.");
     await asSeller
       .post(`${base()}/${seller.sellerId}/avatar`)
       .attach("file", await photo(), "a.jpg")
@@ -178,13 +213,28 @@ describe("seller profiles", () => {
     await request(server).get(first.body.avatarUrl).expect(404);
   });
 
+  it("asks for an image when an avatar upload carries none", async () => {
+    const res = await client()
+      .post(`${base()}/${admin.sellerId}/avatar`)
+      .expect(400);
+    expect(res.body.detail).toBe("Envie uma imagem.");
+  });
+
   it("answers an avatar upload with more than one file in Portuguese", async () => {
     const res = await client()
       .post(`${base()}/${admin.sellerId}/avatar`)
       .attach("file", await photo("#111"), "a.jpg")
       .attach("file", await photo("#222"), "b.jpg")
       .expect(400);
-    expect(res.body.message).toBe("Envie uma foto por vez.");
+    expect(res.body.detail).toBe("Envie uma foto por vez.");
+  });
+
+  it("answers an avatar upload under another field name in Portuguese", async () => {
+    const res = await client()
+      .post(`${base()}/${admin.sellerId}/avatar`)
+      .attach("photo", await photo("#111"), "a.jpg")
+      .expect(400);
+    expect(res.body.detail).toBe("Envie uma foto por vez.");
   });
 
   it("refuses avatar uploads for another store's seller", async () => {
@@ -201,10 +251,11 @@ describe("seller profiles", () => {
     const other = await createStoreWithAdmin(ctx, "loja-b");
     const intruder = as(ctx.app, other.cookie);
     await intruder.get(base()).expect(404);
-    await intruder
+    const unknown = await intruder
       .patch(`/stores/${other.storeId}/sellers/${admin.sellerId}`)
       .send({ displayName: "x" })
       .expect(404);
+    expect(unknown.body.detail).toBe("Vendedor não encontrado.");
     const list = await client().get(base()).expect(200);
     expect(list.body.items).toEqual([
       expect.objectContaining({

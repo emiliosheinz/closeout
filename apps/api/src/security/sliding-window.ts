@@ -24,6 +24,16 @@ export class SlidingWindowCounter {
     this.events.set(key, [...this.recent(key, now), now]);
   }
 
+  /**
+   * Whole seconds, at least 1, until the oldest event of `key` leaves the
+   * window ending at `now`. Asked only of a key that has events.
+   */
+  retryAfterSeconds(key: string, now = Date.now()): number {
+    const [oldest] = this.recent(key, now);
+    if (oldest === undefined) throw new Error(`No events recorded for ${key}`);
+    return Math.max(1, Math.ceil((oldest + this.windowMs - now) / 1000));
+  }
+
   /** Forget every event of `key`. */
   clear(key: string): void {
     this.events.delete(key);

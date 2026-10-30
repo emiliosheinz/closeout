@@ -1,4 +1,8 @@
 import {
+  listingRequestSchema,
+  listingUpdateRequestSchema,
+} from "@closeout/contracts/schemas";
+import {
   dehydrate,
   HydrationBoundary,
   QueryClient,
@@ -61,8 +65,14 @@ const seller = (id: string, displayName: string) => ({
   listingCount: 0,
 });
 
-const categories = [{ id: "c", slug: "moveis", name: "Móveis" }];
-const sellers = [seller("ana", "Ana"), seller("bia", "Bia")];
+// Ids are UUIDs, as the API issues them and the listing schema requires.
+const CATEGORY = "6f1c2a4e-1b2c-4d3e-8f40-000000000001";
+const OTHER_CATEGORY = "6f1c2a4e-1b2c-4d3e-8f40-000000000002";
+const ANA = "6f1c2a4e-1b2c-4d3e-8f40-0000000000a1";
+const BIA = "6f1c2a4e-1b2c-4d3e-8f40-0000000000b1";
+
+const categories = [{ id: CATEGORY, slug: "moveis", name: "Móveis" }];
+const sellers = [seller(ANA, "Ana"), seller(BIA, "Bia")];
 
 const listing: AdminListingDetail = {
   id: "listing-1",
@@ -72,10 +82,10 @@ const listing: AdminListingDetail = {
   condition: "good",
   availability: "available",
   publication: "draft",
-  category: { id: "c", name: "Móveis" },
+  category: { id: CATEGORY, name: "Móveis" },
   sellers: [
-    { id: "ana", displayName: "Ana" },
-    { id: "bia", displayName: "Bia" },
+    { id: ANA, displayName: "Ana" },
+    { id: BIA, displayName: "Bia" },
   ],
   coverUrl: null,
   imageCount: 0,
@@ -101,7 +111,7 @@ const renderForm = (props: {
       storeId="store"
       categories={props.categories ?? categories}
       sellers={sellers}
-      ownSellerId="bia"
+      ownSellerId={BIA}
       canAssignSellers={props.canAssignSellers ?? true}
       listingId={props.listing?.id}
     />,
@@ -299,7 +309,40 @@ describe("ListingForm", () => {
       );
 
       await waitFor(() => expect(apiCalls()).toHaveLength(1));
-      expect(apiCalls()[0]?.body).toMatchObject({ sellerIds: ["bia"] });
+      expect(apiCalls()[0]?.body).toMatchObject({ sellerIds: [BIA] });
+    });
+
+    it("sends a new listing the listing request schema takes", async () => {
+      renderNew();
+      fireEvent.change(title(), { target: { value: "Mesa" } });
+      fireEvent.change(price(), { target: { value: "1.200,50" } });
+      fireEvent.click(saveDraft());
+
+      await waitFor(() => expect(apiCalls()).toHaveLength(1));
+      const parsed = listingRequestSchema.safeParse(apiCalls()[0]?.body);
+      expect(parsed.error?.issues).toBeUndefined();
+      expect(parsed.data).toMatchObject({
+        title: "Mesa",
+        categoryId: CATEGORY,
+        sellerIds: [BIA],
+        priceCents: 120050,
+      });
+    });
+
+    it("sends an edit the listing update request schema takes", async () => {
+      renderForm({ listing });
+      fireEvent.click(
+        screen.getByRole("button", { name: "Salvar alterações" }),
+      );
+
+      await waitFor(() => expect(apiCalls()).toHaveLength(1));
+      const parsed = listingUpdateRequestSchema.safeParse(apiCalls()[0]?.body);
+      expect(parsed.error?.issues).toBeUndefined();
+      expect(parsed.data).toMatchObject({
+        categoryId: CATEGORY,
+        sellerIds: [ANA, BIA],
+        publication: "draft",
+      });
     });
 
     it("sends the typed price in cents, and null for no price", async () => {
@@ -750,8 +793,8 @@ describe("ListingForm", () => {
     renderForm({
       canAssignSellers: false,
       categories: [
-        { id: "c1", slug: "moveis", name: "Móveis" },
-        { id: "c2", slug: "livros", name: "Livros" },
+        { id: CATEGORY, slug: "moveis", name: "Móveis" },
+        { id: OTHER_CATEGORY, slug: "livros", name: "Livros" },
       ],
     });
     const category = screen.getByRole("combobox", { name: "Categoria" });
@@ -769,7 +812,7 @@ describe("ListingForm", () => {
     fireEvent.change(title(), { target: { value: "Livro" } });
     fireEvent.click(saveDraft());
     await waitFor(() => expect(apiCalls()).toHaveLength(1));
-    expect(apiCalls()[0]?.body).toMatchObject({ categoryId: "c2" });
+    expect(apiCalls()[0]?.body).toMatchObject({ categoryId: OTHER_CATEGORY });
   });
 
   it("saves the publication and availability picked by keyboard on an edit", async () => {
@@ -804,7 +847,7 @@ describe("ListingForm server render", () => {
             storeId="store"
             categories={categories}
             sellers={sellers}
-            ownSellerId="bia"
+            ownSellerId={BIA}
             canAssignSellers
             listingId={listing.id}
           />

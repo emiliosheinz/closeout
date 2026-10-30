@@ -4,6 +4,7 @@ import { NextRequest } from "next/server";
 import type { MockInstance } from "vitest";
 import { POST } from "@/_app/api-routes/invite";
 import oracle from "@/test/copy-oracle.json";
+import { expectProblem, problem, problemResponse } from "@/test/fixtures";
 
 function accept(body: unknown, headers: Record<string, string> = {}) {
   return POST(
@@ -39,8 +40,7 @@ afterEach(() => {
 describe("invite accept route", () => {
   it("refuses a request from another site without calling the API", async () => {
     const res = await accept(input, { origin: "https://evil.example" });
-    expect(res.status).toBe(403);
-    expect(await res.json()).toEqual({ message: "Origem não permitida." });
+    await expectProblem(res, 403, "Origem não permitida.");
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -79,67 +79,72 @@ describe("invite accept route", () => {
     const logged = vi.spyOn(console, "error").mockImplementation(() => {});
     fetchMock.mockResolvedValue(Response.json({ expiresAt: "2030-01-01" }));
     const res = await accept(input);
-    expect(res.status).toBe(502);
-    expect(await res.json()).toEqual({
-      message: oracle.inviteAcceptFallback,
-    });
+    await expectProblem(res, 502, oracle.inviteAcceptFallback);
     expect(res.headers.get("set-cookie")).toBeNull();
     expect(logged).toHaveBeenCalled();
   });
 
-  it("passes the API's messages through with its status and sets no cookie", async () => {
+  it("passes the API's problem through with its status and sets no cookie", async () => {
+    const errors = [
+      { pointer: "/name", detail: "Informe seu nome." },
+      {
+        pointer: "/password",
+        detail: "A senha precisa ter pelo menos 10 caracteres.",
+      },
+    ];
     fetchMock.mockResolvedValue(
-      Response.json(
-        {
-          message: [
-            "Informe seu nome.",
-            "A senha precisa ter pelo menos 10 caracteres.",
-          ],
-        },
-        { status: 400 },
-      ),
+      problemResponse(400, "Informe seu nome.", errors),
     );
     const res = await accept(input);
     expect(res.status).toBe(400);
-    expect(await res.json()).toEqual({
-      message: [
-        "Informe seu nome.",
-        "A senha precisa ter pelo menos 10 caracteres.",
-      ],
-    });
+    expect(res.headers.get("content-type")).toBe("application/problem+json");
+    expect(await res.json()).toEqual(problem(400, "Informe seu nome.", errors));
     expect(res.headers.get("set-cookie")).toBeNull();
   });
 
   it("reports an invalid link as the API words it", async () => {
-    fetchMock.mockResolvedValue(
-      Response.json(
-        {
-          message:
-            "Este convite é inválido ou expirou. Peça um novo link a quem convidou você.",
-        },
-        { status: 404 },
-      ),
-    );
+    const invalid =
+      "Este convite é inválido ou expirou. Peça um novo link a quem convidou você.";
+    fetchMock.mockResolvedValue(problemResponse(404, invalid));
     const res = await accept(input);
     expect(res.status).toBe(404);
-    expect(await res.json()).toEqual({
-      message:
-        "Este convite é inválido ou expirou. Peça um novo link a quem convidou você.",
-    });
+    expect(await res.json()).toEqual(problem(404, invalid));
   });
 
-  it("falls back to a generic message when the API sends none", async () => {
-    fetchMock.mockResolvedValue(new Response("oops", { status: 502 }));
+  it("passes a rate limit through with its Retry-After", async () => {
+    const tooMany = "Muitas tentativas. Tente novamente em alguns minutos.";
+    fetchMock.mockResolvedValue(
+      Response.json(problem(429, tooMany), {
+        status: 429,
+        headers: { "Retry-After": "42" },
+      }),
+    );
     const res = await accept(input);
-    expect(res.status).toBe(502);
-    expect(await res.json()).toEqual({
-      message: "Não foi possível aceitar o convite agora.",
-    });
+    expect(res.status).toBe(429);
+    expect(res.headers.get("retry-after")).toBe("42");
+    expect(await res.json()).toEqual(problem(429, tooMany));
+  });
+
+  it("keeps the status and answers the generic failure when the API body is not a problem", async () => {
+    fetchMock.mockResolvedValue(new Response("oops", { status: 502 }));
+    await expectProblem(
+      await accept(input),
+      502,
+      "Não foi possível aceitar o convite agora.",
+    );
+    fetchMock.mockResolvedValue(
+      Response.json({ message: "Convite expirado." }, { status: 404 }),
+    );
+    await expectProblem(
+      await accept(input),
+      404,
+      "Não foi possível aceitar o convite agora.",
+    );
   });
 
   it("refuses an oversized body", async () => {
     const res = await accept({ ...input, name: "x".repeat(5000) });
-    expect(res.status).toBe(413);
+    await expectProblem(res, 413, "Requisição grande demais.");
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });

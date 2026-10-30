@@ -3,6 +3,7 @@ import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { renderToString } from "react-dom/server";
 import { sessionKeys } from "@/entities/session";
 import { renderWithFeedback } from "@/test/feedback-harness";
+import { problemResponse } from "@/test/fixtures";
 import { StoreSettingsForm } from "../store-settings-form";
 
 const store = {
@@ -142,10 +143,7 @@ describe("StoreSettingsForm", () => {
 
   it("toasts the API message and no success when the save fails", async () => {
     fetchMock.mockResolvedValue(
-      Response.json(
-        { message: "Não foi possível salvar agora." },
-        { status: 500 },
-      ),
+      problemResponse(500, "Não foi possível salvar agora."),
     );
     renderForm();
 

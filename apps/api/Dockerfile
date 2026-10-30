@@ -46,4 +46,4 @@ COPY --from=builder /out ./
 
 USER node
 
-CMD ["node", "dist/main"]
+CMD ["node", "--require", "./dist/tracing.js", "dist/main"]
