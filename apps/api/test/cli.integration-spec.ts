@@ -342,6 +342,73 @@ describe("operator commands", () => {
       expect(count).toBe(0);
     });
 
+    it("reports only the first message when several fields are invalid", async () => {
+      const result = await cli(
+        ["admin:create", ...createArgs({ name: "  " })],
+        { env: "short-pw" },
+      );
+
+      expect(result.code).not.toBe(0);
+      expect(result.output).toContain("Informe seu nome.");
+      expect(result.output).not.toContain(
+        "A senha precisa ter pelo menos 10 caracteres.",
+      );
+    });
+
+    it("refuses a blank name with the API's message", async () => {
+      const result = await cli(
+        ["admin:create", ...createArgs({ name: "  " })],
+        {
+          env: PASSWORD,
+        },
+      );
+
+      expect(result.code).not.toBe(0);
+      expect(result.output).toContain("Informe seu nome.");
+    });
+
+    it("refuses a name over 60 characters and a password over 200", async () => {
+      const longName = await cli(
+        ["admin:create", ...createArgs({ name: "n".repeat(61) })],
+        { env: PASSWORD },
+      );
+      const longPassword = await cli(["admin:create", ...createArgs()], {
+        env: "p".repeat(201),
+      });
+
+      expect(longName.code).not.toBe(0);
+      expect(longName.output).toContain("Use até 60 caracteres no nome.");
+      expect(longPassword.code).not.toBe(0);
+      expect(longPassword.output).toContain("Use até 200 caracteres na senha.");
+    });
+
+    it("does not echo a refused WhatsApp number", async () => {
+      const typed = "21 91234-5678";
+      const result = await cli(
+        ["admin:create", ...createArgs({ whatsapp: typed })],
+        { env: PASSWORD },
+      );
+
+      expect(result.code).not.toBe(0);
+      expect(result.output).toContain(
+        "Informe o WhatsApp com o código do país, por exemplo +55 11 99999-8888.",
+      );
+      expect(result.output).not.toContain(typed);
+    });
+
+    it("creates the member without a number when --whatsapp is empty", async () => {
+      const result = await cli(
+        ["admin:create", ...createArgs({ whatsapp: "" })],
+        { env: PASSWORD },
+      );
+
+      expect(result.code).toBe(0);
+      const sellers = await ctx.dataSource.query(
+        `SELECT whatsapp_number FROM sellers`,
+      );
+      expect(sellers).toEqual([{ whatsapp_number: null }]);
+    });
+
     it.each([
       ["from the environment", "env"],
       ["typed at the prompt", "typed"],
@@ -399,6 +466,24 @@ describe("operator commands", () => {
       });
 
       await as(ctx.app, oldCookie).get("/me").expect(401);
+      await login(ctx.app, "emilio@example.com", "a brand new passphrase");
+    });
+
+    it("refuses a malformed email with the API's message", async () => {
+      await expect(
+        resetPassword(ctx.dataSource, ctx.app.get(SessionsService), {
+          email: "not-an-email",
+          password: PASSWORD,
+        }),
+      ).rejects.toThrow(new CommandError("Informe um e-mail válido."));
+    });
+
+    it("finds the user whatever the email's case or padding", async () => {
+      await admin("emilio@example.com");
+      await resetPassword(ctx.dataSource, ctx.app.get(SessionsService), {
+        email: " Emilio@Example.com ",
+        password: "a brand new passphrase",
+      });
       await login(ctx.app, "emilio@example.com", "a brand new passphrase");
     });
 

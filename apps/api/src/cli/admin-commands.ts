@@ -120,7 +120,7 @@ export async function resetPassword(
     acceptInviteRequestSchema.shape.password,
     input.password,
   );
-  const email = input.email.trim().toLowerCase();
+  const email = parseInput(inviteRequestSchema.shape.email, input.email);
   const passwordHash = await hashPassword(password);
   await dataSource.transaction(async (manager) => {
     const user = await manager
