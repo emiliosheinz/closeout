@@ -5,7 +5,9 @@ import { ENTITIES } from "./entities";
 
 /**
  * Connection options for the Nest app and the operator CLI, with pool guards
- * against runaway queries and abandoned transactions.
+ * against runaway queries and abandoned transactions. The client-side query
+ * timeout and TCP keep-alive give a connection back when the server or the
+ * network hangs, where the server's statement timeout never fires.
  */
 export function dataSourceOptions(database: DatabaseConfig): DataSourceOptions {
   return {
@@ -14,6 +16,8 @@ export function dataSourceOptions(database: DatabaseConfig): DataSourceOptions {
       statement_timeout: 10_000,
       idle_in_transaction_session_timeout: 30_000,
       connectionTimeoutMillis: 5_000,
+      query_timeout: 15_000,
+      keepAlive: true,
     },
   };
 }

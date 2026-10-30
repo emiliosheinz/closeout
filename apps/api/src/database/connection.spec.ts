@@ -38,4 +38,11 @@ describe("dataSourceOptions", () => {
     });
     expect(migrationDataSourceOptions(DATABASE).extra).toBeUndefined();
   });
+
+  it("gives app connections back when the server or network hangs", () => {
+    expect(dataSourceOptions(DATABASE).extra).toMatchObject({
+      query_timeout: 15_000,
+      keepAlive: true,
+    });
+  });
 });

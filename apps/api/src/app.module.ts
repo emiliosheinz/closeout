@@ -3,11 +3,11 @@ import { APP_FILTER, APP_PIPE } from "@nestjs/core";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { LoggerModule } from "nestjs-pino";
 import type { Logger } from "pino";
-import { AppController } from "./app.controller";
 import { AuthModule } from "./auth/auth.module";
 import { CatalogModule } from "./catalog/catalog.module";
 import { type AppModuleConfig, configModule } from "./config/config.module";
 import { dataSourceOptions } from "./database/connection";
+import { HealthController } from "./health/health.controller";
 import { InvitesModule } from "./invites/invites.module";
 import { MediaModule } from "./media/media.module";
 import { ProblemFilter } from "./problem/problem.filter";
@@ -24,7 +24,7 @@ import { ContractPipe } from "./validation/contract.pipe";
     CatalogModule,
     InvitesModule,
   ],
-  controllers: [AppController],
+  controllers: [HealthController],
   providers: [
     { provide: APP_FILTER, useClass: ProblemFilter },
     { provide: APP_PIPE, useClass: ContractPipe },

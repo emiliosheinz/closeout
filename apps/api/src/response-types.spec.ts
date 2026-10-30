@@ -3,6 +3,7 @@ import type {
   adminListingSummarySchema,
   categorySchema,
   dashboardCountsSchema,
+  healthResponseSchema,
   inviteDetailsSchema,
   issuedInviteSchema,
   meSchema,
@@ -16,6 +17,7 @@ import type { z } from "zod";
 import type { AuthController } from "./auth/auth.controller";
 import type { DashboardController } from "./catalog/controllers/dashboard.controller";
 import type { ListingsService } from "./catalog/services/listings.service";
+import type { HealthController } from "./health/health.controller";
 import type { InviteAcceptController } from "./invites/controllers/invite-accept.controller";
 import type { InvitesController } from "./invites/controllers/invites.controller";
 import type { InvitesService } from "./invites/services/invites.service";
@@ -102,6 +104,12 @@ describe("admin response types", () => {
     >();
     expectTypeOf<Body<ListingsService["get"]>>().toEqualTypeOf<
       Out<typeof adminListingDetailSchema>
+    >();
+  });
+
+  it("the health report matches its response schema", () => {
+    expectTypeOf<Body<HealthController["health"]>>().toEqualTypeOf<
+      Out<typeof healthResponseSchema>
     >();
   });
 });

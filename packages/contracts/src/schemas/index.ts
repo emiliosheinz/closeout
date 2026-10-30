@@ -1,5 +1,6 @@
 export * from "./catalog";
 export * from "./category";
+export * from "./health";
 export * from "./image";
 export * from "./invite";
 export * from "./listing";

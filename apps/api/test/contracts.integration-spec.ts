@@ -4,6 +4,7 @@ import {
   adminListingSummarySchema,
   categorySchema,
   dashboardCountsSchema,
+  healthResponseSchema,
   inviteDetailsSchema,
   issuedInviteSchema,
   meSchema,
@@ -37,14 +38,13 @@ import {
 /** Routes whose response body some test parsed with a contracts schema. */
 const parsedRoutes = new Set<string>();
 
-/** Registered routes that answer 2xx without a JSON body, or have no body schema yet. */
+/** Registered routes that answer 2xx without a JSON body. */
 const NOT_PARSED = new Set([
   "GET /media/:file", // image bytes
   "POST /auth/logout", // 204
   "DELETE /stores/:storeId/listings/:id", // 204
   "DELETE /stores/:storeId/members/:userId", // 204
   "DELETE /stores/:storeId/invites/:id", // 204
-  "GET /health", // { status } has no contracts schema
 ]);
 
 /** Fails with the schema's issues in the message instead of a bare boolean. */
@@ -453,11 +453,25 @@ describe("response contracts", () => {
     });
   });
 
+  it("parses the health report", async () => {
+    const res = await request(ctx.app.getHttpServer())
+      .get("/health")
+      .expect(200);
+    expectParses("GET /health", healthResponseSchema, res.body);
+  });
+
   // Runs last: it diffs the routes the tests above parsed against the app's.
   it("parses the body of every registered JSON route", () => {
-    const uncovered = registeredRoutes(ctx.app)
-      .map((route) => `${route.method} ${route.path}`)
-      .filter((route) => !NOT_PARSED.has(route) && !parsedRoutes.has(route));
+    const registered = registeredRoutes(ctx.app).map(
+      (route) => `${route.method} ${route.path}`,
+    );
+    const uncovered = registered.filter(
+      (route) => !NOT_PARSED.has(route) && !parsedRoutes.has(route),
+    );
     expect(uncovered).toEqual([]);
+    const stale = [...NOT_PARSED, ...parsedRoutes].filter(
+      (route) => !registered.includes(route),
+    );
+    expect(stale).toEqual([]);
   });
 });
