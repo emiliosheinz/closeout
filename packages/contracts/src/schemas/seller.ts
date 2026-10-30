@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { whatsappInputSchema } from "./whatsapp";
+import { optionalWhatsappInputSchema } from "./whatsapp";
 
 export const sellerSchema = z.object({
   id: z.string(),
@@ -10,12 +10,6 @@ export const sellerSchema = z.object({
   listingCount: z.number(),
 });
 export type Seller = z.infer<typeof sellerSchema>;
-
-/** A contact number as typed, stored as digits; empty or null clears it. */
-export const optionalWhatsappInputSchema = z.preprocess(
-  (input) => (typeof input === "string" && input.trim() === "" ? null : input),
-  whatsappInputSchema.nullish(),
-);
 
 const DISPLAY_NAME_MESSAGE = "Informe o nome.";
 

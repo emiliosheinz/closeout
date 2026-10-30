@@ -19,3 +19,9 @@ export const whatsappInputSchema = z
   .regex(/^\+[0-9\s().-]+$/, INVALID_WHATSAPP)
   .transform((input) => input.replace(/\D/g, ""))
   .pipe(whatsappDigitsSchema);
+
+/** A contact number as typed, stored as digits; empty or null clears it. */
+export const optionalWhatsappInputSchema = z.preprocess(
+  (input) => (typeof input === "string" && input.trim() === "" ? null : input),
+  whatsappInputSchema.nullish(),
+);

@@ -1,9 +1,9 @@
 import { z } from "zod";
 import { ASSIGNABLE_ROLES } from "../enums";
 import { emailSchema, INVALID_EMAIL } from "./email";
-import { optionalWhatsappInputSchema } from "./seller";
+import { optionalWhatsappInputSchema } from "./whatsapp";
 
-// Mirrors the API password minimum; the API cannot import schemas.
+// The one password minimum, shared by the API, the CLI and the web.
 export const MIN_PASSWORD_LENGTH = 10;
 
 export const pendingInviteSchema = z.object({

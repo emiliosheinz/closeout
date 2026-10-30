@@ -1,8 +1,5 @@
 import type { z } from "zod";
-import { UNKNOWN_FIELD } from "./problem";
-
-export const REQUIRED_FIELD = "Preencha este campo.";
-export const INVALID_VALUE = "Valor inválido.";
+import { INVALID_VALUE, REQUIRED_FIELD, UNKNOWN_FIELD } from "./problem";
 
 /** pt-BR message for any issue whose rule declares none of its own. */
 function fallbackMessage(issue: z.core.$ZodRawIssue): string {
