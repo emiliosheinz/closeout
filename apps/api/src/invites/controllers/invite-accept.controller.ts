@@ -2,9 +2,11 @@ import {
   type AcceptInviteRequest,
   acceptInviteRequestSchema,
   FORBIDDEN,
+  type InviteDetails,
   type InviteLookupRequest,
   inviteLookupRequestSchema,
   NO_CLIENT_IP,
+  type SessionResponse,
 } from "@closeout/contracts/schemas";
 import {
   Body,
@@ -27,10 +29,7 @@ import {
   isInternalRequest,
   trustedClientIp,
 } from "@/security/internal-request";
-import {
-  type InviteDetails,
-  InvitesService,
-} from "../services/invites.service";
+import { InvitesService } from "../services/invites.service";
 
 /**
  * Called only by apps/web (the invite page and its accept route handler,
@@ -61,7 +60,7 @@ export class InviteAcceptController {
   async accept(
     @Req() req: Request,
     @Body({ schema: acceptInviteRequestSchema }) body: AcceptInviteRequest,
-  ): Promise<{ sessionToken: string; expiresAt: string }> {
+  ): Promise<SessionResponse> {
     const { sessionToken, expiresAt } = await this.invites.accept(
       body,
       internalClientIp(req, internalSecret(this.config)),

@@ -1,4 +1,5 @@
-import type { AssignableRole, StoreRole } from "@closeout/contracts/enums";
+import type { AssignableRole } from "@closeout/contracts/enums";
+import type { TeamMember } from "@closeout/contracts/schemas";
 import { HttpStatus, Injectable, Logger } from "@nestjs/common";
 import { InjectDataSource } from "@nestjs/typeorm";
 import type { DataSource } from "typeorm";
@@ -6,19 +7,6 @@ import { MediaService } from "@/media/media.service";
 import { mediaUrls } from "@/media/media-urls";
 import { AppException } from "@/problem/app-exception";
 import { forbidden, type MembershipContext } from "../membership";
-
-export interface TeamMember {
-  userId: string;
-  name: string;
-  email: string;
-  role: StoreRole;
-  /** The member's contact profile. */
-  sellerId: string;
-  displayName: string;
-  whatsappNumber: string | null;
-  avatarUrl: string | null;
-  listingCount: number;
-}
 
 interface MemberRow extends Omit<TeamMember, "avatarUrl"> {
   avatarKey: string | null;

@@ -1,5 +1,7 @@
 import {
+  type Category,
   type StoreRequest,
+  type StoreSettings,
   storeRequestSchema,
   uuidSchema,
 } from "@closeout/contracts/schemas";
@@ -7,11 +9,7 @@ import { Body, Controller, Get, Param, Patch, UseGuards } from "@nestjs/common";
 import { SessionGuard } from "@/auth/guards/session.guard";
 import { StoreMemberGuard } from "../guards/store-member.guard";
 import { ANY_MEMBER, MANAGERS, Roles } from "../membership";
-import {
-  type CategoryResponse,
-  type StoreSettings,
-  StoresService,
-} from "../services/stores.service";
+import { StoresService } from "../services/stores.service";
 
 @Controller("stores/:storeId")
 @UseGuards(SessionGuard, StoreMemberGuard)
@@ -39,7 +37,7 @@ export class StoreAdminController {
   @Roles(ANY_MEMBER)
   async categories(
     @Param("storeId", { schema: uuidSchema }) storeId: string,
-  ): Promise<{ items: CategoryResponse[] }> {
+  ): Promise<{ items: Category[] }> {
     return { items: await this.stores.listCategories(storeId) };
   }
 }

@@ -1,6 +1,9 @@
 import type { AssignableRole } from "@closeout/contracts/enums";
 import {
   type AcceptInviteRequest,
+  type InviteDetails,
+  type IssuedInvite,
+  type PendingInvite,
   TOO_MANY_ATTEMPTS,
 } from "@closeout/contracts/schemas";
 import { HttpStatus, Inject, Injectable, Logger } from "@nestjs/common";
@@ -33,25 +36,6 @@ const INVITE_INVALID =
 const INVITE_NOT_FOUND = "Convite não encontrado.";
 const SIGN_IN_INSTEAD =
   "Sua conta foi criada, mas não foi possível entrar. Entre com seu e-mail e senha.";
-
-export interface InviteSummary {
-  id: string;
-  email: string;
-  role: AssignableRole;
-  expiresAt: string;
-}
-
-/** The raw link exists only in this response; the API keeps its hash. */
-export interface IssuedInvite {
-  invite: InviteSummary;
-  link: string;
-}
-
-export interface InviteDetails {
-  storeName: string;
-  email: string;
-  role: AssignableRole;
-}
 
 interface InviteRow {
   id: string;
@@ -126,7 +110,7 @@ export class InvitesService {
   }
 
   /** Pending, unexpired invites; never their links. */
-  async list(storeId: string): Promise<InviteSummary[]> {
+  async list(storeId: string): Promise<PendingInvite[]> {
     const rows = await this.dataSource.query<InviteRow[]>(
       `SELECT ${RETURNING} FROM store_invites
         WHERE store_id = $1 AND expires_at > now()
@@ -326,7 +310,7 @@ function inviteInvalid(): AppException {
   return new AppException(HttpStatus.NOT_FOUND, INVITE_INVALID);
 }
 
-function toSummary(row: InviteRow): InviteSummary {
+function toSummary(row: InviteRow): PendingInvite {
   return {
     id: row.id,
     email: row.email,

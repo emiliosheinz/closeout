@@ -4,7 +4,9 @@ import type {
   Publication,
 } from "@closeout/contracts/enums";
 import type {
-  AdminImage,
+  AdminListingDetail,
+  AdminListingSummary,
+  DashboardCounts,
   PublicListingDetail,
 } from "@closeout/contracts/schemas";
 import { HttpStatus, Injectable } from "@nestjs/common";
@@ -41,36 +43,6 @@ import type { ListingAttribute } from "../listing-types";
 import { listingSellers, toPublicDetail } from "../public-mappers";
 import { listingSlug } from "../slug";
 import { escapeLike } from "../sql";
-
-export interface DashboardCounts {
-  published: number;
-  available: number;
-  reserved: number;
-  sold: number;
-  draft: number;
-  archived: number;
-}
-
-export interface AdminListingSummary {
-  id: string;
-  slug: string;
-  title: string;
-  priceCents: number | null;
-  condition: Condition;
-  availability: Availability;
-  publication: Publication;
-  category: { id: string; name: string };
-  sellers: { id: string; displayName: string }[];
-  coverUrl: string | null;
-  imageCount: number;
-  updatedAt: string;
-}
-
-export interface AdminListingDetail extends AdminListingSummary {
-  description: string;
-  attributes: ListingAttribute[];
-  images: AdminImage[];
-}
 
 export interface ListingInput {
   title?: string;

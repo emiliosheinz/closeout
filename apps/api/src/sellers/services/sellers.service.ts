@@ -1,4 +1,7 @@
-import type { SellerRequest } from "@closeout/contracts/schemas";
+import type {
+  SellerRequest,
+  Seller as SellerResponse,
+} from "@closeout/contracts/schemas";
 import { HttpStatus, Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import type { Repository } from "typeorm";
@@ -14,16 +17,6 @@ import {
 import { Seller } from "../entities/seller.entity";
 
 const SELLER_NOT_FOUND = "Vendedor não encontrado.";
-
-export interface SellerResponse {
-  id: string;
-  /** The member this profile represents. */
-  userId: string;
-  displayName: string;
-  whatsappNumber: string | null;
-  avatarUrl: string | null;
-  listingCount: number;
-}
 
 @Injectable()
 export class SellersService {

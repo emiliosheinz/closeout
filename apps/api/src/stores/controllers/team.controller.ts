@@ -1,6 +1,7 @@
 import {
   type MemberRequest,
   memberRequestSchema,
+  type TeamMember,
   uuidSchema,
 } from "@closeout/contracts/schemas";
 import {
@@ -21,7 +22,7 @@ import {
   type MembershipContext,
   Roles,
 } from "../membership";
-import { type TeamMember, TeamService } from "../services/team.service";
+import { TeamService } from "../services/team.service";
 
 @Controller("stores/:storeId/members")
 @UseGuards(SessionGuard, StoreMemberGuard)

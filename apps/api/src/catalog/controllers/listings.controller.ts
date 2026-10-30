@@ -1,5 +1,7 @@
 import {
   type AdminImage,
+  type AdminListingDetail,
+  type AdminListingSummary,
   type AdminListingsQuery,
   adminListingsQuerySchema,
   type ListingRequest,
@@ -51,11 +53,7 @@ import {
 } from "@/stores/membership";
 import { AssignedListingGuard } from "../guards/assigned-listing.guard";
 import { ListingImagesService } from "../services/listing-images.service";
-import {
-  type AdminListingDetail,
-  type AdminListingSummary,
-  ListingsService,
-} from "../services/listings.service";
+import { ListingsService } from "../services/listings.service";
 
 const NO_PHOTOS = "Envie ao menos uma foto.";
 

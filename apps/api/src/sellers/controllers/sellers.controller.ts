@@ -1,5 +1,6 @@
 import {
   type SellerRequest,
+  type Seller as SellerResponse,
   sellerRequestSchema,
   uuidSchema,
 } from "@closeout/contracts/schemas";
@@ -32,10 +33,7 @@ import {
   type MembershipContext,
   Roles,
 } from "@/stores/membership";
-import {
-  type SellerResponse,
-  SellersService,
-} from "../services/sellers.service";
+import { SellersService } from "../services/sellers.service";
 
 const NO_IMAGE = "Envie uma imagem.";
 

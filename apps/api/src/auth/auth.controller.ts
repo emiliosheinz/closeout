@@ -3,6 +3,7 @@ import {
   type LoginRequest,
   loginRequestSchema,
   NO_CLIENT_IP,
+  type SessionResponse,
 } from "@closeout/contracts/schemas";
 import {
   Body,
@@ -50,7 +51,7 @@ export class AuthController {
   async login(
     @Req() req: Request,
     @Body({ schema: loginRequestSchema }) body: LoginRequest,
-  ): Promise<{ sessionToken: string; expiresAt: string }> {
+  ): Promise<SessionResponse> {
     const secret = internalSecret(this.config);
     if (!isInternalRequest(req.headers, secret)) {
       throw new AppException(HttpStatus.FORBIDDEN, FORBIDDEN);

@@ -1,6 +1,8 @@
 import {
   type InviteRequest,
+  type IssuedInvite,
   inviteRequestSchema,
+  type PendingInvite,
   uuidSchema,
 } from "@closeout/contracts/schemas";
 import {
@@ -21,11 +23,7 @@ import {
   type MembershipContext,
   Roles,
 } from "@/stores/membership";
-import {
-  type InviteSummary,
-  InvitesService,
-  type IssuedInvite,
-} from "../services/invites.service";
+import { InvitesService } from "../services/invites.service";
 
 @Controller("stores/:storeId/invites")
 @UseGuards(SessionGuard, StoreMemberGuard)
@@ -46,7 +44,7 @@ export class InvitesController {
   @Roles(MANAGERS)
   async list(
     @CurrentMember() member: MembershipContext,
-  ): Promise<{ items: InviteSummary[] }> {
+  ): Promise<{ items: PendingInvite[] }> {
     return { items: await this.invites.list(member.storeId) };
   }
 
