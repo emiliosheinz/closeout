@@ -7,6 +7,7 @@ import {
 } from "@testing-library/react";
 import { inviteKeys, type PendingInvite } from "@/entities/invite";
 import { renderWithFeedback } from "@/test/feedback-harness";
+import { problemResponse } from "@/test/fixtures";
 import { InviteActions, InviteButton } from "../invites";
 
 let fetchMock: ReturnType<typeof vi.fn>;
@@ -164,10 +165,7 @@ describe("Invite row actions menu", () => {
 
   it("toasts the error and keeps the dialog open when the revocation fails", async () => {
     fetchMock.mockResolvedValue(
-      Response.json(
-        { message: "Não foi possível revogar agora." },
-        { status: 500 },
-      ),
+      problemResponse(500, "Não foi possível revogar agora."),
     );
     renderWithFeedback(
       <table>
@@ -409,10 +407,7 @@ describe("InviteButton", () => {
 
   it("shows the API's email message under the field and no toast", async () => {
     fetchMock.mockResolvedValue(
-      Response.json(
-        { message: "Essa pessoa já tem uma conta." },
-        { status: 409 },
-      ),
+      problemResponse(409, "Essa pessoa já tem uma conta."),
     );
     await openDialog();
     fireEvent.change(email(), { target: { value: "bia@example.com" } });

@@ -53,6 +53,9 @@ export default defineRailway((ctx, project) => {
     source,
     replicas,
     build: { builder: "DOCKERFILE", dockerfilePath: "apps/api/Dockerfile" },
+    // Railway injects the OpenTelemetry endpoint and auth header on the next
+    // deploy, so the service sets none of its own.
+    tracing: { enabled: true },
     deploy: {
       ...deploy,
       preDeployCommand: ["node dist/database/migrate.js"],

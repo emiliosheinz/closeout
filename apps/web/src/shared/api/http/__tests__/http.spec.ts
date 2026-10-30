@@ -2,6 +2,7 @@
  * @vitest-environment node
  */
 import oracle from "@/test/copy-oracle.json";
+import { problemResponse } from "@/test/fixtures";
 import { ApiError } from "../api-error";
 import { api, apiGet, apiParsed } from "../client";
 import type { Schema } from "../schema";
@@ -26,34 +27,62 @@ function respondWith(status: number, body: unknown) {
 }
 
 describe("api error messages", () => {
-  it("passes the API's Portuguese messages through", async () => {
-    respondWith(422, {
-      message: "Adicione ao menos uma foto antes de publicar.",
-    });
-    await expect(api("PATCH", "/x")).rejects.toEqual(
-      new ApiError(422, "Adicione ao menos uma foto antes de publicar."),
+  it.each([
+    ["listing", 422, "Adicione ao menos uma foto antes de publicar."],
+    ["photos", 422, "A nova ordem precisa conter todas as fotos do anúncio."],
+    ["seller", 404, "Vendedor não encontrado."],
+    ["store", 403, "Você não tem permissão para esta ação."],
+    ["team", 404, "Membro não encontrado."],
+    ["invites", 409, "Este e-mail já tem uma conta."],
+  ])("shows the %s problem's detail", async (_source, status, detail) => {
+    global.fetch = vi.fn().mockResolvedValue(problemResponse(status, detail));
+    await expect(api("PATCH", "/x", {})).rejects.toEqual(
+      new ApiError(status, detail),
     );
   });
 
-  it("keeps Portuguese validation messages and drops English framework ones", async () => {
-    respondWith(400, {
-      message: [
-        "title must be shorter than or equal to 120 characters",
-        "Informe o WhatsApp com o código do país, por exemplo +55 11 99999-8888.",
-      ],
-    });
-    await expect(api("POST", "/x", {})).rejects.toThrow(
-      "Informe o WhatsApp com o código do país, por exemplo +55 11 99999-8888.",
-    );
+  it("shows a detail with no Portuguese words untouched", async () => {
+    global.fetch = vi.fn().mockResolvedValue(problemResponse(409, "Duda: 3"));
+    await expect(api("POST", "/x", {})).rejects.toThrow("Duda: 3");
   });
 
-  it("falls back to a Portuguese summary when only English details exist", async () => {
-    respondWith(400, { message: ["categoryId must be a UUID"] });
-    await expect(api("POST", "/x", {})).rejects.toThrow(
-      oracle.adminInvalidFields,
+  it("keys field errors by pointer, keeping the first message for each", async () => {
+    global.fetch = vi.fn().mockResolvedValue(
+      problemResponse(400, "Informe seu nome.", [
+        { pointer: "/name", detail: "Informe seu nome." },
+        { pointer: "/whatsappNumber", detail: "Informe o WhatsApp." },
+        { pointer: "/name", detail: "Nome longo demais." },
+      ]),
     );
-    respondWith(500, { message: "Internal server error" });
-    await expect(api("POST", "/x")).rejects.toThrow(oracle.adminGenericError);
+    const error = await api("POST", "/x", {}).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(ApiError);
+    expect(error).toMatchObject({
+      status: 400,
+      message: "Informe seu nome.",
+      fieldErrors: {
+        "/name": "Informe seu nome.",
+        "/whatsappNumber": "Informe o WhatsApp.",
+      },
+    });
+  });
+
+  it.each([
+    ["an HTML page", "<html>Bad Gateway</html>"],
+    ["an empty body", ""],
+    ["a body that is not a problem", JSON.stringify({ message: "Erro." })],
+  ])("falls back to today's copy for %s", async (_name, body) => {
+    global.fetch = vi.fn(
+      async () => new Response(body, { status: 400 }),
+    ) as typeof fetch;
+    await expect(api("POST", "/x", {})).rejects.toEqual(
+      new ApiError(400, oracle.adminInvalidFields),
+    );
+    global.fetch = vi.fn(
+      async () => new Response(body, { status: 502 }),
+    ) as typeof fetch;
+    await expect(api("POST", "/x", {})).rejects.toEqual(
+      new ApiError(502, oracle.adminGenericError),
+    );
   });
 });
 
@@ -108,9 +137,12 @@ describe("failures", () => {
   it("reports a 401 as status 401 without navigating", async () => {
     const assign = vi.fn();
     vi.stubGlobal("window", { location: { assign } });
-    respondWith(401, { message: "Unauthorized" });
+    global.fetch = vi
+      .fn()
+      .mockResolvedValue(problemResponse(401, "Entre para continuar."));
     await expect(api("PATCH", "/x", {})).rejects.toMatchObject({
       status: 401,
+      message: "Sua sessão expirou. Entre de novo.",
     });
     expect(assign).not.toHaveBeenCalled();
     vi.unstubAllGlobals();

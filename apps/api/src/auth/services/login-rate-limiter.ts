@@ -15,18 +15,25 @@ const MAX_FAILURES_PER_IP = 30;
 export class LoginRateLimiter {
   private readonly failures = new SlidingWindowCounter(WINDOW_MS);
 
-  isBlocked(email: string, ip: string, now = Date.now()): boolean {
-    return (
-      this.failures.count(clientKey(email, ip), now) >=
-        MAX_FAILURES_PER_CLIENT ||
-      this.failures.count(emailKey(email), now) >= MAX_FAILURES_PER_EMAIL ||
-      this.failures.count(ipKey(ip), now) >= MAX_FAILURES_PER_IP
-    );
+  /**
+   * Seconds until every exceeded limit admits an attempt again, or
+   * `undefined` when no limit is exceeded.
+   */
+  blockedFor(email: string, ip: string, now = Date.now()): number | undefined {
+    const limits: [string, number][] = [
+      [clientKey(email, ip), MAX_FAILURES_PER_CLIENT],
+      [emailKey(email), MAX_FAILURES_PER_EMAIL],
+      [ipKey(ip), MAX_FAILURES_PER_IP],
+    ];
+    const waits = limits
+      .filter(([key, max]) => this.failures.count(key, now) >= max)
+      .map(([key]) => this.failures.retryAfterSeconds(key, now));
+    return waits.length > 0 ? Math.max(...waits) : undefined;
   }
 
   /**
    * Count an attempt as failed before the password is checked, so a burst
-   * of concurrent requests cannot all slip past {@link isBlocked} while the
+   * of concurrent requests cannot all slip past {@link blockedFor} while the
    * slow hash comparison runs. {@link forgiveSuccess} undoes it.
    */
   recordFailure(email: string, ip: string, now = Date.now()): void {

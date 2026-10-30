@@ -1,41 +1,22 @@
-import type { StoreRole } from "@closeout/contracts/enums";
-import { Injectable, NotFoundException } from "@nestjs/common";
+import {
+  type Category as CategoryResponse,
+  type Me,
+  NOT_FOUND,
+  type StoreSettings,
+} from "@closeout/contracts/schemas";
+import { HttpStatus, Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import type { EntityManager, Repository } from "typeorm";
 import { User } from "@/auth/entities/user.entity";
+import { AppException } from "@/problem/app-exception";
 import { Seller } from "@/sellers/entities/seller.entity";
 import { DEFAULT_CATEGORIES } from "../default-categories";
 import { Category } from "../entities/category.entity";
 import { Store } from "../entities/store.entity";
 import { StoreMember } from "../entities/store-member.entity";
 
-export interface StoreSettings {
-  id: string;
-  slug: string;
-  name: string;
-  headline: string;
-  intro: string;
-  locale: string;
-  currency: string;
-}
-
-export interface CategoryResponse {
-  id: string;
-  slug: string;
-  name: string;
-}
-
-export interface MeResponse {
-  user: { id: string; name: string; email: string };
-  memberships: Membership[];
-}
-
-export interface Membership {
-  role: StoreRole;
-  /** The member's own contact profile in this store. */
-  sellerId: string;
-  store: StoreSettings;
-}
+/** One of the caller's stores and their role in it. */
+type Membership = Me["memberships"][number];
 
 @Injectable()
 export class StoresService {
@@ -74,7 +55,7 @@ export class StoresService {
   }
 
   /** The signed-in user and the stores they belong to. */
-  async me(userId: string): Promise<MeResponse> {
+  async me(userId: string): Promise<Me> {
     const user = await this.users.findOneOrFail({ where: { id: userId } });
     return {
       user: { id: user.id, name: user.name, email: user.email },
@@ -125,7 +106,7 @@ export class StoresService {
 
   private async findOrFail(storeId: string): Promise<Store> {
     const store = await this.stores.findOne({ where: { id: storeId } });
-    if (!store) throw new NotFoundException();
+    if (!store) throw new AppException(HttpStatus.NOT_FOUND, NOT_FOUND);
     return store;
   }
 }

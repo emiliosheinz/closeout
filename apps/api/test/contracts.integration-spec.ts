@@ -4,6 +4,7 @@ import {
   adminListingSummarySchema,
   categorySchema,
   dashboardCountsSchema,
+  healthResponseSchema,
   inviteDetailsSchema,
   issuedInviteSchema,
   meSchema,
@@ -14,6 +15,7 @@ import {
   publicStoreIndexSchema,
   publicStoreSchema,
   sellerSchema,
+  sessionResponseSchema,
   storeSettingsSchema,
   teamMemberSchema,
 } from "@closeout/contracts/schemas";
@@ -26,13 +28,28 @@ import {
   createTestApp,
   insertListing,
   internalPost,
+  PASSWORD,
   photo,
+  registeredRoutes,
   resetDatabase,
   type TestContext,
 } from "./helpers";
 
+/** Routes whose response body some test parsed with a contracts schema. */
+const parsedRoutes = new Set<string>();
+
+/** Registered routes that answer 2xx without a JSON body. */
+const NOT_PARSED = new Set([
+  "GET /media/:file", // image bytes
+  "POST /auth/logout", // 204
+  "DELETE /stores/:storeId/listings/:id", // 204
+  "DELETE /stores/:storeId/members/:userId", // 204
+  "DELETE /stores/:storeId/invites/:id", // 204
+]);
+
 /** Fails with the schema's issues in the message instead of a bare boolean. */
 function expectParses(
+  route: string,
   schema: {
     safeParse(body: unknown): {
       success: boolean;
@@ -41,6 +58,7 @@ function expectParses(
   },
   body: unknown,
 ): void {
+  parsedRoutes.add(route);
   const result = schema.safeParse(body);
   if (!result.success) {
     throw new Error(JSON.stringify(result.error?.issues, null, 2));
@@ -78,7 +96,11 @@ describe("response contracts", () => {
         attributes: [{ label: "Material", value: "Madeira" }],
       })
       .expect(201);
-    expectParses(adminListingDetailSchema, created.body);
+    expectParses(
+      "POST /stores/:storeId/listings",
+      adminListingDetailSchema,
+      created.body,
+    );
     withPhoto = created.body;
     await client()
       .post(`${base()}/listings/${withPhoto.id}/images`)
@@ -108,14 +130,22 @@ describe("response contracts", () => {
       const res = await client().get(`${base()}/listings`).expect(200);
       expect(res.body.items).toHaveLength(4);
       for (const item of res.body.items) {
-        expectParses(adminListingSummarySchema, item);
+        expectParses(
+          "GET /stores/:storeId/listings",
+          adminListingSummarySchema,
+          item,
+        );
       }
     });
 
     it("parses a listing with photos and one without", async () => {
       for (const id of [withPhoto.id, draft.id]) {
         const res = await client().get(`${base()}/listings/${id}`).expect(200);
-        expectParses(adminListingDetailSchema, res.body);
+        expectParses(
+          "GET /stores/:storeId/listings/:id",
+          adminListingDetailSchema,
+          res.body,
+        );
       }
     });
 
@@ -123,7 +153,11 @@ describe("response contracts", () => {
       const res = await client()
         .post(`${base()}/listings/${withPhoto.id}/duplicate`)
         .expect(201);
-      expectParses(adminListingDetailSchema, res.body);
+      expectParses(
+        "POST /stores/:storeId/listings/:id/duplicate",
+        adminListingDetailSchema,
+        res.body,
+      );
     });
 
     it("parses the preview of a draft and of a published listing", async () => {
@@ -131,29 +165,38 @@ describe("response contracts", () => {
         const res = await client()
           .get(`${base()}/listings/${id}/preview`)
           .expect(200);
-        expectParses(publicListingDetailSchema, res.body);
+        expectParses(
+          "GET /stores/:storeId/listings/:id/preview",
+          publicListingDetailSchema,
+          res.body,
+        );
       }
     });
 
     it("parses the dashboard counts", async () => {
       const res = await client().get(`${base()}/dashboard`).expect(200);
-      expectParses(dashboardCountsSchema, res.body);
+      expectParses(
+        "GET /stores/:storeId/dashboard",
+        dashboardCountsSchema,
+        res.body,
+      );
     });
 
     it("parses the store settings, read and updated", async () => {
       const read = await client().get(base()).expect(200);
-      expectParses(storeSettingsSchema, read.body);
+      expectParses("GET /stores/:storeId", storeSettingsSchema, read.body);
       const updated = await client()
         .patch(base())
         .send({ headline: "Tudo precisa de um novo lar" })
         .expect(200);
-      expectParses(storeSettingsSchema, updated.body);
+      expectParses("PATCH /stores/:storeId", storeSettingsSchema, updated.body);
     });
 
     it("parses the categories", async () => {
       const res = await client().get(`${base()}/categories`).expect(200);
       expect(res.body.items.length).toBeGreaterThan(0);
-      for (const item of res.body.items) expectParses(categorySchema, item);
+      for (const item of res.body.items)
+        expectParses("GET /stores/:storeId/categories", categorySchema, item);
     });
 
     it("parses the sellers, with and without a contact number", async () => {
@@ -164,18 +207,20 @@ describe("response contracts", () => {
           (s: { whatsappNumber: unknown }) => s.whatsappNumber,
         ),
       ).toContain(null);
-      for (const item of res.body.items) expectParses(sellerSchema, item);
+      for (const item of res.body.items)
+        expectParses("GET /stores/:storeId/sellers", sellerSchema, item);
     });
 
     it("parses the team members", async () => {
       const res = await client().get(`${base()}/members`).expect(200);
       expect(res.body.items).toHaveLength(2);
-      for (const item of res.body.items) expectParses(teamMemberSchema, item);
+      for (const item of res.body.items)
+        expectParses("GET /stores/:storeId/members", teamMemberSchema, item);
     });
 
     it("parses me", async () => {
       const res = await client().get("/me").expect(200);
-      expectParses(meSchema, res.body);
+      expectParses("GET /me", meSchema, res.body);
     });
 
     it("parses an issued invite, the pending list and the invite lookup", async () => {
@@ -183,12 +228,16 @@ describe("response contracts", () => {
         .post(`${base()}/invites`)
         .send({ email: "novo@example.com", role: "seller" })
         .expect(201);
-      expectParses(issuedInviteSchema, issued.body);
+      expectParses(
+        "POST /stores/:storeId/invites",
+        issuedInviteSchema,
+        issued.body,
+      );
 
       const list = await client().get(`${base()}/invites`).expect(200);
       expect(list.body.items).toHaveLength(1);
       for (const item of list.body.items) {
-        expectParses(pendingInviteSchema, item);
+        expectParses("GET /stores/:storeId/invites", pendingInviteSchema, item);
       }
 
       const token = (issued.body.link as string).split("/invite/")[1];
@@ -199,7 +248,11 @@ describe("response contracts", () => {
       )
         .send({ token })
         .expect(200);
-      expectParses(inviteDetailsSchema, lookup.body);
+      expectParses(
+        "POST /auth/invites/lookup",
+        inviteDetailsSchema,
+        lookup.body,
+      );
     });
   });
 
@@ -209,12 +262,20 @@ describe("response contracts", () => {
         .patch(`${base()}/listings/${draft.id}`)
         .send({ title: "Rascunho novo", priceCents: null })
         .expect(200);
-      expectParses(adminListingDetailSchema, updated.body);
+      expectParses(
+        "PATCH /stores/:storeId/listings/:id",
+        adminListingDetailSchema,
+        updated.body,
+      );
       const status = await client()
         .patch(`${base()}/listings/${draft.id}/status`)
         .send({ availability: "reserved" })
         .expect(200);
-      expectParses(adminListingDetailSchema, status.body);
+      expectParses(
+        "PATCH /stores/:storeId/listings/:id/status",
+        adminListingDetailSchema,
+        status.body,
+      );
     });
 
     it("parses the image list after upload, reorder and delete", async () => {
@@ -225,7 +286,11 @@ describe("response contracts", () => {
         .expect(201);
       expect(uploaded.body.items).toHaveLength(2);
       for (const item of uploaded.body.items) {
-        expectParses(adminImageSchema, item);
+        expectParses(
+          "POST /stores/:storeId/listings/:id/images",
+          adminImageSchema,
+          item,
+        );
       }
       const ids = uploaded.body.items.map((item: { id: string }) => item.id);
 
@@ -234,13 +299,21 @@ describe("response contracts", () => {
         .send({ ids: [...ids].reverse() })
         .expect(200);
       for (const item of reordered.body.items) {
-        expectParses(adminImageSchema, item);
+        expectParses(
+          "PUT /stores/:storeId/listings/:id/images/order",
+          adminImageSchema,
+          item,
+        );
       }
 
       const removed = await client().delete(`${url}/${ids[0]}`).expect(200);
       expect(removed.body.items).toHaveLength(1);
       for (const item of removed.body.items) {
-        expectParses(adminImageSchema, item);
+        expectParses(
+          "DELETE /stores/:storeId/listings/:id/images/:imageId",
+          adminImageSchema,
+          item,
+        );
       }
     });
 
@@ -253,7 +326,11 @@ describe("response contracts", () => {
         .patch(`${base()}/members/${bia.userId}`)
         .send({ role: "seller" })
         .expect(200);
-      expectParses(teamMemberSchema, res.body);
+      expectParses(
+        "PATCH /stores/:storeId/members/:userId",
+        teamMemberSchema,
+        res.body,
+      );
     });
 
     it("parses a seller update and a new avatar", async () => {
@@ -261,13 +338,21 @@ describe("response contracts", () => {
         .patch(`${base()}/sellers/${admin.sellerId}`)
         .send({ displayName: "Ana Souza", whatsappNumber: null })
         .expect(200);
-      expectParses(sellerSchema, updated.body);
+      expectParses(
+        "PATCH /stores/:storeId/sellers/:id",
+        sellerSchema,
+        updated.body,
+      );
       const avatar = await client()
         .post(`${base()}/sellers/${admin.sellerId}/avatar`)
         .attach("file", await photo(), "avatar.jpg")
         .expect(201);
       expect(avatar.body.avatarUrl).not.toBeNull();
-      expectParses(sellerSchema, avatar.body);
+      expectParses(
+        "POST /stores/:storeId/sellers/:id/avatar",
+        sellerSchema,
+        avatar.body,
+      );
     });
 
     it("parses a regenerated invite", async () => {
@@ -278,42 +363,115 @@ describe("response contracts", () => {
       const res = await client()
         .post(`${base()}/invites/${issued.body.invite.id}/regenerate`)
         .expect(200);
-      expectParses(issuedInviteSchema, res.body);
+      expectParses(
+        "POST /stores/:storeId/invites/:id/regenerate",
+        issuedInviteSchema,
+        res.body,
+      );
+    });
+  });
+
+  describe("sessions", () => {
+    it("parses a login and an accepted invite", async () => {
+      const login = await internalPost(ctx.app, "/auth/login", "192.0.2.21")
+        .send({ email: admin.email, password: PASSWORD })
+        .expect(200);
+      expectParses("POST /auth/login", sessionResponseSchema, login.body);
+
+      const issued = await client()
+        .post(`${base()}/invites`)
+        .send({ email: "nova@example.com", role: "seller" })
+        .expect(201);
+      const token = (issued.body.link as string).split("/invite/")[1];
+      const accepted = await internalPost(
+        ctx.app,
+        "/auth/invites/accept",
+        "192.0.2.22",
+      )
+        .send({ token, name: "Nova Pessoa", password: PASSWORD })
+        .expect(200);
+      expectParses(
+        "POST /auth/invites/accept",
+        sessionResponseSchema,
+        accepted.body,
+      );
     });
   });
 
   describe("public", () => {
     it("parses the store", async () => {
       const res = await publicGet("").expect(200);
-      expectParses(publicStoreSchema, res.body);
+      expectParses(
+        "GET /public/stores/:storeSlug",
+        publicStoreSchema,
+        res.body,
+      );
     });
 
     it("parses the store index", async () => {
       const res = await request(ctx.app.getHttpServer())
         .get("/public/stores")
         .expect(200);
-      expectParses(publicStoreIndexSchema, res.body);
+      expectParses("GET /public/stores", publicStoreIndexSchema, res.body);
     });
 
     it("parses the listing page and each of its items", async () => {
       const res = await publicGet("/listings").expect(200);
-      expectParses(publicListingPageSchema, res.body);
+      expectParses(
+        "GET /public/stores/:storeSlug/listings",
+        publicListingPageSchema,
+        res.body,
+      );
       expect(res.body.items).toHaveLength(2);
       for (const item of res.body.items) {
-        expectParses(publicListingSummarySchema, item);
+        expectParses(
+          "GET /public/stores/:storeSlug/listings",
+          publicListingSummarySchema,
+          item,
+        );
       }
     });
 
     it("parses a listing with photos, attributes and contact", async () => {
       const res = await publicGet(`/listings/${withPhoto.slug}`).expect(200);
       expect(res.body.canContact).toBe(true);
-      expectParses(publicListingDetailSchema, res.body);
+      expectParses(
+        "GET /public/stores/:storeSlug/listings/:listingSlug",
+        publicListingDetailSchema,
+        res.body,
+      );
     });
 
     it("parses a sold listing without contact data", async () => {
       const res = await publicGet(`/listings/${sold.slug}`).expect(200);
       expect(res.body.canContact).toBe(false);
-      expectParses(publicListingDetailSchema, res.body);
+      expectParses(
+        "GET /public/stores/:storeSlug/listings/:listingSlug",
+        publicListingDetailSchema,
+        res.body,
+      );
     });
+  });
+
+  it("parses the health report", async () => {
+    const res = await request(ctx.app.getHttpServer())
+      .get("/health")
+      .expect(200);
+    expectParses("GET /health", healthResponseSchema, res.body);
+  });
+
+  // Runs last: it diffs the routes the tests above parsed against the app's.
+  it("parses the body of every registered JSON route", () => {
+    const registered = registeredRoutes(ctx.app).map(
+      (route) => `${route.method} ${route.path}`,
+    );
+    const uncovered = registered.filter(
+      (route) => !NOT_PARSED.has(route) && !parsedRoutes.has(route),
+    );
+    expect(uncovered).toEqual([]);
+    const stale = [...NOT_PARSED, ...parsedRoutes].filter(
+      (route) => !registered.includes(route),
+    );
+    expect(stale).toEqual([]);
   });
 });

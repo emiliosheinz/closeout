@@ -14,7 +14,7 @@ export const teamMemberSchema = z.object({
 });
 export type TeamMember = z.infer<typeof teamMemberSchema>;
 
-export const memberRequestSchema = z.object({
-  role: z.enum(ASSIGNABLE_ROLES),
+export const memberRequestSchema = z.strictObject({
+  role: z.enum(ASSIGNABLE_ROLES, "Escolha o papel da pessoa."),
 });
 export type MemberRequest = z.infer<typeof memberRequestSchema>;

@@ -48,7 +48,7 @@ export class MediaService {
       try {
         await this.storage.remove(name);
       } catch (err) {
-        this.logger.error(`Failed to remove media file ${name}`, err);
+        this.logger.error({ err, file: name }, "Failed to remove media file");
       }
     }
   }

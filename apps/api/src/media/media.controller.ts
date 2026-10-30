@@ -1,5 +1,7 @@
-import { Controller, Get, NotFoundException, Param, Res } from "@nestjs/common";
+import { NOT_FOUND, routeNameSchema } from "@closeout/contracts/schemas";
+import { Controller, Get, HttpStatus, Param, Res } from "@nestjs/common";
 import type { Response } from "express";
+import { AppException } from "@/problem/app-exception";
 import { MediaService } from "./media.service";
 import { MEDIA_FILE_PATTERN } from "./media-storage";
 
@@ -9,12 +11,13 @@ export class MediaController {
 
   @Get(":file")
   async serve(
-    @Param("file") file: string,
+    @Param("file", { schema: routeNameSchema }) file: string,
     @Res() res: Response,
   ): Promise<void> {
-    if (!MEDIA_FILE_PATTERN.test(file)) throw new NotFoundException();
+    if (!MEDIA_FILE_PATTERN.test(file))
+      throw new AppException(HttpStatus.NOT_FOUND, NOT_FOUND);
     const data = await this.media.read(file);
-    if (!data) throw new NotFoundException();
+    if (!data) throw new AppException(HttpStatus.NOT_FOUND, NOT_FOUND);
 
     res.setHeader(
       "Content-Type",

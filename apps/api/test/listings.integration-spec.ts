@@ -104,7 +104,7 @@ describe("listing administration", () => {
         .patch(`${base()}/${listing.id}/status`)
         .send({ publication: "published" })
         .expect(422);
-      expect(res.body.message).toBe(
+      expect(res.body.detail).toBe(
         "Adicione ao menos uma foto antes de publicar.",
       );
     });
@@ -170,6 +170,70 @@ describe("listing administration", () => {
         .expect(400);
     });
 
+    it("reports each required field of an empty listing", async () => {
+      const res = await client()
+        .post(base())
+        .set("Content-Type", "application/json")
+        .expect(400);
+      expect(res.body.detail).toBe("Dê um nome ao item.");
+      expect(res.body.errors).toEqual([
+        { pointer: "/title", detail: "Dê um nome ao item." },
+        { pointer: "/categoryId", detail: "Escolha uma categoria." },
+        { pointer: "/condition", detail: "Escolha o estado do item." },
+      ]);
+    });
+
+    it("rejects category and seller ids that are not UUIDs", async () => {
+      const fields = {
+        title: "Mesa",
+        categoryId: admin.categoryId,
+        sellerIds: [admin.sellerId],
+        condition: "good",
+      };
+      const category = await client()
+        .post(base())
+        .send({ ...fields, categoryId: "sala" })
+        .expect(400);
+      expect(category.body.errors).toEqual([
+        { pointer: "/categoryId", detail: "Escolha uma categoria." },
+      ]);
+      const sellers = await client()
+        .post(base())
+        .send({ ...fields, sellerIds: [admin.sellerId, "ana"] })
+        .expect(400);
+      expect(sellers.body.errors).toEqual([
+        { pointer: "/sellerIds/1", detail: "Vendedor inválido." },
+      ]);
+      const listing = await createListing();
+      const update = await client()
+        .patch(`${base()}/${listing.id}`)
+        .send({ categoryId: "sala" })
+        .expect(400);
+      expect(update.body.errors).toEqual([
+        { pointer: "/categoryId", detail: "Escolha uma categoria." },
+      ]);
+    });
+
+    it("rejects listing and photo ids that are not UUIDs at their route params", async () => {
+      const listing = await createListing();
+      const invalidId = [{ pointer: "/params/id", detail: "Valor inválido." }];
+      for (const res of [
+        await client().get(`${base()}/mesa`),
+        await client().patch(`${base()}/mesa`).send({ title: "Mesa" }),
+        await client().delete(`${base()}/mesa`),
+        await upload("mesa", [await photo()]),
+      ]) {
+        expect(res.status).toBe(400);
+        expect(res.body.errors).toEqual(invalidId);
+      }
+      const image = await client()
+        .delete(`${base()}/${listing.id}/images/foto`)
+        .expect(400);
+      expect(image.body.errors).toEqual([
+        { pointer: "/params/imageId", detail: "Valor inválido." },
+      ]);
+    });
+
     it("sells one listing through several sellers, listed by name", async () => {
       const partner = await addMember(ctx, admin, {
         email: "bia@example.com",
@@ -213,7 +277,16 @@ describe("listing administration", () => {
     });
 
     it("requires at least one seller and no repeats", async () => {
-      await client()
+      const noSeller = await client()
+        .post(base())
+        .send({
+          title: "Mesa",
+          categoryId: admin.categoryId,
+          condition: "good",
+        })
+        .expect(400);
+      expect(noSeller.body.detail).toBe("Escolha ao menos um vendedor.");
+      const emptySellers = await client()
         .post(base())
         .send({
           title: "Mesa",
@@ -222,6 +295,12 @@ describe("listing administration", () => {
           condition: "good",
         })
         .expect(400);
+      expect(emptySellers.body.errors).toEqual([
+        {
+          pointer: "/sellerIds",
+          detail: "Escolha ao menos uma pessoa para receber as mensagens.",
+        },
+      ]);
       const listing = await createListing();
       await client()
         .patch(`${base()}/${listing.id}`)
@@ -235,6 +314,35 @@ describe("listing administration", () => {
       expect(unchanged.body.sellers).toEqual([
         { id: admin.sellerId, displayName: "Admin loja-a" },
       ]);
+    });
+
+    it("answers 409 when a seller profile disappears while the listing is saved", async () => {
+      // Stands in for a member removed between validation and the insert.
+      await ctx.dataSource.query(`
+        CREATE FUNCTION lose_seller() RETURNS trigger LANGUAGE plpgsql
+          AS $$ BEGIN RAISE EXCEPTION 'seller gone' USING ERRCODE = '23503'; END $$;
+        CREATE TRIGGER lose_seller BEFORE INSERT ON listing_sellers
+          FOR EACH ROW EXECUTE FUNCTION lose_seller();
+      `);
+      try {
+        const res = await client()
+          .post(base())
+          .send({
+            title: "Mesa",
+            categoryId: admin.categoryId,
+            sellerIds: [admin.sellerId],
+            condition: "good",
+          })
+          .expect(409);
+        expect(res.body.detail).toBe("Vendedor inválido.");
+      } finally {
+        await ctx.dataSource.query(`
+          DROP TRIGGER lose_seller ON listing_sellers;
+          DROP FUNCTION lose_seller();
+        `);
+      }
+      const listings = await client().get(base()).expect(200);
+      expect(listings.body.items).toHaveLength(0);
     });
 
     it("duplicates into a new draft without photos", async () => {
@@ -353,7 +461,7 @@ describe("listing administration", () => {
   describe("store boundaries", () => {
     it("rejects a seller or category from another store and creates nothing", async () => {
       const other = await createStoreWithAdmin(ctx, "loja-b");
-      await client()
+      const foreignSellerOnCreate = await client()
         .post(base())
         .send({
           title: "Mesa",
@@ -362,7 +470,7 @@ describe("listing administration", () => {
           condition: "good",
         })
         .expect(422);
-      await client()
+      const foreignCategoryOnCreate = await client()
         .post(base())
         .send({
           title: "Mesa",
@@ -372,14 +480,18 @@ describe("listing administration", () => {
         })
         .expect(422);
       const listing = await createListing();
-      await client()
+      const foreignSellerOnUpdate = await client()
         .patch(`${base()}/${listing.id}`)
         .send({ sellerIds: [other.sellerId], title: "Trocado" })
         .expect(422);
-      await client()
+      const foreignCategoryOnUpdate = await client()
         .patch(`${base()}/${listing.id}`)
         .send({ categoryId: other.categoryId, title: "Trocado" })
         .expect(422);
+      expect(foreignSellerOnCreate.body.detail).toBe("Vendedor inválido.");
+      expect(foreignSellerOnUpdate.body.detail).toBe("Vendedor inválido.");
+      expect(foreignCategoryOnCreate.body.detail).toBe("Categoria inválida.");
+      expect(foreignCategoryOnUpdate.body.detail).toBe("Categoria inválida.");
       const unchanged = await client()
         .get(`${base()}/${listing.id}`)
         .expect(200);
@@ -411,7 +523,8 @@ describe("listing administration", () => {
         .expect(404);
 
       const ownStore = `/stores/${other.storeId}/listings/${listing.id}`;
-      await intruder.get(ownStore).expect(404);
+      const unknown = await intruder.get(ownStore).expect(404);
+      expect(unknown.body.detail).toBe("Anúncio não encontrado.");
       await intruder.patch(ownStore).send({ title: "x" }).expect(404);
       await intruder.delete(ownStore).expect(404);
 
@@ -505,29 +618,43 @@ describe("listing administration", () => {
         await photo(),
         Buffer.from("definitely not an image"),
       ]).expect(400);
-      expect(res.body.message).toBe("Arquivo não é uma imagem válida.");
+      expect(res.body.detail).toBe("Arquivo não é uma imagem válida.");
       expect(await mediaFileCount()).toBe(before);
       const detail = await client().get(`${base()}/${listing.id}`).expect(200);
       expect(detail.body.imageCount).toBe(0);
     });
 
-    it("rejects files over 10 MB with 413 and persists nothing", async () => {
+    it("rejects uploaded files over 10 MB with 413 and persists nothing", async () => {
       const listing = await createListing();
       const before = await mediaFileCount();
       const res = await upload(listing.id, [
         Buffer.alloc(10 * 1024 * 1024 + 1),
       ]).expect(413);
-      expect(res.body.message).toBe("Cada foto pode ter até 10 MB.");
+      expect(res.body.detail).toBe("Cada foto pode ter até 10 MB.");
       expect(await mediaFileCount()).toBe(before);
       const detail = await client().get(`${base()}/${listing.id}`).expect(200);
       expect(detail.body.imageCount).toBe(0);
     });
 
-    it("rejects more than 8 files per request", async () => {
+    it("rejects more than 8 files per upload", async () => {
       const listing = await createListing();
       const small = await photo("#123", 32, 32);
       const res = await upload(listing.id, Array(9).fill(small)).expect(400);
-      expect(res.body.message).toBe("Envie até 8 fotos por vez.");
+      expect(res.body.detail).toBe("Envie até 8 fotos por vez.");
+    });
+
+    it("answers other errors on the upload route as problem documents", async () => {
+      const res = await upload("00000000-0000-4000-8000-000000000000", [
+        await photo(),
+      ]).expect(404);
+      expect(res.headers["content-type"]).toMatch(
+        /^application\/problem\+json(;|$)/,
+      );
+      expect(res.body).toMatchObject({
+        type: "about:blank",
+        status: 404,
+        requestId: res.headers["x-request-id"],
+      });
     });
 
     it("rejects images above 40 megapixels before decoding them", async () => {
@@ -551,7 +678,8 @@ describe("listing administration", () => {
       for (const count of [8, 8, 4]) {
         await upload(listing.id, Array(count).fill(small)).expect(201);
       }
-      await upload(listing.id, [small]).expect(422);
+      const res = await upload(listing.id, [small]).expect(422);
+      expect(res.body.detail).toBe("Cada anúncio pode ter até 20 fotos.");
     });
 
     it("reorders photos only when given exactly the listing's photo ids", async () => {
@@ -575,14 +703,38 @@ describe("listing administration", () => {
       const detail = await client().get(`${base()}/${listing.id}`).expect(200);
       expect(detail.body.coverUrl).toBe(reordered.body.items[0].urls.sm);
 
-      await client()
+      const partial = await client()
         .put(`${base()}/${listing.id}/images/order`)
         .send({ ids: [ids[0], ids[1]] })
         .expect(422);
-      await client()
+      const repeated = await client()
         .put(`${base()}/${listing.id}/images/order`)
         .send({ ids: [ids[0], ids[0], ids[1]] })
         .expect(422);
+      for (const res of [partial, repeated]) {
+        expect(res.body.detail).toBe(
+          "A nova ordem precisa conter todas as fotos do anúncio.",
+        );
+      }
+    });
+
+    it("asks for at least one photo when an upload carries none", async () => {
+      const listing = await createListing();
+      const res = await client()
+        .post(`${base()}/${listing.id}/images`)
+        .expect(400);
+      expect(res.body.detail).toBe("Envie ao menos uma foto.");
+    });
+
+    it("answers 404 for a photo the listing does not have", async () => {
+      const listing = await createListing();
+      await upload(listing.id, [await photo()]).expect(201);
+      const res = await client()
+        .delete(
+          `${base()}/${listing.id}/images/00000000-0000-4000-8000-000000000000`,
+        )
+        .expect(404);
+      expect(res.body.detail).toBe("Foto não encontrada.");
     });
 
     it("deletes a photo, renumbers the rest and stops serving its files", async () => {
@@ -609,9 +761,12 @@ describe("listing administration", () => {
         .patch(`${base()}/${listing.id}/status`)
         .send({ publication: "published" })
         .expect(200);
-      await client()
+      const refused = await client()
         .delete(`${base()}/${listing.id}/images/${res.body.items[0].id}`)
         .expect(422);
+      expect(refused.body.detail).toBe(
+        "Um anúncio publicado precisa de ao menos uma foto. Adicione outra antes de remover esta.",
+      );
       const detail = await client().get(`${base()}/${listing.id}`).expect(200);
       expect(detail.body.imageCount).toBe(1);
     });
@@ -635,16 +790,18 @@ describe("listing administration", () => {
         .field("alt", "texto")
         .attach("files", await photo(), "a.jpg")
         .expect(400);
-      expect(res.body.message).toBe("Envie apenas fotos, sem outros campos.");
+      expect(res.body.detail).toBe("Envie apenas fotos, sem outros campos.");
     });
 
     it("never serves files outside the media naming scheme", async () => {
       const server = ctx.app.getHttpServer();
       await request(server).get("/media/..%2F..%2Fetc%2Fpasswd").expect(404);
-      await request(server).get("/media/.env").expect(404);
-      await request(server)
+      const malformed = await request(server).get("/media/.env").expect(404);
+      const missing = await request(server)
         .get("/media/00000000-0000-0000-0000-000000000000-lg.webp")
         .expect(404);
+      expect(malformed.body.detail).toBe("Não encontrado.");
+      expect(missing.body.detail).toBe("Não encontrado.");
     });
   });
 
@@ -739,7 +896,6 @@ describe("listing administration", () => {
     it("makes the seller the only seller of what they create, whatever they submit", async () => {
       const submissions = [
         { sellerIds: [admin.sellerId, partner.sellerId] },
-        { sellerIds: [] },
         {},
       ];
       for (const submitted of submissions) {
@@ -755,6 +911,28 @@ describe("listing administration", () => {
         expect(res.body.sellers).toEqual([
           { id: seller.sellerId, displayName: "Vendedora" },
         ]);
+      }
+      await asSeller()
+        .post(base())
+        .send({
+          title: "Luminária",
+          categoryId: admin.categoryId,
+          condition: "good",
+          sellerIds: [],
+        })
+        .expect(400);
+    });
+
+    it("answers a seller's non-UUID listing id as an unknown listing", async () => {
+      for (const res of [
+        await asSeller().get(`${base()}/mesa`),
+        await asSeller().patch(`${base()}/mesa`).send({ title: "Mesa" }),
+        await asSeller()
+          .post(`${base()}/mesa/images`)
+          .attach("files", await photo(), "a.jpg"),
+      ]) {
+        expect(res.status).toBe(404);
+        expect(res.body.detail).toBe("Anúncio não encontrado.");
       }
     });
 
@@ -780,7 +958,7 @@ describe("listing administration", () => {
         .patch(url)
         .send({ title: "Mesa trocada", sellerIds: [seller.sellerId] })
         .expect(403);
-      expect(refused.body.message).toBe(
+      expect(refused.body.detail).toBe(
         "Você não tem permissão para esta ação.",
       );
       await asSeller()
@@ -793,7 +971,7 @@ describe("listing administration", () => {
         .patch(url)
         .send({ sellerIds: [seller.sellerId, admin.sellerId] })
         .expect(403);
-      expect(swapped.body.message).toBe(
+      expect(swapped.body.detail).toBe(
         "Você não tem permissão para esta ação.",
       );
 

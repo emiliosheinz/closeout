@@ -1,11 +1,17 @@
 import {
+  type InviteRequest,
+  type IssuedInvite,
+  inviteRequestSchema,
+  type PendingInvite,
+  uuidSchema,
+} from "@closeout/contracts/schemas";
+import {
   Body,
   Controller,
   Delete,
   Get,
   HttpCode,
   Param,
-  ParseUUIDPipe,
   Post,
   UseGuards,
 } from "@nestjs/common";
@@ -17,12 +23,7 @@ import {
   type MembershipContext,
   Roles,
 } from "@/stores/membership";
-import { CreateInviteDto } from "../dto/invite.dto";
-import {
-  type InviteSummary,
-  InvitesService,
-  type IssuedInvite,
-} from "../services/invites.service";
+import { InvitesService } from "../services/invites.service";
 
 @Controller("stores/:storeId/invites")
 @UseGuards(SessionGuard, StoreMemberGuard)
@@ -34,7 +35,7 @@ export class InvitesController {
   @HttpCode(201)
   create(
     @CurrentMember() member: MembershipContext,
-    @Body() body: CreateInviteDto,
+    @Body({ schema: inviteRequestSchema }) body: InviteRequest,
   ): Promise<IssuedInvite> {
     return this.invites.create(member, body.email, body.role);
   }
@@ -43,7 +44,7 @@ export class InvitesController {
   @Roles(MANAGERS)
   async list(
     @CurrentMember() member: MembershipContext,
-  ): Promise<{ items: InviteSummary[] }> {
+  ): Promise<{ items: PendingInvite[] }> {
     return { items: await this.invites.list(member.storeId) };
   }
 
@@ -52,7 +53,7 @@ export class InvitesController {
   @HttpCode(204)
   revoke(
     @CurrentMember() member: MembershipContext,
-    @Param("id", new ParseUUIDPipe()) id: string,
+    @Param("id", { schema: uuidSchema }) id: string,
   ): Promise<void> {
     return this.invites.revoke(member, id);
   }
@@ -62,7 +63,7 @@ export class InvitesController {
   @HttpCode(200)
   regenerate(
     @CurrentMember() member: MembershipContext,
-    @Param("id", new ParseUUIDPipe()) id: string,
+    @Param("id", { schema: uuidSchema }) id: string,
   ): Promise<IssuedInvite> {
     return this.invites.regenerate(member, id);
   }

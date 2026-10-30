@@ -1,16 +1,20 @@
 import {
+  type MemberRequest,
+  memberRequestSchema,
+  type TeamMember,
+  uuidSchema,
+} from "@closeout/contracts/schemas";
+import {
   Body,
   Controller,
   Delete,
   Get,
   HttpCode,
   Param,
-  ParseUUIDPipe,
   Patch,
   UseGuards,
 } from "@nestjs/common";
 import { SessionGuard } from "@/auth/guards/session.guard";
-import { UpdateMemberDto } from "../dto/update-member.dto";
 import { StoreMemberGuard } from "../guards/store-member.guard";
 import {
   CurrentMember,
@@ -18,7 +22,7 @@ import {
   type MembershipContext,
   Roles,
 } from "../membership";
-import { type TeamMember, TeamService } from "../services/team.service";
+import { TeamService } from "../services/team.service";
 
 @Controller("stores/:storeId/members")
 @UseGuards(SessionGuard, StoreMemberGuard)
@@ -37,8 +41,8 @@ export class TeamController {
   @Roles(MANAGERS)
   changeRole(
     @CurrentMember() member: MembershipContext,
-    @Param("userId", new ParseUUIDPipe()) userId: string,
-    @Body() body: UpdateMemberDto,
+    @Param("userId", { schema: uuidSchema }) userId: string,
+    @Body({ schema: memberRequestSchema }) body: MemberRequest,
   ): Promise<TeamMember> {
     return this.team.changeRole(member, userId, body.role);
   }
@@ -48,7 +52,7 @@ export class TeamController {
   @HttpCode(204)
   remove(
     @CurrentMember() member: MembershipContext,
-    @Param("userId", new ParseUUIDPipe()) userId: string,
+    @Param("userId", { schema: uuidSchema }) userId: string,
   ): Promise<void> {
     return this.team.remove(member, userId);
   }

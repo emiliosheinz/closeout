@@ -1,7 +1,9 @@
+import { sellerRequestSchema } from "@closeout/contracts/schemas";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { listingKeys } from "@/entities/listing";
 import { memberKeys, type TeamMember } from "@/entities/member";
 import { renderWithFeedback } from "@/test/feedback-harness";
+import { problemResponse } from "@/test/fixtures";
 import { MemberActions } from "../member-row";
 
 let fetchMock: ReturnType<typeof vi.fn>;
@@ -177,10 +179,7 @@ describe("MemberActions actions menu", () => {
 
   it("toasts the error and keeps the dialog open when the removal fails", async () => {
     fetchMock.mockResolvedValue(
-      Response.json(
-        { message: "Não foi possível remover agora." },
-        { status: 500 },
-      ),
+      problemResponse(500, "Não foi possível remover agora."),
     );
     renderWithFeedback(
       <table>
@@ -377,6 +376,22 @@ describe("Member edit dialog", () => {
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
   });
 
+  it("sends the number as typed, in a body the seller request schema takes", async () => {
+    await openEditDialog();
+    fireEvent.change(screen.getByLabelText("WhatsApp"), {
+      target: { value: "+55 (21) 97777-1234" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
+
+    await waitFor(() => expect(apiCalls()).toHaveLength(1));
+    const body = JSON.parse(apiCalls()[0]?.body as string);
+    expect(body.whatsappNumber).toBe("+55 (21) 97777-1234");
+    expect(sellerRequestSchema.parse(body)).toEqual({
+      displayName: "Ana",
+      whatsappNumber: "5521977771234",
+    });
+  });
+
   it("also changes the role when a manager picks another one", async () => {
     await openEditDialog();
 
@@ -395,10 +410,7 @@ describe("Member edit dialog", () => {
 
   it("shows the API's number message under the field, with no toast", async () => {
     fetchMock.mockResolvedValue(
-      Response.json(
-        { message: "Informe o WhatsApp com código do país." },
-        { status: 400 },
-      ),
+      problemResponse(400, "Informe o WhatsApp com código do país."),
     );
     await openEditDialog();
 
@@ -441,7 +453,7 @@ describe("Member edit dialog", () => {
 
   it("toasts one error when the avatar upload fails", async () => {
     fetchMock.mockResolvedValue(
-      Response.json({ message: "Envie uma imagem válida." }, { status: 400 }),
+      problemResponse(400, "Envie uma imagem válida."),
     );
     await openEditDialog();
 
@@ -461,10 +473,7 @@ describe("Member edit dialog", () => {
       .mockResolvedValueOnce(new Response(null, { status: 204 }))
       .mockResolvedValueOnce(new Response(null, { status: 204 }))
       .mockResolvedValueOnce(
-        Response.json(
-          { message: "Não foi possível mudar o papel." },
-          { status: 500 },
-        ),
+        problemResponse(500, "Não foi possível mudar o papel."),
       );
     await openEditDialog();
 
@@ -486,9 +495,7 @@ describe("Member edit dialog", () => {
     fetchMock
       .mockResolvedValueOnce(new Response(null, { status: 204 }))
       .mockResolvedValueOnce(new Response(null, { status: 204 }))
-      .mockResolvedValueOnce(
-        Response.json({ message: "Papel inválido." }, { status: 400 }),
-      );
+      .mockResolvedValueOnce(problemResponse(400, "Papel inválido."));
     await openEditDialog();
 
     fireEvent.click(screen.getByRole("radio", { name: /admin/i }));

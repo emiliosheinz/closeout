@@ -1,10 +1,11 @@
+import type { Me } from "@closeout/contracts/schemas";
 import { Controller, Get, Req, UseGuards } from "@nestjs/common";
 import {
   type RequestWithPrincipal,
   requirePrincipal,
   SessionGuard,
 } from "@/auth/guards/session.guard";
-import { type MeResponse, StoresService } from "../services/stores.service";
+import { StoresService } from "../services/stores.service";
 
 @Controller("me")
 export class MeController {
@@ -12,7 +13,7 @@ export class MeController {
 
   @UseGuards(SessionGuard)
   @Get()
-  me(@Req() req: RequestWithPrincipal): Promise<MeResponse> {
+  me(@Req() req: RequestWithPrincipal): Promise<Me> {
     return this.stores.me(requirePrincipal(req).userId);
   }
 }

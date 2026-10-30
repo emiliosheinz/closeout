@@ -1,10 +1,15 @@
 import {
-  BadRequestException,
+  type SellerRequest,
+  type Seller as SellerResponse,
+  sellerRequestSchema,
+  uuidSchema,
+} from "@closeout/contracts/schemas";
+import {
   Body,
   Controller,
   Get,
+  HttpStatus,
   Param,
-  ParseUUIDPipe,
   Patch,
   Post,
   UploadedFile,
@@ -15,8 +20,12 @@ import {
 import { FileInterceptor } from "@nestjs/platform-express";
 import { SessionGuard } from "@/auth/guards/session.guard";
 import { InvalidImageError } from "@/media/image-processor";
-import { UploadErrorsFilter } from "@/media/upload-errors.filter";
+import {
+  ONE_PHOTO_AT_A_TIME,
+  UploadErrorsFilter,
+} from "@/media/upload-errors.filter";
 import { imageUploadOptions } from "@/media/upload-limits";
+import { AppException } from "@/problem/app-exception";
 import { StoreMemberGuard } from "@/stores/guards/store-member.guard";
 import {
   ANY_MEMBER,
@@ -24,11 +33,9 @@ import {
   type MembershipContext,
   Roles,
 } from "@/stores/membership";
-import { UpdateSellerDto } from "../dto/seller.dto";
-import {
-  type SellerResponse,
-  SellersService,
-} from "../services/sellers.service";
+import { SellersService } from "../services/sellers.service";
+
+const NO_IMAGE = "Envie uma imagem.";
 
 /**
  * Contact profiles are created and deleted only with their member (see the
@@ -51,27 +58,27 @@ export class SellersController {
   @Roles(ANY_MEMBER)
   update(
     @CurrentMember() member: MembershipContext,
-    @Param("id", new ParseUUIDPipe()) id: string,
-    @Body() body: UpdateSellerDto,
+    @Param("id", { schema: uuidSchema }) id: string,
+    @Body({ schema: sellerRequestSchema }) body: SellerRequest,
   ): Promise<SellerResponse> {
     return this.sellers.update(member, id, body);
   }
 
   @Post(":id/avatar")
   @Roles(ANY_MEMBER)
-  @UseFilters(new UploadErrorsFilter("Envie uma foto por vez."))
+  @UseFilters(new UploadErrorsFilter(ONE_PHOTO_AT_A_TIME))
   @UseInterceptors(FileInterceptor("file", imageUploadOptions(1)))
   async avatar(
     @CurrentMember() member: MembershipContext,
-    @Param("id", new ParseUUIDPipe()) id: string,
+    @Param("id", { schema: uuidSchema }) id: string,
     @UploadedFile() file: Express.Multer.File | undefined,
   ): Promise<SellerResponse> {
-    if (!file) throw new BadRequestException("Envie uma imagem.");
+    if (!file) throw new AppException(HttpStatus.BAD_REQUEST, NO_IMAGE);
     try {
       return await this.sellers.setAvatar(member, id, file.buffer);
     } catch (err) {
       if (err instanceof InvalidImageError) {
-        throw new BadRequestException(err.message);
+        throw new AppException(HttpStatus.BAD_REQUEST, err.message);
       }
       throw err;
     }

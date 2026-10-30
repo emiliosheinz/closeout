@@ -1,12 +1,28 @@
 import {
-  BadRequestException,
+  type AdminImage,
+  type AdminListingDetail,
+  type AdminListingSummary,
+  type AdminListingsQuery,
+  adminListingsQuerySchema,
+  type ListingRequest,
+  type ListingStatusRequest,
+  type ListingUpdateRequest,
+  listingRequestSchema,
+  listingStatusRequestSchema,
+  listingUpdateRequestSchema,
+  type PublicListingDetail,
+  type ReorderImagesRequest,
+  reorderImagesRequestSchema,
+  uuidSchema,
+} from "@closeout/contracts/schemas";
+import {
   Body,
   Controller,
   Delete,
   Get,
   HttpCode,
+  HttpStatus,
   Param,
-  ParseUUIDPipe,
   Patch,
   Post,
   Put,
@@ -27,6 +43,7 @@ import {
   imageUploadOptions,
   MAX_FILES_PER_REQUEST,
 } from "@/media/upload-limits";
+import { AppException } from "@/problem/app-exception";
 import { StoreMemberGuard } from "@/stores/guards/store-member.guard";
 import {
   ANY_MEMBER,
@@ -34,22 +51,11 @@ import {
   type MembershipContext,
   Roles,
 } from "@/stores/membership";
-import {
-  AdminListingsQueryDto,
-  CreateListingDto,
-  ListingStatusDto,
-  ReorderImagesDto,
-  UpdateListingDto,
-} from "../dto/listing.dto";
 import { AssignedListingGuard } from "../guards/assigned-listing.guard";
-import type { PublicListingDetail } from "../public-mappers";
 import { ListingImagesService } from "../services/listing-images.service";
-import {
-  type AdminImage,
-  type AdminListingDetail,
-  type AdminListingSummary,
-  ListingsService,
-} from "../services/listings.service";
+import { ListingsService } from "../services/listings.service";
+
+const NO_PHOTOS = "Envie ao menos uma foto.";
 
 @Controller("stores/:storeId/listings")
 @UseGuards(SessionGuard, StoreMemberGuard, AssignedListingGuard)
@@ -63,7 +69,7 @@ export class ListingsController {
   @Roles(ANY_MEMBER)
   async list(
     @CurrentMember() member: MembershipContext,
-    @Query() query: AdminListingsQueryDto,
+    @Query({ schema: adminListingsQuerySchema }) query: AdminListingsQuery,
   ): Promise<{ items: AdminListingSummary[] }> {
     return { items: await this.listings.list(member, query.q) };
   }
@@ -73,7 +79,7 @@ export class ListingsController {
   @HttpCode(201)
   create(
     @CurrentMember() member: MembershipContext,
-    @Body() body: CreateListingDto,
+    @Body({ schema: listingRequestSchema }) body: ListingRequest,
   ): Promise<AdminListingDetail> {
     return this.listings.create(member, body);
   }
@@ -82,7 +88,7 @@ export class ListingsController {
   @Roles(ANY_MEMBER)
   get(
     @CurrentMember() member: MembershipContext,
-    @Param("id", new ParseUUIDPipe()) id: string,
+    @Param("id", { schema: uuidSchema }) id: string,
   ): Promise<AdminListingDetail> {
     return this.listings.get(member.storeId, id);
   }
@@ -91,7 +97,7 @@ export class ListingsController {
   @Roles(ANY_MEMBER)
   preview(
     @CurrentMember() member: MembershipContext,
-    @Param("id", new ParseUUIDPipe()) id: string,
+    @Param("id", { schema: uuidSchema }) id: string,
   ): Promise<PublicListingDetail> {
     return this.listings.preview(member.storeId, id);
   }
@@ -100,8 +106,8 @@ export class ListingsController {
   @Roles(ANY_MEMBER)
   update(
     @CurrentMember() member: MembershipContext,
-    @Param("id", new ParseUUIDPipe()) id: string,
-    @Body() body: UpdateListingDto,
+    @Param("id", { schema: uuidSchema }) id: string,
+    @Body({ schema: listingUpdateRequestSchema }) body: ListingUpdateRequest,
   ): Promise<AdminListingDetail> {
     return this.listings.update(member, id, body);
   }
@@ -110,8 +116,8 @@ export class ListingsController {
   @Roles(ANY_MEMBER)
   setStatus(
     @CurrentMember() member: MembershipContext,
-    @Param("id", new ParseUUIDPipe()) id: string,
-    @Body() body: ListingStatusDto,
+    @Param("id", { schema: uuidSchema }) id: string,
+    @Body({ schema: listingStatusRequestSchema }) body: ListingStatusRequest,
   ): Promise<AdminListingDetail> {
     return this.listings.update(member, id, body);
   }
@@ -121,7 +127,7 @@ export class ListingsController {
   @HttpCode(201)
   duplicate(
     @CurrentMember() member: MembershipContext,
-    @Param("id", new ParseUUIDPipe()) id: string,
+    @Param("id", { schema: uuidSchema }) id: string,
   ): Promise<AdminListingDetail> {
     return this.listings.duplicate(member.storeId, id);
   }
@@ -131,7 +137,7 @@ export class ListingsController {
   @HttpCode(204)
   remove(
     @CurrentMember() member: MembershipContext,
-    @Param("id", new ParseUUIDPipe()) id: string,
+    @Param("id", { schema: uuidSchema }) id: string,
   ): Promise<void> {
     return this.listings.remove(member.storeId, id);
   }
@@ -149,11 +155,11 @@ export class ListingsController {
   )
   async addImages(
     @CurrentMember() member: MembershipContext,
-    @Param("id", new ParseUUIDPipe()) id: string,
+    @Param("id", { schema: uuidSchema }) id: string,
     @UploadedFiles() files: Express.Multer.File[] | undefined,
   ): Promise<{ items: AdminImage[] }> {
     if (!files || files.length === 0) {
-      throw new BadRequestException("Envie ao menos uma foto.");
+      throw new AppException(HttpStatus.BAD_REQUEST, NO_PHOTOS);
     }
     try {
       const items = await this.images.add(
@@ -164,7 +170,7 @@ export class ListingsController {
       return { items };
     } catch (err) {
       if (err instanceof InvalidImageError) {
-        throw new BadRequestException(err.message);
+        throw new AppException(HttpStatus.BAD_REQUEST, err.message);
       }
       throw err;
     }
@@ -174,8 +180,8 @@ export class ListingsController {
   @Roles(ANY_MEMBER)
   async reorderImages(
     @CurrentMember() member: MembershipContext,
-    @Param("id", new ParseUUIDPipe()) id: string,
-    @Body() body: ReorderImagesDto,
+    @Param("id", { schema: uuidSchema }) id: string,
+    @Body({ schema: reorderImagesRequestSchema }) body: ReorderImagesRequest,
   ): Promise<{ items: AdminImage[] }> {
     return { items: await this.images.reorder(member.storeId, id, body.ids) };
   }
@@ -184,8 +190,8 @@ export class ListingsController {
   @Roles(ANY_MEMBER)
   async removeImage(
     @CurrentMember() member: MembershipContext,
-    @Param("id", new ParseUUIDPipe()) id: string,
-    @Param("imageId", new ParseUUIDPipe()) imageId: string,
+    @Param("id", { schema: uuidSchema }) id: string,
+    @Param("imageId", { schema: uuidSchema }) imageId: string,
   ): Promise<{ items: AdminImage[] }> {
     return { items: await this.images.remove(member.storeId, id, imageId) };
   }

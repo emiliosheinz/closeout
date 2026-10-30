@@ -10,6 +10,7 @@ import { withNuqsTestingAdapter } from "nuqs/adapters/testing";
 import { inviteKeys, type PendingInvite } from "@/entities/invite";
 import { memberKeys, type TeamMember } from "@/entities/member";
 import { renderWithFeedback as renderWithProviders } from "@/test/feedback-harness";
+import { problemResponse } from "@/test/fixtures";
 import { TeamView } from "../team-view";
 
 const Nuqs = withNuqsTestingAdapter();
@@ -310,10 +311,7 @@ describe("TeamView for a manager", () => {
   it("shows the API message and keeps the dialog open when saving fails", async () => {
     stubApi((method) =>
       method === "PATCH"
-        ? Response.json(
-            { message: "Informe o WhatsApp com o código do país" },
-            { status: 400 },
-          )
+        ? problemResponse(400, "Informe o WhatsApp com o código do país")
         : undefined,
     );
     renderManager();

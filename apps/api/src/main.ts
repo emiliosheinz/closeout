@@ -1,19 +1,30 @@
-import { Logger } from "@nestjs/common";
+import { Logger, Module, type OnApplicationShutdown } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
-import { AppModule } from "./app.module";
-import { configureApp } from "./configure-app";
+import { serverScope } from "./config/config";
+import { parseOrExit } from "./config/report";
+import { appSetup } from "./configure-app";
+import { shutdownTracing } from "./tracing";
+
+/** Flushes pending spans on close, after the HTTP adapter has drained. */
+@Module({})
+class Server implements OnApplicationShutdown {
+  onApplicationShutdown() {
+    return shutdownTracing();
+  }
+}
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
-  configureApp(app);
-
-  if (!process.env.PORT || !process.env.HOST) {
-    throw new Error("PORT and HOST must be defined in environment variables");
-  }
-
-  await app.listen(process.env.PORT, process.env.HOST);
-  new Logger("Bootstrap").log(
-    `API listening on http://${process.env.HOST}:${process.env.PORT}`,
+  const config = parseOrExit(serverScope);
+  const setup = appSetup(config);
+  const app = await NestFactory.create(
+    { module: Server, imports: [setup.module] },
+    setup.options,
   );
+  setup.configure(app);
+  app.enableShutdownHooks([], { useProcessExit: true });
+
+  const { port, host } = config.http;
+  await app.listen(port, host);
+  new Logger("Bootstrap").log({ host, port }, "API listening");
 }
 bootstrap();

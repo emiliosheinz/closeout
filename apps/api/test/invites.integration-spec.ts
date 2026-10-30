@@ -16,10 +16,13 @@ const INVITE_INVALID =
   "Este convite é inválido ou expirou. Peça um novo link a quem convidou você.";
 const HAS_ACCOUNT = "Este e-mail já tem uma conta.";
 const TOO_MANY = "Muitas tentativas. Tente novamente em alguns minutos.";
+const INVITE_NOT_FOUND = "Convite não encontrado.";
 const INVALID_BODY = {
-  statusCode: 404,
-  message: INVITE_INVALID,
-  error: "Not Found",
+  type: "about:blank",
+  title: "Not Found",
+  status: 404,
+  detail: INVITE_INVALID,
+  requestId: expect.any(String),
 };
 const WEEK_MS = 168 * 60 * 60 * 1000;
 const NEW_PASSWORD = "senha-forte-123";
@@ -138,8 +141,22 @@ describe("store invites", () => {
           .post(invites())
           .send({ email, role: "seller" })
           .expect(400);
-        expect(res.body.message).toContain("Informe um e-mail válido.");
+        expect(res.body.errors).toEqual([
+          { pointer: "/email", detail: "Informe um e-mail válido." },
+        ]);
       }
+    });
+
+    it("reports every required field of an empty invite", async () => {
+      const res = await asOwner()
+        .post(invites())
+        .set("Content-Type", "application/json")
+        .expect(400);
+      expect(res.body.detail).toBe("Informe um e-mail válido.");
+      expect(res.body.errors).toEqual([
+        { pointer: "/email", detail: "Informe um e-mail válido." },
+        { pointer: "/role", detail: "Escolha o papel da pessoa." },
+      ]);
     });
 
     it("refuses emails that already have an account, wherever it belongs", async () => {
@@ -157,7 +174,7 @@ describe("store invites", () => {
           .post(invites())
           .send({ email, role: "seller" })
           .expect(409);
-        expect(res.body.message).toBe(HAS_ACCOUNT);
+        expect(res.body.detail).toBe(HAS_ACCOUNT);
       }
       expect(
         await count(`SELECT COUNT(*)::int AS count FROM store_invites`),
@@ -188,8 +205,14 @@ describe("store invites", () => {
       );
       const list = await asOwner().get(invites()).expect(200);
       expect(list.body.items).toEqual([]);
-      await asOwner().delete(`${invites()}/${expired.id}`).expect(404);
-      await asOwner().post(`${invites()}/${expired.id}/regenerate`).expect(404);
+      const revoked = await asOwner()
+        .delete(`${invites()}/${expired.id}`)
+        .expect(404);
+      const regenerated = await asOwner()
+        .post(`${invites()}/${expired.id}/regenerate`)
+        .expect(404);
+      expect(revoked.body.detail).toBe(INVITE_NOT_FOUND);
+      expect(regenerated.body.detail).toBe(INVITE_NOT_FOUND);
 
       await invite("nova@example.com");
       const emails = await ctx.dataSource.query(
@@ -286,6 +309,25 @@ describe("store invites", () => {
       }
     });
 
+    it("answers an unmatched token of up to 200 characters as an invalid link", async () => {
+      const unmatched = "x".repeat(200);
+      expect((await lookup(unmatched).expect(404)).body).toEqual(INVALID_BODY);
+      expect((await accept(unmatched).expect(404)).body).toEqual(INVALID_BODY);
+    });
+
+    it("rejects an empty or over-long token as malformed", async () => {
+      for (const token of ["", "x".repeat(201)]) {
+        const opened = await lookup(token).expect(400);
+        expect(opened.body.errors).toEqual([
+          { pointer: "/token", detail: "Valor inválido." },
+        ]);
+        const submitted = await accept(token).expect(400);
+        expect(submitted.body.errors).toEqual([
+          { pointer: "/token", detail: "Valor inválido." },
+        ]);
+      }
+    });
+
     it("treats a link as invalid from the moment it expires", async () => {
       const { id, token } = await invite("nova@example.com");
       await ctx.dataSource.query(
@@ -338,6 +380,28 @@ describe("store invites", () => {
         },
       ]);
       await lookup(token).expect(404);
+    });
+
+    it("tells the new member to sign in when the account exists but no session could be opened", async () => {
+      const { token } = await invite("nova@example.com");
+      await ctx.dataSource.query(`
+        CREATE FUNCTION refuse_sessions() RETURNS trigger LANGUAGE plpgsql
+          AS $$ BEGIN RAISE EXCEPTION 'sessions unavailable'; END $$;
+        CREATE TRIGGER refuse_sessions BEFORE INSERT ON sessions
+          FOR EACH ROW EXECUTE FUNCTION refuse_sessions();
+      `);
+      try {
+        const res = await accept(token).expect(500);
+        expect(res.body.detail).toBe(
+          "Sua conta foi criada, mas não foi possível entrar. Entre com seu e-mail e senha.",
+        );
+      } finally {
+        await ctx.dataSource.query(`
+          DROP TRIGGER refuse_sessions ON sessions;
+          DROP FUNCTION refuse_sessions();
+        `);
+      }
+      expect(await usersWithEmail("nova@example.com")).toBe(1);
     });
 
     it("creates an admin without WhatsApp when none is given", async () => {
@@ -405,7 +469,9 @@ describe("store invites", () => {
       ] as const;
       for (const [fields, message] of cases) {
         const res = await accept(token, fields).expect(400);
-        expect(res.body.message).toEqual([message]);
+        expect(res.body.errors).toEqual([
+          { pointer: `/${Object.keys(fields)[0]}`, detail: message },
+        ]);
       }
       expect(await usersWithEmail("nova@example.com")).toBe(0);
       await lookup(token).expect(200);
@@ -419,7 +485,7 @@ describe("store invites", () => {
       });
 
       const res = await accept(token).expect(409);
-      expect(res.body.message).toBe(HAS_ACCOUNT);
+      expect(res.body.detail).toBe(HAS_ACCOUNT);
       await lookup(token).expect(404);
       const users = await ctx.dataSource.query(
         `SELECT name FROM users WHERE email = 'nova@example.com'`,
@@ -455,9 +521,9 @@ describe("store invites", () => {
         await accept(`desconhecido-${i}`).expect(404);
       }
       const blockedLookup = await lookup(token).expect(429);
-      expect(blockedLookup.body.message).toBe(TOO_MANY);
+      expect(blockedLookup.body.detail).toBe(TOO_MANY);
       const blockedAccept = await accept(token).expect(429);
-      expect(blockedAccept.body.message).toBe(TOO_MANY);
+      expect(blockedAccept.body.detail).toBe(TOO_MANY);
       expect(await usersWithEmail("nova@example.com")).toBe(0);
 
       const elsewhere = "192.0.2.200";
@@ -473,12 +539,12 @@ describe("store invites", () => {
       await accept(token).expect(200);
       await lookup("desconhecido-9").expect(404);
       const blocked = await lookup("desconhecido-10").expect(429);
-      expect(blocked.body.message).toBe(TOO_MANY);
+      expect(blocked.body.detail).toBe(TOO_MANY);
     });
 
     it("lets a blocked client try again once 15 minutes have passed", async () => {
       const start = Date.now();
-      const clock = jest.spyOn(Date, "now").mockReturnValue(start);
+      const clock = vi.spyOn(Date, "now").mockReturnValue(start);
       try {
         const { token } = await invite("nova@example.com");
         for (let i = 0; i < 10; i++) {
@@ -493,6 +559,80 @@ describe("store invites", () => {
       }
     });
 
+    it("does not count refused attempts, so a blocked client is let back in when its failures expire", async () => {
+      const minute = 60 * 1000;
+      const start = Date.now();
+      const clock = vi.spyOn(Date, "now").mockReturnValue(start);
+      try {
+        const { token } = await invite("nova@example.com");
+        for (let i = 0; i < 10; i++) {
+          await lookup(`desconhecido-${i}`).expect(404);
+        }
+        clock.mockReturnValue(start + 5 * minute);
+        for (let i = 0; i < 10; i++) {
+          await lookup(token).expect(429);
+        }
+        clock.mockReturnValue(start + 15 * minute);
+        await lookup(token).expect(200);
+      } finally {
+        clock.mockRestore();
+      }
+    });
+
+    it("tells a blocked client when to retry", async () => {
+      const minute = 60 * 1000;
+      const start = Date.now();
+      const clock = vi.spyOn(Date, "now").mockReturnValue(start);
+      try {
+        const { token } = await invite("nova@example.com");
+        for (let i = 0; i < 10; i++) {
+          await lookup(`desconhecido-${i}`).expect(404);
+        }
+        clock.mockReturnValue(start + 5 * minute);
+        const blockedLookup = await lookup(token).expect(429);
+        expect(blockedLookup.headers["retry-after"]).toBe("600");
+        expect(blockedLookup.body.detail).toBe(TOO_MANY);
+        clock.mockReturnValue(start + 15 * minute - 1);
+        const blockedAccept = await accept(token).expect(429);
+        expect(blockedAccept.headers["retry-after"]).toBe("1");
+        expect(blockedAccept.body.detail).toBe(TOO_MANY);
+      } finally {
+        clock.mockRestore();
+      }
+    });
+
+    it("counts only invalid links, not accepted, existing-account or sign-in-failed outcomes", async () => {
+      const existing = await invite("existente@example.com");
+      await addMember(ctx, owner, {
+        email: "existente@example.com",
+        name: "Pela CLI",
+      });
+      const valid = await invite("nova@example.com");
+      const unlucky = await invite("azar@example.com");
+      for (let i = 0; i < 9; i++) await lookup(`desconhecido-${i}`).expect(404);
+
+      await accept(existing.token).expect(409);
+      await accept(valid.token).expect(200);
+      await ctx.dataSource.query(`
+        CREATE FUNCTION refuse_sessions() RETURNS trigger LANGUAGE plpgsql
+          AS $$ BEGIN RAISE EXCEPTION 'sessions unavailable'; END $$;
+        CREATE TRIGGER refuse_sessions BEFORE INSERT ON sessions
+          FOR EACH ROW EXECUTE FUNCTION refuse_sessions();
+      `);
+      try {
+        await accept(unlucky.token).expect(500);
+      } finally {
+        await ctx.dataSource.query(`
+          DROP TRIGGER refuse_sessions ON sessions;
+          DROP FUNCTION refuse_sessions();
+        `);
+      }
+
+      await lookup("desconhecido-9").expect(404);
+      const blocked = await lookup("desconhecido-10").expect(429);
+      expect(blocked.body.detail).toBe(TOO_MANY);
+    });
+
     it("answers only internal calls that carry the visitor's IP", async () => {
       const { token } = await invite("nova@example.com");
       const server = ctx.app.getHttpServer();
@@ -504,17 +644,23 @@ describe("store invites", () => {
         ],
       ] as const;
       for (const [path, body] of calls) {
-        await request(server)
+        const external = await request(server)
           .post(path)
           .set("Origin", ORIGIN)
           .set("x-client-ip", ip)
           .send(body)
           .expect(403);
-        await request(server)
+        expect(external.body.detail).toBe(
+          "Você não tem permissão para esta ação.",
+        );
+        const withoutIp = await request(server)
           .post(path)
           .set("x-internal-secret", INTERNAL_SECRET)
           .send(body)
           .expect(400);
+        expect(withoutIp.body.detail).toBe(
+          "Não foi possível identificar a origem da requisição.",
+        );
       }
       await lookup(token).expect(200);
     });
