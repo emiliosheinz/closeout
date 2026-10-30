@@ -73,7 +73,7 @@ apps/
   api/          NestJS + TypeORM API, the only database owner: auth, stores, catalog, media
   web/          Next.js App Router: public storefront and admin, talks to the API over HTTP
 packages/
-  config/       Shared Biome, TypeScript and Jest configuration
+  config/       Shared Biome and TypeScript configuration
 docker/         Development tooling image
 bin/closeout    Docker wrapper for every command
 scripts/        setup-env.sh
