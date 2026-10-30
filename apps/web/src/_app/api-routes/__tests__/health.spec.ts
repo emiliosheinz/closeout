@@ -52,10 +52,12 @@ describe("GET /health", () => {
   it.each([
     ["PUBLIC_BASE_URL", "https://"],
     ["API_BASE_URL", "http://:8080"],
+    ["API_BASE_URL", "unusable-value-that-must-never-leak"],
   ])("is not ready when %s is %p", async (name, value) => {
     process.env[name] = value;
     const { status, body } = await check();
     expect(status).toBe(503);
     expect(JSON.parse(body).unusable).toEqual([name]);
+    expect(body).not.toContain(value);
   });
 });
