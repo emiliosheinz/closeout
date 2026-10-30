@@ -252,7 +252,7 @@ describe("admin authentication", () => {
       .expect(200);
   });
 
-  it("guards every route except the public catalog, media, health, login and invite acceptance", () => {
+  it("guards every route except the public catalog, media and health", () => {
     const open = registeredRoutes(ctx.app)
       .filter((route) => !route.guarded)
       .map((route) => `${route.method} ${route.path}`)
@@ -264,9 +264,6 @@ describe("admin authentication", () => {
       "GET /public/stores/:storeSlug",
       "GET /public/stores/:storeSlug/listings",
       "GET /public/stores/:storeSlug/listings/:listingSlug",
-      "POST /auth/invites/accept",
-      "POST /auth/invites/lookup",
-      "POST /auth/login",
     ]);
   });
 
