@@ -1,5 +1,5 @@
 {
-  "src/__tests__/health.spec.ts": "src/__tests__/health.spec.ts",
+  "src/__tests__/health.spec.ts": "src/_app/api-routes/__tests__/health.spec.ts",
   "src/__tests__/next-config.spec.ts": "src/__tests__/next-config.spec.ts",
   "src/__tests__/proxy.spec.ts": "src/__tests__/proxy.spec.ts",
   "src/__tests__/robots.spec.ts": "src/__tests__/robots.spec.ts",
