@@ -559,6 +559,26 @@ describe("store invites", () => {
       }
     });
 
+    it("does not count refused attempts, so a blocked client is let back in when its failures expire", async () => {
+      const minute = 60 * 1000;
+      const start = Date.now();
+      const clock = vi.spyOn(Date, "now").mockReturnValue(start);
+      try {
+        const { token } = await invite("nova@example.com");
+        for (let i = 0; i < 10; i++) {
+          await lookup(`desconhecido-${i}`).expect(404);
+        }
+        clock.mockReturnValue(start + 5 * minute);
+        for (let i = 0; i < 10; i++) {
+          await lookup(token).expect(429);
+        }
+        clock.mockReturnValue(start + 15 * minute);
+        await lookup(token).expect(200);
+      } finally {
+        clock.mockRestore();
+      }
+    });
+
     it("tells a blocked client when to retry", async () => {
       const minute = 60 * 1000;
       const start = Date.now();

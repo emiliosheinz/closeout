@@ -105,6 +105,26 @@ describe("admin authentication", () => {
     }
   });
 
+  it("does not count refused attempts, so a blocked client is let back in when its failures expire", async () => {
+    const minute = 60 * 1000;
+    const start = Date.now();
+    const clock = vi.spyOn(Date, "now").mockReturnValue(start);
+    try {
+      await createStoreWithAdmin(ctx, "insiste");
+      for (let i = 0; i < 10; i++) {
+        await attempt("insiste@example.com", "wrong").expect(401);
+      }
+      clock.mockReturnValue(start + 5 * minute);
+      for (let i = 0; i < 10; i++) {
+        await attempt("insiste@example.com", PASSWORD).expect(429);
+      }
+      clock.mockReturnValue(start + 15 * minute);
+      await attempt("insiste@example.com", PASSWORD).expect(200);
+    } finally {
+      clock.mockRestore();
+    }
+  });
+
   it("counts emails that differ only in case or surrounding spaces together", async () => {
     await createStoreWithAdmin(ctx, "caixa");
     const spellings = [
