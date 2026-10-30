@@ -247,8 +247,9 @@ The `api` service has Railway tracing enabled in `railway.ts`, and it sets no
 and auth header. Tracing is a Railway preview feature and must be turned on for the
 account first (the `TRACING` beta feature) by an operator, before the first plan
 that includes it; the apply does not do it. Traces show on the service's Traces
-page. Railway accepts 1,000 spans per 10 seconds per replica and rejects the rest. The Railway auto-instrumentation stays off, because it would bypass the
-attribute allow-list.
+page. Railway accepts 1,000 spans per 10 seconds per replica and rejects the rest.
+The Railway auto-instrumentation stays off, because it would bypass the attribute
+allow-list.
 
 ### Operator CLI
 
