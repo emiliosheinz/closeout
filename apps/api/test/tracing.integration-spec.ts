@@ -1,6 +1,7 @@
 import { once } from "node:events";
 import { createServer as createHttpServer, type Server } from "node:http";
 import { createServer as createTcpServer, type Socket } from "node:net";
+import path from "node:path";
 import { type BuiltServer, freePort, startBuiltServer } from "./child-process";
 import {
   createStoreWithAdmin,
@@ -33,6 +34,9 @@ const ALLOWED_KEYS = [
   "aws.s3.bucket",
 ];
 const SERVER = 2;
+const STATUS_ERROR = 2;
+/** Preloaded into the server: emits one OpenTelemetry log record once running. */
+const EMIT_LOG_RECORD = path.join(__dirname, "emit-log-record.cjs");
 /** A trace context whose caller chose not to sample it (flags 00). */
 const UNSAMPLED_TRACE_ID = "4bf92f3577b34da6a3ce929d0e0e4736";
 const UNSAMPLED_PARENT = `00-${UNSAMPLED_TRACE_ID}-00f067aa0ba902b7-00`;
@@ -42,6 +46,7 @@ let uploadUrl: string;
 let cookie: string;
 let bucket: Server;
 let bucketRequests: string[];
+let bucketFails: boolean;
 let bucketEndpoint: string;
 
 beforeAll(async () => {
@@ -57,7 +62,14 @@ beforeAll(async () => {
   bucket = createHttpServer((req, res) => {
     bucketRequests.push(`${req.method} ${req.url}`);
     req.resume();
-    req.on("end", () => res.writeHead(200, { etag: '"stub"' }).end());
+    req.on("end", () => {
+      if (!bucketFails) return res.writeHead(200, { etag: '"stub"' }).end();
+      res
+        .writeHead(500, { "content-type": "application/xml" })
+        .end(
+          `<Error><Code>InternalError</Code><Message>${SENTINEL}-bucket</Message></Error>`,
+        );
+    });
   }).listen(0, "127.0.0.1");
   await once(bucket, "listening");
   const address = bucket.address();
@@ -76,6 +88,7 @@ describe("tracing", () => {
   let receiver: OtlpStub | undefined;
   beforeEach(() => {
     bucketRequests.length = 0;
+    bucketFails = false;
   });
   afterEach(async () => {
     if (server && server.child.exitCode === null) server.child.kill("SIGKILL");
@@ -179,8 +192,9 @@ describe("tracing", () => {
     expect(puts[0]?.attributes["aws.s3.bucket"]).toBe("media");
     // Outgoing HTTP client spans stay off: the S3 span covers the call.
     expect(children.filter((span) => span.name === "PUT")).toEqual([]);
+    // All spans, not only the request's: the pool connects at boot too.
     expect(
-      children.filter((span) => /^pg(-pool)?\.connect/.test(span.name)),
+      spans.filter((span) => /^pg(-pool)?\.connect/.test(span.name)),
     ).toEqual([]);
   });
 
@@ -203,6 +217,28 @@ describe("tracing", () => {
     for (const request of (receiver as OtlpStub).requests) {
       expect(request.body.includes(SENTINEL)).toBe(false);
       expect(request.body.includes(sessionToken)).toBe(false);
+    }
+  });
+
+  it("exports no error details from a failed S3 call", async () => {
+    bucketFails = true;
+    const run = await startTraced();
+    await upload(run.url);
+    await stop(run);
+
+    const spans = exportedSpans(receiver as OtlpStub);
+    const failed = spans.filter(
+      (span) =>
+        span.attributes["rpc.service"] === "S3" &&
+        span.status.code === STATUS_ERROR,
+    );
+    expect(failed.length).toBeGreaterThan(0);
+    for (const span of spans) {
+      expect(span.events).toBe(0);
+      expect(span.status.message).toBe("");
+    }
+    for (const request of (receiver as OtlpStub).requests) {
+      expect(request.body.includes(SENTINEL)).toBe(false);
     }
   });
 
@@ -282,7 +318,10 @@ describe("tracing", () => {
     ["unset", {}],
     ["set", { OTEL_METRICS_EXPORTER: "otlp", OTEL_LOGS_EXPORTER: "otlp" }],
   ])("sends traces only with the metrics and logs exporters %s", async (_case, env) => {
-    const run = await startTraced(env);
+    const run = await startTraced({
+      ...env,
+      NODE_OPTIONS: `--require ${EMIT_LOG_RECORD}`,
+    });
     expect((await fetch(`${run.url}/health`)).status).toBe(200);
     await stop(run);
 
