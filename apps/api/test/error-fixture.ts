@@ -11,13 +11,11 @@ const FIXTURE = path.join(__dirname, "fixtures", "error-responses.json");
  * documents, keyed `"<METHOD> <route pattern> <status>"`. `recorded` holds
  * the messages captured then; `expectedDetail` is the `detail` every
  * response under the key must carry now (a list when several throw sites
- * share the key). `changedBy` names the behaviour change that moved the
- * outcome away from the recording.
+ * share the key).
  */
 interface FixtureEntry {
   recorded: string[];
   expectedDetail: string | string[];
-  changedBy?: string;
 }
 
 /**
@@ -60,8 +58,8 @@ export function installErrorObserver(
 
 /**
  * Compares the observed responses with the fixture. Returns one line per
- * problem: an entry never observed (unless a behaviour change accounts for
- * it) or a key whose observed details differ from its expected ones.
+ * problem: an entry never observed or a key whose observed details differ
+ * from its expected ones.
  */
 export function compareWithFixture(observedFile: string): string[] {
   const fixture: Record<string, FixtureEntry> = JSON.parse(
@@ -77,7 +75,7 @@ export function compareWithFixture(observedFile: string): string[] {
   for (const [key, entry] of Object.entries(fixture)) {
     const seen = observed.get(key);
     if (!seen) {
-      if (!entry.changedBy) problems.push(`${key}: never observed`);
+      problems.push(`${key}: never observed`);
       continue;
     }
     const expected = [entry.expectedDetail].flat().sort();
