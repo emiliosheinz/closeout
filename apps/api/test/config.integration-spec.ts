@@ -4,10 +4,13 @@ import { setTimeout as sleep } from "node:timers/promises";
 import {
   accepts,
   type BuiltProcess,
+  type BuiltServer,
   freePort,
   runBuilt,
   runInApi,
+  startBuiltServer,
 } from "./child-process";
+import { type OtlpStub, startOtlpStub } from "./otlp-stub";
 
 type Entry = "server" | "cli" | "migrate" | "TypeORM CLI";
 type Env = Record<string, string | undefined>;
@@ -88,6 +91,18 @@ const CASES: [string, Env, string[], Entry[]][] = [
     ["LOG_LEVEL"],
     ["server", "migrate"],
   ],
+  [
+    "OTEL_EXPORTER_OTLP_ENDPOINT without a scheme",
+    { OTEL_EXPORTER_OTLP_ENDPOINT: "collector:4318" },
+    ["OTEL_EXPORTER_OTLP_ENDPOINT"],
+    ["server"],
+  ],
+  [
+    "OTEL_EXPORTER_OTLP_ENDPOINT not http(s)",
+    { OTEL_EXPORTER_OTLP_ENDPOINT: "grpc://collector:4317" },
+    ["OTEL_EXPORTER_OTLP_ENDPOINT"],
+    ["server"],
+  ],
 ];
 
 const SEVERAL: Record<Entry, Env> = {
@@ -97,6 +112,7 @@ const SEVERAL: Record<Entry, Env> = {
     INTERNAL_API_SECRET: "short",
     POSTGRES_DB: "",
     LOG_LEVEL: "verbose",
+    OTEL_EXPORTER_OTLP_ENDPOINT: "collector",
   },
   cli: {
     PUBLIC_BASE_URL: "/store",
@@ -133,6 +149,7 @@ const SENTINEL_ENV: Env = {
   MEDIA_DIR: `${SENTINEL}-media`,
   CLOSEOUT_PASSWORD: `${SENTINEL}-password`,
   LOG_LEVEL: `${SENTINEL}-level`,
+  OTEL_EXPORTER_OTLP_ENDPOINT: `${SENTINEL}-otlp`,
 };
 
 /** Stands in for Postgres and counts every connection it accepts. */
@@ -264,5 +281,42 @@ describe("configuration at every entry point", () => {
     const outcome = await launch("migrate", {});
     expect(outcome.code).not.toBe(0);
     expect(outcome.connections).toBeGreaterThan(0);
+  });
+});
+
+describe("tracing endpoint", () => {
+  let server: BuiltServer | undefined;
+  let receiver: OtlpStub | undefined;
+  afterEach(async () => {
+    if (server && server.child.exitCode === null) server.child.kill("SIGKILL");
+    server = undefined;
+    await receiver?.close();
+    receiver = undefined;
+  });
+
+  /** Serves one request that queries the database, then stops the server. */
+  async function serveOneRequest(env: Env): Promise<BuiltServer> {
+    server = await startBuiltServer(env);
+    expect((await fetch(`${server.url}/health`)).status).toBe(200);
+    server.child.kill("SIGTERM");
+    expect(await server.exit).toEqual({ code: 0, signal: null });
+    return server;
+  }
+
+  it("exports nothing, not even to the default receiver, when unset", async () => {
+    receiver = await startOtlpStub(4318);
+    const run = await serveOneRequest({ OTEL_EXPORTER_OTLP_ENDPOINT: "" });
+
+    expect(receiver.requests).toEqual([]);
+    expect(`${run.stdout()}${run.stderr()}`).not.toMatch(/otlp|export/i);
+  });
+
+  it("exports traces to the configured receiver", async () => {
+    receiver = await startOtlpStub(4318);
+    await serveOneRequest({ OTEL_EXPORTER_OTLP_ENDPOINT: receiver.url });
+
+    expect(receiver.requests.map((request) => request.path)).toContain(
+      "/v1/traces",
+    );
   });
 });

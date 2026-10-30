@@ -37,16 +37,25 @@ export async function freePort(): Promise<number> {
   return address.port;
 }
 
+/** Node options a script runs with in the production image. */
+const PRODUCTION_PRELOAD: Record<string, string[]> = {
+  "main.js": ["--require", "./dist/tracing.js"],
+};
+
 /**
- * Run a script from the API build output (`dist/`), with the test run's env
- * plus `env`, capturing its output.
+ * Run a script from the API build output (`dist/`) as the production image
+ * does, with the test run's env plus `env`, capturing its output.
  */
 export function runBuilt(
   script: string,
   env: NodeJS.ProcessEnv = {},
   args: string[] = [],
 ): BuiltProcess {
-  return runInApi(process.execPath, [path.join("dist", script), ...args], env);
+  return runInApi(
+    process.execPath,
+    [...(PRODUCTION_PRELOAD[script] ?? []), path.join("dist", script), ...args],
+    env,
+  );
 }
 
 /**

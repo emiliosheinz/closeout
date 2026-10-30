@@ -77,7 +77,8 @@ const port = z
   .transform(Number)
   .refine((value) => value >= 1 && value <= 65_535, { error: PORT_RULE });
 
-const httpUrl = z.url({
+/** An absolute http(s) URL with a host. */
+export const httpUrl = z.url({
   protocol: /^https?$/,
   hostname: /.+/,
   error: URL_RULE,
