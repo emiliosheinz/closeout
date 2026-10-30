@@ -21,9 +21,11 @@ describe("LoginRateLimiter", () => {
 
   it("blocks an email after thirty failures spread across clients", () => {
     const limiter = new LoginRateLimiter();
-    for (let i = 0; i < 30; i++) {
+    for (let i = 0; i < 29; i++) {
       limiter.recordFailure("A@x.com", `10.0.0.${i}`, 0);
     }
+    expect(limiter.isBlocked("a@x.com", "10.9.9.9", 0)).toBe(false);
+    limiter.recordFailure("a@x.com", "10.0.0.29", 0);
     expect(limiter.isBlocked("a@x.com", "10.9.9.9", 0)).toBe(true);
   });
 
@@ -42,6 +44,18 @@ describe("LoginRateLimiter", () => {
       limiter.forgiveSuccess("a@x.com", `10.0.0.${i}`, 0);
     }
     expect(limiter.isBlocked("a@x.com", "10.9.9.9", 0)).toBe(false);
+  });
+
+  it("keeps counting other failures on the email after a successful login", () => {
+    const limiter = new LoginRateLimiter();
+    for (let i = 0; i < 29; i++) {
+      limiter.recordFailure("a@x.com", `10.0.0.${i}`, 0);
+    }
+    limiter.recordFailure("a@x.com", "10.0.1.1", 0);
+    limiter.forgiveSuccess("a@x.com", "10.0.1.1", 0);
+    expect(limiter.isBlocked("a@x.com", "10.9.9.9", 0)).toBe(false);
+    limiter.recordFailure("a@x.com", "10.0.1.2", 0);
+    expect(limiter.isBlocked("a@x.com", "10.9.9.9", 0)).toBe(true);
   });
 
   it("blocks one IP after thirty failures across rotating emails", () => {
@@ -71,6 +85,18 @@ describe("LoginRateLimiter", () => {
       limiter.forgiveSuccess(`u${i}@x.com`, "9.9.9.9", 0);
     }
     expect(limiter.isBlocked("x@x.com", "9.9.9.9", 0)).toBe(false);
+  });
+
+  it("keeps counting other failures on the IP after a successful login", () => {
+    const limiter = new LoginRateLimiter();
+    for (let i = 0; i < 29; i++) {
+      limiter.recordFailure(`u${i}@x.com`, "9.9.9.9", 0);
+    }
+    limiter.recordFailure("owner@x.com", "9.9.9.9", 0);
+    limiter.forgiveSuccess("owner@x.com", "9.9.9.9", 0);
+    expect(limiter.isBlocked("x@x.com", "9.9.9.9", 0)).toBe(false);
+    limiter.recordFailure("u29@x.com", "9.9.9.9", 0);
+    expect(limiter.isBlocked("x@x.com", "9.9.9.9", 0)).toBe(true);
   });
 
   it("shares counts between emails that differ only in case", () => {
