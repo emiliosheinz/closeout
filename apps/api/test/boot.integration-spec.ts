@@ -11,7 +11,10 @@ describe("production build", () => {
     server = await startBuiltServer();
     const res = await fetch(`${server.url}/health`);
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ status: "ok" });
+    expect(await res.json()).toEqual({
+      status: "ok",
+      checks: { database: "up" },
+    });
   });
 
   it("exits 0 within 15 s of SIGTERM", async () => {
