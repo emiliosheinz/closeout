@@ -1,7 +1,12 @@
+import { register } from "node:module";
 import { setTimeout as sleep } from "node:timers/promises";
+import { pathToFileURL } from "node:url";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-proto";
 import { AwsInstrumentation } from "@opentelemetry/instrumentation-aws-sdk";
-import { ExpressInstrumentation } from "@opentelemetry/instrumentation-express";
+import {
+  ExpressInstrumentation,
+  ExpressLayerType,
+} from "@opentelemetry/instrumentation-express";
 import { HttpInstrumentation } from "@opentelemetry/instrumentation-http";
 import { PgInstrumentation } from "@opentelemetry/instrumentation-pg";
 import { NodeSDK } from "@opentelemetry/sdk-node";
@@ -31,6 +36,11 @@ const { tracing } = parseOrExit({
 const sdk = tracing.OTEL_EXPORTER_OTLP_ENDPOINT ? startSdk() : undefined;
 
 function startSdk(): NodeSDK {
+  // Nest's ESM packages import express: patching it needs the ESM loader hook.
+  register(
+    "@opentelemetry/instrumentation/hook.mjs",
+    pathToFileURL(__filename),
+  );
   const exporter = new OTLPTraceExporter({ timeoutMillis: EXPORT_TIMEOUT_MS });
   const sdk = new NodeSDK({
     // Incoming trace context is continued but cannot opt a request out.
@@ -44,7 +54,10 @@ function startSdk(): NodeSDK {
     instrumentations: [
       // The AWS SDK span already covers each S3 call.
       new HttpInstrumentation({ disableOutgoingRequestInstrumentation: true }),
-      new ExpressInstrumentation(),
+      // One span per middleware would spend Railway's span budget on noise.
+      new ExpressInstrumentation({
+        ignoreLayersType: [ExpressLayerType.MIDDLEWARE],
+      }),
       new PgInstrumentation({ ignoreConnectSpans: true }),
       new AwsInstrumentation(),
     ],

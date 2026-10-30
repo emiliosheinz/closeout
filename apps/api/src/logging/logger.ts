@@ -1,3 +1,4 @@
+import { trace } from "@opentelemetry/api";
 import {
   type DestinationStream,
   type Logger,
@@ -8,7 +9,8 @@ import type { LoggingConfig } from "@/config/config";
 import { errorMessage, REDACTED_PATHS, serializers } from "./serializers";
 
 /**
- * The process logger: lines on stdout in the configured format.
+ * The process logger: lines on stdout in the configured format. Lines
+ * written inside a traced request carry its `trace_id`.
  * `destination` replaces stdout (always JSON), which is how tests capture
  * lines in memory.
  */
@@ -20,6 +22,7 @@ export function createLogger(
     level,
     serializers,
     redact: { paths: REDACTED_PATHS },
+    mixin: () => ({ trace_id: trace.getActiveSpan()?.spanContext().traceId }),
     hooks: {
       logMethod(args, method) {
         const [first, second] = args as unknown[];
