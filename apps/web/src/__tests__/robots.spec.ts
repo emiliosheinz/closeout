@@ -13,4 +13,9 @@ describe("robots", () => {
       sitemap: "https://closeout.example/sitemap.xml",
     });
   });
+
+  it("does not disallow the waitlist page", () => {
+    const { disallow } = robots().rules as { disallow: string[] };
+    expect(disallow.filter((rule) => "/waitlist".startsWith(rule))).toEqual([]);
+  });
 });

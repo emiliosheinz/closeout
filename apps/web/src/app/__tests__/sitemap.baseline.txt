@@ -1,5 +1,9 @@
 [
   {
+    "url": "https://closeout.example/waitlist",
+    "priority": 0.5
+  },
+  {
     "url": "https://closeout.example/store/nosso-desapego",
     "changeFrequency": "daily",
     "priority": 1

@@ -10,7 +10,9 @@ export const dynamic = "force-dynamic";
 
 /** Every store's catalog plus its published listings (sold ones keep their page). */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const entries: MetadataRoute.Sitemap = [];
+  const entries: MetadataRoute.Sitemap = [
+    { url: absoluteUrl("/waitlist"), priority: 0.5 },
+  ];
   for (const slug of await getStoreSlugs()) {
     entries.push({
       url: absoluteUrl(storePath(slug)),

@@ -30,7 +30,8 @@ beforeEach(() => {
 describe("sitemap", () => {
   it("lists every store and every listing across pages with absolute URLs", async () => {
     const urls = (await sitemap()).map((entry) => entry.url);
-    expect(urls).toHaveLength(2 + 101 + 1);
+    expect(urls).toHaveLength(1 + 2 + 101 + 1);
+    expect(urls).toContain("https://closeout.example/waitlist");
     expect(urls).toContain("https://closeout.example/store/nosso-desapego");
     expect(urls).toContain("https://closeout.example/store/loja-da-bia");
     expect(urls).toContain(
