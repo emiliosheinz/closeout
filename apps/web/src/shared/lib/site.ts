@@ -1,3 +1,4 @@
+import type { WaitlistPlacement } from "@closeout/contracts/enums";
 import { requireEnv } from "@/shared/config/env";
 
 /** Absolute origin visitors use, e.g. `https://desapego.example`. */
@@ -16,4 +17,18 @@ export function storePath(slug: string): string {
 
 export function itemPath(slug: string, item: string): string {
   return `${storePath(slug)}/items/${encodeURIComponent(item)}`;
+}
+
+/** Waitlist page, tagged with the placement and, when known, the store it came from. */
+export function waitlistPath({
+  src,
+  ref,
+}: {
+  src: WaitlistPlacement;
+  ref?: string;
+}): string {
+  const params = new URLSearchParams();
+  if (ref) params.set("ref", ref);
+  params.set("src", src);
+  return `/waitlist?${params}`;
 }

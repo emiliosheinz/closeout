@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { waitlistPath } from "@/shared/lib/site";
 
 const DESCRIPTION =
   "Uma vitrine própria para vender o que você não usa mais. Fotografe, compartilhe o link e receba os interessados no WhatsApp.";
@@ -56,12 +57,20 @@ export function LandingPage() {
       </ol>
 
       <div className="mt-12 flex flex-col items-start gap-3">
-        <Link
-          href="/admin/entrar"
-          className="inline-flex h-12 items-center rounded-full bg-ink px-6 text-base font-semibold text-surface hover:bg-ink-soft"
-        >
-          Entrar para gerenciar sua loja
-        </Link>
+        <div className="flex flex-wrap items-center gap-3">
+          <Link
+            href="/admin/entrar"
+            className="inline-flex h-12 items-center rounded-full bg-ink px-6 text-base font-semibold text-surface hover:bg-ink-soft"
+          >
+            Entrar para gerenciar sua loja
+          </Link>
+          <Link
+            href={waitlistPath({ src: "landing" })}
+            className="inline-flex h-12 items-center rounded-full border border-ink px-6 text-base font-semibold text-ink hover:bg-ink/5"
+          >
+            Quero vender meus desapegos
+          </Link>
+        </div>
         <p className="text-sm text-muted">
           Quer comprar? Peça o link da loja a quem está vendendo.
         </p>

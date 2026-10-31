@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { SESSION_EXPIRED_ERROR } from "@/entities/session";
 import { getMe } from "@/entities/session/index.server";
+import { waitlistPath } from "@/shared/lib/site";
 import { LoginForm } from "./login-form";
 
 export const metadata: Metadata = { title: "Entrar" };
@@ -39,6 +41,13 @@ export async function LoginPage({
         </p>
       )}
       <LoginForm />
+      <p className="mt-6 text-sm text-muted">
+        Ainda não tem uma loja?{" "}
+        <Link href={waitlistPath({ src: "login" })} className="underline">
+          Entre na lista de espera
+        </Link>
+        .
+      </p>
     </main>
   );
 }

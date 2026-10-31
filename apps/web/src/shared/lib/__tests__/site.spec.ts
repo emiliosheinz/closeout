@@ -1,4 +1,4 @@
-import { absoluteUrl, itemPath, storePath } from "../site";
+import { absoluteUrl, itemPath, storePath, waitlistPath } from "../site";
 
 describe("store URLs", () => {
   it("roots each store's storefront at its own path", () => {
@@ -25,5 +25,17 @@ describe("store URLs", () => {
     expect(absoluteUrl(itemPath("loja-da-bia", "sofa-x9"))).toBe(
       "https://closeout.example/store/loja-da-bia/items/sofa-x9",
     );
+  });
+});
+
+describe("waitlist URL", () => {
+  it("carries the store and the placement it came from", () => {
+    expect(waitlistPath({ ref: "loja-x", src: "catalog-footer" })).toBe(
+      "/waitlist?ref=loja-x&src=catalog-footer",
+    );
+  });
+
+  it("carries only the placement when no store is known", () => {
+    expect(waitlistPath({ src: "landing" })).toBe("/waitlist?src=landing");
   });
 });
