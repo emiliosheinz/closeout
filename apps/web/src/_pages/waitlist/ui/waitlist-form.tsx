@@ -14,6 +14,7 @@ import { type Resolver, useForm } from "react-hook-form";
 import { readProblem } from "@/shared/api";
 import { Button } from "@/shared/ui/button";
 import { Field, inputClass } from "@/shared/ui/field";
+import { notify } from "@/shared/ui/sonner";
 import type { SignupAttribution } from "../model/signup-attribution";
 
 const FALLBACK_MESSAGE = "Não foi possível entrar na lista agora.";
@@ -104,7 +105,7 @@ export function WaitlistForm({
         }),
       });
     } catch {
-      setError("root", { message: OFFLINE_MESSAGE });
+      notify.error(OFFLINE_MESSAGE);
       return;
     }
     if (response.status === 204) {
@@ -119,7 +120,7 @@ export function WaitlistForm({
     const [pointer, message] = Object.entries(fieldErrors)[0] ?? [];
     const field = pointer ? FIELD_BY_POINTER.get(pointer) : undefined;
     if (field && message) setError(field, { message });
-    else setError("root", { message: detail });
+    else notify.error(detail);
   }
 
   function guarded(event: React.FormEvent<HTMLFormElement>) {
@@ -228,14 +229,6 @@ export function WaitlistForm({
           {...register("website")}
         />
       </div>
-      {errors.root && (
-        <p
-          role="alert"
-          className="rounded-md bg-stamp/10 px-3 py-2 text-sm text-stamp"
-        >
-          {errors.root.message}
-        </p>
-      )}
       <div className="mt-1 flex flex-col gap-3">
         <Button type="submit" size="lg" disabled={isSubmitting}>
           {isSubmitting ? "Enviando..." : "Entrar na lista"}

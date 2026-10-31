@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getStore } from "@/entities/listing/index.server";
 import { storePath } from "@/shared/lib/site";
+import { Toaster } from "@/shared/ui/sonner";
 import { parseSignupAttribution } from "../model/signup-attribution";
 import { WaitlistForm } from "./waitlist-form";
 
@@ -73,6 +74,7 @@ export async function WaitlistPage({
           <WaitlistForm attribution={attribution} storeHref={storeHref} />
         </div>
       </div>
+      <Toaster />
     </main>
   );
 }

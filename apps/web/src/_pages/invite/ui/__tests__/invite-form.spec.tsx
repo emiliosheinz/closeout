@@ -1,11 +1,6 @@
 import { acceptInviteRequestSchema } from "@closeout/contracts/schemas";
-import {
-  act,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from "@testing-library/react";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react";
+import { renderWithToaster } from "@/test/feedback-harness";
 import { problem } from "@/test/fixtures";
 import { InviteForm } from "../invite-form";
 
@@ -16,7 +11,7 @@ describe("InviteForm", () => {
       json: async () => ({}),
     });
     global.fetch = fetchMock as unknown as typeof fetch;
-    render(<InviteForm token="tok" email="ana@loja.test" />);
+    renderWithToaster(<InviteForm token="tok" email="ana@loja.test" />);
     fireEvent.change(screen.getByLabelText("Seu nome"), {
       target: { value: "Ana" },
     });
@@ -59,7 +54,7 @@ describe("InviteForm", () => {
   it("shows the name and password messages without sending a request", async () => {
     const fetchMock = vi.fn();
     global.fetch = fetchMock as unknown as typeof fetch;
-    render(<InviteForm token="tok" email="ana@loja.test" />);
+    renderWithToaster(<InviteForm token="tok" email="ana@loja.test" />);
     fill("  ", "curta");
     submit();
 
@@ -78,7 +73,7 @@ describe("InviteForm", () => {
       ok: false,
       json: async () => ({}),
     }) as unknown as typeof fetch;
-    render(<InviteForm token="tok" email="ana@loja.test" />);
+    renderWithToaster(<InviteForm token="tok" email="ana@loja.test" />);
     fill("", "senha-longa-1");
     submit();
     await screen.findByText("Informe seu nome.");
@@ -110,7 +105,7 @@ describe("InviteForm", () => {
         { pointer: "/whatsappNumber", detail: "Número sem código do país." },
       ]),
     );
-    render(<InviteForm token="tok" email="ana@loja.test" />);
+    renderWithToaster(<InviteForm token="tok" email="ana@loja.test" />);
     fill("Ana", "senha-longa-1");
     submit();
 
@@ -134,7 +129,7 @@ describe("InviteForm", () => {
         { pointer: "/password", detail: "WhatsApp inválido." },
       ]),
     );
-    render(<InviteForm token="tok" email="ana@loja.test" />);
+    renderWithToaster(<InviteForm token="tok" email="ana@loja.test" />);
     fill("Ana", "senha-longa-1");
     submit();
 
@@ -149,9 +144,11 @@ describe("InviteForm", () => {
       "aria-invalid",
       "false",
     );
-    expect(
-      screen.getAllByRole("alert").map((alert) => alert.textContent),
-    ).toContain("Informe seu nome.");
+    await waitFor(() =>
+      expect(
+        screen.getAllByRole("alert").map((alert) => alert.textContent),
+      ).toContain("Informe seu nome."),
+    );
   });
 
   it.each([
@@ -160,9 +157,9 @@ describe("InviteForm", () => {
       404,
       "Este convite é inválido ou expirou. Peça um novo link a quem convidou você.",
     ],
-  ])("shows the %s problem's detail inline in the form", async (status, detail) => {
+  ])("toasts the %s problem's detail", async (status, detail) => {
     failWith(problem(status, detail));
-    render(<InviteForm token="tok" email="ana@loja.test" />);
+    renderWithToaster(<InviteForm token="tok" email="ana@loja.test" />);
     fill("Ana", "senha-longa-1");
     submit();
 
@@ -171,7 +168,7 @@ describe("InviteForm", () => {
 
   it("falls back to a generic message when the body is not a problem", async () => {
     failWith({ message: "Convite expirado." });
-    render(<InviteForm token="tok" email="ana@loja.test" />);
+    renderWithToaster(<InviteForm token="tok" email="ana@loja.test" />);
     fill("Ana", "senha-longa-1");
     submit();
 
@@ -185,7 +182,7 @@ describe("InviteForm", () => {
       ok: false,
       json: async () => ({}),
     }) as unknown as typeof fetch;
-    render(<InviteForm token="tok" email="ana@loja.test" />);
+    renderWithToaster(<InviteForm token="tok" email="ana@loja.test" />);
     fill("Ana", "senha-longa-1");
     submit();
 
@@ -194,11 +191,11 @@ describe("InviteForm", () => {
     );
   });
 
-  it("shows the network message inline when the request cannot be sent", async () => {
+  it("toasts the network message when the request cannot be sent", async () => {
     global.fetch = vi
       .fn()
       .mockRejectedValue(new TypeError("offline")) as unknown as typeof fetch;
-    render(<InviteForm token="tok" email="ana@loja.test" />);
+    renderWithToaster(<InviteForm token="tok" email="ana@loja.test" />);
     fill("Ana", "senha-longa-1");
     submit();
 
@@ -212,7 +209,7 @@ describe("InviteForm", () => {
     vi.stubGlobal("location", { assign });
     const fetchMock = vi.fn().mockResolvedValue({ ok: true });
     global.fetch = fetchMock as unknown as typeof fetch;
-    render(<InviteForm token="tok" email="ana@loja.test" />);
+    renderWithToaster(<InviteForm token="tok" email="ana@loja.test" />);
     fill("Ana", "senha-longa-1");
     submit();
 
@@ -225,7 +222,7 @@ describe("InviteForm", () => {
   });
 
   it("limits the name to 60 and the password to 200 characters", () => {
-    render(<InviteForm token="tok" email="ana@loja.test" />);
+    renderWithToaster(<InviteForm token="tok" email="ana@loja.test" />);
     expect(screen.getByLabelText("Seu nome")).toHaveAttribute(
       "maxlength",
       "60",
@@ -241,7 +238,7 @@ describe("InviteForm", () => {
       }),
     );
     global.fetch = fetchMock as unknown as typeof fetch;
-    const { container } = render(
+    const { container } = renderWithToaster(
       <InviteForm token="tok" email="ana@loja.test" />,
     );
     fill("Ana", "senha-longa-1");
@@ -260,7 +257,7 @@ describe("InviteForm", () => {
     resolve({ ok: false, json: async () => ({}) });
     expect(await screen.findByRole("alert")).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Criar conta e entrar" }),
+      await screen.findByRole("button", { name: "Criar conta e entrar" }),
     ).toBeEnabled();
   });
 });

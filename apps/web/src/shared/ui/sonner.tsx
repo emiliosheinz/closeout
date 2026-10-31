@@ -15,6 +15,8 @@ import { ApiError, GENERIC_ERROR } from "@/shared/api";
 export const notify = {
   success: (message: string, options?: ExternalToast) =>
     toast.success(message, options),
+  info: (message: string, options?: ExternalToast) =>
+    toast.info(message, options),
   error: (message: string, options?: ExternalToast) =>
     toast.error(
       <span role="alert" aria-live="assertive">

@@ -1,11 +1,6 @@
 import { loginRequestSchema } from "@closeout/contracts/schemas";
-import {
-  act,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from "@testing-library/react";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react";
+import { renderWithToaster } from "@/test/feedback-harness";
 import { problem } from "@/test/fixtures";
 import { LoginForm } from "../login-form";
 
@@ -16,7 +11,7 @@ describe("LoginForm", () => {
       json: async () => problem(401, "E-mail ou senha inválidos."),
     });
     global.fetch = fetchMock as unknown as typeof fetch;
-    render(<LoginForm />);
+    renderWithToaster(<LoginForm />);
     fireEvent.change(screen.getByLabelText("E-mail"), {
       target: { value: "ana@loja.test" },
     });
@@ -45,7 +40,7 @@ describe("LoginForm", () => {
       json: async () => problem(401, "E-mail ou senha inválidos."),
     });
     global.fetch = fetchMock as unknown as typeof fetch;
-    render(<LoginForm />);
+    renderWithToaster(<LoginForm />);
     fireEvent.change(screen.getByLabelText("E-mail"), {
       target: { value: "  ana@loja.test " },
     });
@@ -70,7 +65,7 @@ describe("LoginForm", () => {
       ok: false,
       json: async () => problem(status, detail),
     }) as unknown as typeof fetch;
-    render(<LoginForm />);
+    renderWithToaster(<LoginForm />);
     fireEvent.change(screen.getByLabelText("E-mail"), {
       target: { value: "ana@loja.test" },
     });
@@ -87,7 +82,7 @@ describe("LoginForm", () => {
       ok: false,
       json: async () => ({}),
     }) as unknown as typeof fetch;
-    render(<LoginForm />);
+    renderWithToaster(<LoginForm />);
     fireEvent.change(screen.getByLabelText("E-mail"), {
       target: { value: "ana@loja.test" },
     });
@@ -104,7 +99,7 @@ describe("LoginForm", () => {
   it("shows the email and password messages without sending a request", async () => {
     const fetchMock = vi.fn();
     global.fetch = fetchMock as unknown as typeof fetch;
-    render(<LoginForm />);
+    renderWithToaster(<LoginForm />);
     fireEvent.change(screen.getByLabelText("E-mail"), {
       target: { value: "sem-arroba" },
     });
@@ -123,11 +118,11 @@ describe("LoginForm", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("shows the network message inline when the request cannot be sent", async () => {
+  it("toasts the network message when the request cannot be sent", async () => {
     global.fetch = vi
       .fn()
       .mockRejectedValue(new TypeError("offline")) as unknown as typeof fetch;
-    render(<LoginForm />);
+    renderWithToaster(<LoginForm />);
     fireEvent.change(screen.getByLabelText("E-mail"), {
       target: { value: "ana@loja.test" },
     });
@@ -139,7 +134,7 @@ describe("LoginForm", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Sem conexão. Verifique a internet e tente de novo.",
     );
-    expect(screen.getByRole("button", { name: "Entrar" })).toBeEnabled();
+    expect(await screen.findByRole("button", { name: "Entrar" })).toBeEnabled();
   });
 
   it("opens the admin with a full navigation and blocks a second submit", async () => {
@@ -147,7 +142,7 @@ describe("LoginForm", () => {
     vi.stubGlobal("location", { assign });
     const fetchMock = vi.fn().mockResolvedValue({ ok: true });
     global.fetch = fetchMock as unknown as typeof fetch;
-    render(<LoginForm />);
+    renderWithToaster(<LoginForm />);
     fireEvent.change(screen.getByLabelText("E-mail"), {
       target: { value: "ana@loja.test" },
     });
@@ -170,7 +165,7 @@ describe("LoginForm", () => {
       }),
     );
     global.fetch = fetchMock as unknown as typeof fetch;
-    const { container } = render(<LoginForm />);
+    const { container } = renderWithToaster(<LoginForm />);
     fireEvent.change(screen.getByLabelText("E-mail"), {
       target: { value: "ana@loja.test" },
     });
@@ -189,7 +184,7 @@ describe("LoginForm", () => {
 
     resolve({ ok: false, json: async () => ({}) });
     expect(await screen.findByRole("alert")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Entrar" })).toBeEnabled();
+    expect(await screen.findByRole("button", { name: "Entrar" })).toBeEnabled();
   });
 
   it("clears the field messages once both are fixed and resubmitted", async () => {
@@ -198,7 +193,7 @@ describe("LoginForm", () => {
       json: async () => problem(401, "E-mail ou senha inválidos."),
     });
     global.fetch = fetchMock as unknown as typeof fetch;
-    render(<LoginForm />);
+    renderWithToaster(<LoginForm />);
     fireEvent.change(screen.getByLabelText("E-mail"), {
       target: { value: "sem-arroba" },
     });
@@ -228,39 +223,5 @@ describe("LoginForm", () => {
       "aria-invalid",
       "false",
     );
-  });
-
-  it("clears the wrong-credentials message when the form is resubmitted", async () => {
-    let resolve: (value: unknown) => void = () => {};
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce({
-        ok: false,
-        json: async () => problem(401, "E-mail ou senha inválidos."),
-      })
-      .mockReturnValueOnce(
-        new Promise((r) => {
-          resolve = r;
-        }),
-      );
-    global.fetch = fetchMock as unknown as typeof fetch;
-    render(<LoginForm />);
-    fireEvent.change(screen.getByLabelText("E-mail"), {
-      target: { value: "ana@loja.test" },
-    });
-    fireEvent.change(screen.getByLabelText("Senha"), {
-      target: { value: "senha-longa-1" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "Entrar" }));
-    await screen.findByRole("alert");
-
-    fireEvent.click(screen.getByRole("button", { name: "Entrar" }));
-
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
-    await waitFor(() =>
-      expect(screen.queryByRole("alert")).not.toBeInTheDocument(),
-    );
-    resolve({ ok: false, json: async () => ({}) });
-    await screen.findByRole("alert");
   });
 });

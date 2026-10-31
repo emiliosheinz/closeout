@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { getMe } from "@/entities/session/index.server";
 import { ROLE_DESCRIPTIONS, ROLE_LABELS } from "@/shared/lib/format";
+import { Toaster } from "@/shared/ui/sonner";
 import { lookupInvite } from "../model/lookup-invite";
 import { InviteForm } from "./invite-form";
 import { InviteSignOut } from "./invite-sign-out";
@@ -28,6 +29,7 @@ function Frame({ children }: { children: React.ReactNode }) {
         closeout
       </a>
       {children}
+      <Toaster />
     </main>
   );
 }
