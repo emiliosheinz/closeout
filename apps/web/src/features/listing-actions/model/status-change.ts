@@ -1,15 +1,22 @@
-import type { Availability, Publication } from "@closeout/contracts/enums";
-import { type AdminListingSummary, listingKeys } from "@/entities/listing";
+import type { AdminListingSummary } from "@/entities/listing";
+import { listingKeys } from "@/entities/listing";
 import { AVAILABILITY_LABELS, PUBLICATION_LABELS } from "@/shared/lib/format";
 
-export type StatusPatch =
-  | { publication: Publication }
-  | { availability: Availability };
+/** The summary fields a board edit can change; applied over the cached row while the save is in flight. */
+export type SummaryPatch = Partial<
+  Pick<AdminListingSummary, "publication" | "availability" | "sale">
+>;
 
 export interface StatusChange {
   id: string;
   title: string;
-  patch: StatusPatch;
+  patch: SummaryPatch;
+  /** The request body; the patch is what the row shows meanwhile. */
+  body: Record<string, unknown>;
+  /** `sale` edits the sale only; `status` (default) may also change availability or publication. */
+  route?: "status" | "sale";
+  /** Set when a dialog shows the failure, so a stale-buyer conflict is not toasted too. */
+  inDialog?: boolean;
 }
 
 /** Reserved for mutations whose variables are a `StatusChange`; the list overlay casts them. */
@@ -24,8 +31,15 @@ export function applyChange(
 }
 
 export function statusMessage({ title, patch }: StatusChange): string {
-  if ("publication" in patch) {
+  if (patch.publication) {
     return `"${title}" agora está ${PUBLICATION_LABELS[patch.publication].toLowerCase()}.`;
   }
-  return `"${title}" marcado como ${AVAILABILITY_LABELS[patch.availability].toLowerCase()}.`;
+  if (patch.availability) {
+    const buyer = patch.sale?.buyer.name;
+    if (buyer && patch.availability !== "available") {
+      return `"${title}" ${AVAILABILITY_LABELS[patch.availability].toLowerCase()} para ${buyer}.`;
+    }
+    return `"${title}" marcado como ${AVAILABILITY_LABELS[patch.availability].toLowerCase()}.`;
+  }
+  return `Venda de "${title}" atualizada.`;
 }

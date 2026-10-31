@@ -6,7 +6,7 @@ import {
   PUBLICATIONS,
   type Publication,
 } from "@closeout/contracts/enums";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { Copy, Eye, Pencil, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -16,7 +16,7 @@ import {
   listingEditHref,
   listingKeys,
 } from "@/entities/listing";
-import { api, apiParsed, successFor, withId } from "@/shared/api";
+import { api, apiParsed, withId } from "@/shared/api";
 import { AVAILABILITY_LABELS, PUBLICATION_LABELS } from "@/shared/lib/format";
 import { itemPath } from "@/shared/lib/site";
 import { ConfirmDialog } from "@/shared/ui/confirm-dialog";
@@ -29,12 +29,8 @@ import {
 } from "@/shared/ui/select";
 import { notify } from "@/shared/ui/sonner";
 import { Tooltip } from "@/shared/ui/tooltip";
-import {
-  applyChange,
-  type StatusChange,
-  statusMessage,
-  statusMutationKey,
-} from "../model/status-change";
+import type { StatusChange } from "../model/status-change";
+import { useListingChange } from "../model/use-listing-change";
 
 const selectTriggerClass =
   "h-11 border-line bg-surface px-2 text-sm font-medium text-ink shadow-none";
@@ -55,35 +51,17 @@ export function ListingStatusControls({
   /** Called when the status is changed, so the caller can keep the row in view. */
   onStatusChange?: (id: string) => void;
 }) {
-  const client = useQueryClient();
-  const change = useMutation({
-    mutationKey: statusMutationKey(storeId),
-    mutationFn: ({ id, patch }: StatusChange) =>
-      api("PATCH", `${listingsPath(storeId)}/${id}/status`, patch),
-    onMutate: () =>
-      client.cancelQueries({ queryKey: listingKeys.list(storeId) }),
-    onSuccess: async (_data, applied) => {
-      await client.cancelQueries({ queryKey: listingKeys.list(storeId) });
-      client.setQueryData(
-        listingKeys.list(storeId),
-        (old: { items: AdminListingSummary[] } | undefined) =>
-          old && { ...old, items: applyChange(old.items, applied) },
-      );
-    },
-    onSettled: () => {
-      // The mutation settling now still counts as running.
-      if (client.isMutating({ mutationKey: statusMutationKey(storeId) }) > 1) {
-        return;
-      }
-      client.invalidateQueries({ queryKey: listingKeys.all(storeId) });
-    },
-    meta: { success: successFor<StatusChange>(statusMessage) },
-  });
+  const change = useListingChange(storeId);
 
   function setStatus(patch: StatusChange["patch"]) {
     if (change.isPending) return;
     onStatusChange?.(listing.id);
-    change.mutate({ id: listing.id, title: listing.title, patch });
+    change.mutate({
+      id: listing.id,
+      title: listing.title,
+      patch,
+      body: patch,
+    });
   }
 
   return (
