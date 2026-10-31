@@ -175,13 +175,13 @@ describe("sale transition", () => {
         hasBuyer: true,
         paid: true,
       }),
-    ).toEqual({ outcome: "refuse" });
+    ).toEqual({ outcome: "available-has-no-buyer" });
     expect(
       saleTransition("available", {
         availability: "available",
         hasBuyer: true,
       }),
-    ).toEqual({ outcome: "refuse" });
+    ).toEqual({ outcome: "available-has-no-buyer" });
   });
 
   it("refuses sale fields without a buyer", () => {
@@ -191,9 +191,9 @@ describe("sale transition", () => {
         hasBuyer: false,
         agreedPriceCents: 1000,
       }),
-    ).toEqual({ outcome: "refuse" });
+    ).toEqual({ outcome: "fields-need-buyer" });
     expect(saleTransition("reserved", { hasBuyer: false, notes: "x" })).toEqual(
-      { outcome: "refuse" },
+      { outcome: "fields-need-buyer" },
     );
   });
 });

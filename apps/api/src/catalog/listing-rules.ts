@@ -89,7 +89,14 @@ export interface SaleFields {
 
 export type SaleTransition =
   | { outcome: "enter"; sale: Required<SaleFields> | null }
-  | { outcome: "release" | "keep" | "stale" | "refuse" };
+  | {
+      outcome:
+        | "release"
+        | "keep"
+        | "stale"
+        | "fields-need-buyer"
+        | "available-has-no-buyer";
+    };
 
 /**
  * How a status request changes a listing's sale info. Entering a held state
@@ -103,15 +110,14 @@ export function saleTransition(
   request: SaleFields & { availability?: Availability; hasBuyer: boolean },
 ): SaleTransition {
   const { hasBuyer, availability = current } = request;
-  const fields = request;
   const hasSaleFields = [
-    fields.agreedPriceCents,
-    fields.paid,
-    fields.notes,
+    request.agreedPriceCents,
+    request.paid,
+    request.notes,
   ].some((value) => value !== undefined);
-  if (hasSaleFields && !hasBuyer) return { outcome: "refuse" };
+  if (hasSaleFields && !hasBuyer) return { outcome: "fields-need-buyer" };
   if (availability === "available") {
-    if (hasBuyer) return { outcome: "refuse" };
+    if (hasBuyer) return { outcome: "available-has-no-buyer" };
     return { outcome: current === "available" ? "keep" : "release" };
   }
   if (availability === current) {
@@ -121,9 +127,9 @@ export function saleTransition(
   return {
     outcome: "enter",
     sale: {
-      agreedPriceCents: fields.agreedPriceCents ?? null,
-      paid: fields.paid ?? false,
-      notes: fields.notes ?? null,
+      agreedPriceCents: request.agreedPriceCents ?? null,
+      paid: request.paid ?? false,
+      notes: request.notes ?? null,
     },
   };
 }

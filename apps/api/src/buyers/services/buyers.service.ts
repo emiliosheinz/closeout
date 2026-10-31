@@ -1,11 +1,20 @@
-import type { BuyerSummary } from "@closeout/contracts/schemas";
-import { Injectable } from "@nestjs/common";
+import {
+  type Buyer as BuyerResponse,
+  type BuyerSummary,
+  type BuyerUpdateRequest,
+  buyerNameKey,
+} from "@closeout/contracts/schemas";
+import { HttpStatus, Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import type { Repository } from "typeorm";
+import { QueryFailedError, type Repository } from "typeorm";
 import { Listing } from "@/catalog/entities/listing.entity";
 import { visibleToActor } from "@/catalog/listing-queries";
+import { AppException } from "@/problem/app-exception";
 import type { MembershipContext } from "@/stores/membership";
 import { Buyer } from "../entities/buyer.entity";
+
+const BUYER_NOT_FOUND = "Comprador não encontrado.";
+const NAME_TAKEN = "Já existe um comprador com esse nome. Use Juntar com...";
 
 interface AggregateRow {
   id: string;
@@ -89,5 +98,37 @@ export class BuyersService {
       else summary.owedCents += row.agreedPriceCents;
     }
     return [...summaries.values()];
+  }
+
+  async update(
+    storeId: string,
+    id: string,
+    patch: BuyerUpdateRequest,
+  ): Promise<BuyerResponse> {
+    const buyer = await this.buyers.findOneBy({ id, storeId });
+    if (!buyer) throw new AppException(HttpStatus.NOT_FOUND, BUYER_NOT_FOUND);
+    if (patch.name !== undefined) {
+      buyer.name = patch.name;
+      buyer.nameKey = buyerNameKey(patch.name);
+    }
+    if (patch.whatsappNumber !== undefined) {
+      buyer.whatsappNumber = patch.whatsappNumber;
+    }
+    try {
+      await this.buyers.save(buyer);
+    } catch (err) {
+      if (
+        err instanceof QueryFailedError &&
+        (err.driverError as { code?: string }).code === "23505"
+      ) {
+        throw new AppException(HttpStatus.CONFLICT, NAME_TAKEN);
+      }
+      throw err;
+    }
+    return {
+      id: buyer.id,
+      name: buyer.name,
+      whatsappNumber: buyer.whatsappNumber,
+    };
   }
 }

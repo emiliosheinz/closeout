@@ -4,7 +4,8 @@ import { type EntityManager, IsNull } from "typeorm";
 import { AppException } from "@/problem/app-exception";
 import { Buyer } from "./entities/buyer.entity";
 
-const INVALID_BUYER = "Comprador inválido.";
+export const BUYER_NOT_IN_STORE =
+  "Esse comprador foi juntado ou removido. Escolha o comprador de novo.";
 
 type ResolvedBuyer = Pick<Buyer, "id" | "name" | "whatsappNumber">;
 
@@ -24,7 +25,7 @@ export async function resolveBuyer(
 
   if ("id" in ref) {
     const buyer = await buyers.findOneBy({ id: ref.id, storeId });
-    if (!buyer) throw new AppException(HttpStatus.CONFLICT, INVALID_BUYER);
+    if (!buyer) throw new AppException(HttpStatus.CONFLICT, BUYER_NOT_IN_STORE);
     if (whatsappNumber && !buyer.whatsappNumber) {
       await buyers.update(
         { id: buyer.id, whatsappNumber: IsNull() },

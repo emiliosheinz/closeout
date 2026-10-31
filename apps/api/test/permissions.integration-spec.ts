@@ -65,6 +65,13 @@ const soldListing = async (fx: Fixture, sellerIds?: string[]) =>
       })
     ).id
   }`;
+const buyer = async (fx: Fixture) => {
+  const [row] = await dataSource().query(
+    `INSERT INTO buyers (store_id, name, name_key) VALUES ($1, $2, $3) RETURNING id`,
+    [fx.owner.storeId, `Ana ${nextId()}`, nextId()],
+  );
+  return row.id as string;
+};
 const ownProfile = (fx: Fixture, role: Role) =>
   ({
     owner: fx.owner.sellerId,
@@ -313,6 +320,15 @@ const CAPABILITIES: Capability[] = [
   {
     name: "list buyers",
     call: async (fx) => ({ method: "get", url: `${store(fx)}/buyers` }),
+    expected: [200, 200, 200, 404],
+  },
+  {
+    name: "edit a buyer",
+    call: async (fx) => ({
+      method: "patch",
+      url: `${store(fx)}/buyers/${await buyer(fx)}`,
+      body: { name: `Renomeado ${nextId()}` },
+    }),
     expected: [200, 200, 200, 404],
   },
   {

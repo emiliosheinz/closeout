@@ -154,4 +154,116 @@ describe("buyers", () => {
       expect(ana.items[0].agreedPriceCents).toBe(6000);
     });
   });
+
+  describe("editing", () => {
+    const insert = async (
+      name: string,
+      key: string,
+      storeId = admin.storeId,
+    ) => {
+      const [row] = await ctx.dataSource.query(
+        `INSERT INTO buyers (store_id, name, name_key) VALUES ($1, $2, $3) RETURNING id`,
+        [storeId, name, key],
+      );
+      return row.id as string;
+    };
+    const stored = async (id: string) => {
+      const [row] = await ctx.dataSource.query(
+        `SELECT name, whatsapp_number FROM buyers WHERE id = $1`,
+        [id],
+      );
+      return row;
+    };
+
+    it("lets a seller rename a buyer", async () => {
+      const id = await insert("Ana", "ana");
+
+      const res = await as(ctx.app, seller.cookie)
+        .patch(`${base()}/${id}`)
+        .send({ name: "Ana Lima" })
+        .expect(200);
+
+      expect(res.body).toEqual({ id, name: "Ana Lima", whatsappNumber: null });
+    });
+
+    it("accepts a rename that only changes the case", async () => {
+      const id = await insert("Ana", "ana");
+
+      await client().patch(`${base()}/${id}`).send({ name: "ANA" }).expect(200);
+
+      expect((await stored(id)).name).toBe("ANA");
+    });
+
+    it("refuses a rename to another buyer's name and keeps the old name", async () => {
+      const id = await insert("Ana", "ana");
+      await insert("Bia Souza", "bia souza");
+
+      const res = await client()
+        .patch(`${base()}/${id}`)
+        .send({ name: "bía  SOUZA" })
+        .expect(409);
+
+      expect(res.body.detail).toBe(
+        "Já existe um comprador com esse nome. Use Juntar com...",
+      );
+      expect((await stored(id)).name).toBe("Ana");
+    });
+
+    it("stores a formatted phone as digits", async () => {
+      const id = await insert("Ana", "ana");
+
+      const res = await client()
+        .patch(`${base()}/${id}`)
+        .send({ whatsappNumber: "+55 (11) 98888-7777" })
+        .expect(200);
+
+      expect(res.body.whatsappNumber).toBe("5511988887777");
+      expect((await stored(id)).whatsapp_number).toBe("5511988887777");
+    });
+
+    it("refuses a phone without a plus and keeps the stored one", async () => {
+      const id = await insert("Ana", "ana");
+      await client()
+        .patch(`${base()}/${id}`)
+        .send({ whatsappNumber: "+5511988887777" })
+        .expect(200);
+
+      await client()
+        .patch(`${base()}/${id}`)
+        .send({ whatsappNumber: "11988887777" })
+        .expect(400);
+
+      expect((await stored(id)).whatsapp_number).toBe("5511988887777");
+    });
+
+    it("clears the phone", async () => {
+      const id = await insert("Ana", "ana");
+      await client()
+        .patch(`${base()}/${id}`)
+        .send({ whatsappNumber: "+5511988887777" })
+        .expect(200);
+
+      await client()
+        .patch(`${base()}/${id}`)
+        .send({ whatsappNumber: null })
+        .expect(200);
+
+      expect((await stored(id)).whatsapp_number).toBeNull();
+    });
+
+    it("answers 404 for an unknown buyer and for another store's buyer", async () => {
+      const other = await createStoreWithAdmin(ctx, "loja-b");
+      const foreign = await insert("Carla", "carla", other.storeId);
+
+      await client()
+        .patch(`${base()}/00000000-0000-4000-8000-000000000000`)
+        .send({ name: "X" })
+        .expect(404);
+      await client()
+        .patch(`${base()}/${foreign}`)
+        .send({ name: "X" })
+        .expect(404);
+      expect((await stored(foreign)).name).toBe("Carla");
+    });
+  });
 });

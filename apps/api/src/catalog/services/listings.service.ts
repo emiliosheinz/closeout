@@ -21,7 +21,7 @@ import {
   Repository,
 } from "typeorm";
 import type { QueryDeepPartialEntity } from "typeorm/query-builder/QueryPartialEntity";
-import { resolveBuyer } from "@/buyers/resolve-buyer";
+import { BUYER_NOT_IN_STORE, resolveBuyer } from "@/buyers/resolve-buyer";
 import { MediaService } from "@/media/media.service";
 import { mediaUrls } from "@/media/media-urls";
 import { AppException } from "@/problem/app-exception";
@@ -39,6 +39,7 @@ import {
   canSetSellers,
   PUBLISH_REQUIRES_PHOTO,
   SALE_CHANGED,
+  type SaleTransition,
   saleAfterFullUpdate,
   saleTransition,
   sellersForNewListing,
@@ -74,10 +75,10 @@ export function listingNotFound(): AppException {
 const INVALID_SELLER = "Vendedor inválido.";
 const INVALID_CATEGORY = "Categoria inválida.";
 const NO_SELLER_CHOSEN = "Escolha ao menos um vendedor.";
-const SALE_NEEDS_BUYER =
-  "Informe o comprador. Os dados da venda só valem para um anúncio reservado ou vendido.";
-const SALE_NEEDS_A_BUYER = "Informe o comprador da venda.";
-const INVALID_BUYER = "Comprador inválido.";
+const SALE_FIELDS_NEED_BUYER =
+  "Informe o comprador para registrar os dados da venda.";
+const AVAILABLE_HAS_NO_BUYER = "Um anúncio disponível não tem comprador.";
+const EDIT_NEEDS_BUYER = "Informe o comprador da venda.";
 const TRY_AGAIN = "Não foi possível salvar agora. Tente de novo.";
 const COPY_SUFFIX = " (cópia)";
 
@@ -230,15 +231,7 @@ export class ListingsService {
       if (!canSetSellers(actor, current, patch.sellerIds)) throw forbidden();
       await assertReferencesBelongToStore(manager, storeId, patch);
 
-      if (patch.publication === "published") {
-        if (!canPublish(listing.images.length)) {
-          throw new AppException(
-            HttpStatus.UNPROCESSABLE_ENTITY,
-            PUBLISH_REQUIRES_PHOTO,
-          );
-        }
-        listing.publishedAt ??= new Date();
-      }
+      const published = publishPatch(listing, patch.publication);
 
       const {
         images: _images,
@@ -251,6 +244,7 @@ export class ListingsService {
       await manager.getRepository(Listing).save({
         ...row,
         ...definedOnly(fields),
+        ...published,
         ...(saleAfterFullUpdate(listing.availability, patch.availability) ===
         "release"
           ? CLEARED_SALE
@@ -282,41 +276,27 @@ export class ListingsService {
           notes: request.notes,
           hasBuyer: request.buyer !== undefined,
         });
-        if (transition.outcome === "refuse") {
-          throw new AppException(HttpStatus.BAD_REQUEST, SALE_NEEDS_BUYER);
+        if (transition.outcome === "fields-need-buyer") {
+          throw new AppException(
+            HttpStatus.BAD_REQUEST,
+            SALE_FIELDS_NEED_BUYER,
+          );
+        }
+        if (transition.outcome === "available-has-no-buyer") {
+          throw new AppException(
+            HttpStatus.BAD_REQUEST,
+            AVAILABLE_HAS_NO_BUYER,
+          );
         }
         if (transition.outcome === "stale") {
           throw new AppException(HttpStatus.CONFLICT, SALE_CHANGED);
         }
 
-        const patch: QueryDeepPartialEntity<Listing> = {};
-        if (request.publication === "published") {
-          if (!canPublish(listing.images.length)) {
-            throw new AppException(
-              HttpStatus.UNPROCESSABLE_ENTITY,
-              PUBLISH_REQUIRES_PHOTO,
-            );
-          }
-          patch.publishedAt = listing.publishedAt ?? new Date();
-        }
-        if (request.publication) patch.publication = request.publication;
-        if (request.availability) patch.availability = request.availability;
-        if (transition.outcome === "release") {
-          Object.assign(patch, CLEARED_SALE);
-        }
-        if (
-          transition.outcome === "enter" &&
-          transition.sale &&
-          request.buyer
-        ) {
-          const buyer = await resolveBuyer(manager, storeId, request.buyer);
-          Object.assign(patch, {
-            buyerId: buyer.id,
-            agreedPriceCents: transition.sale.agreedPriceCents,
-            paid: transition.sale.paid,
-            saleNotes: transition.sale.notes,
-          });
-        }
+        const patch: QueryDeepPartialEntity<Listing> = {
+          ...publishPatch(listing, request.publication),
+          ...(request.availability && { availability: request.availability }),
+          ...(await statusSalePatch(manager, storeId, transition, request)),
+        };
         if (Object.keys(patch).length > 0) {
           await manager.getRepository(Listing).update({ id, storeId }, patch);
         }
@@ -344,7 +324,7 @@ export class ListingsService {
           throw new AppException(HttpStatus.CONFLICT, SALE_CHANGED);
         }
         if (outcome === "refuse") {
-          throw new AppException(HttpStatus.BAD_REQUEST, SALE_NEEDS_A_BUYER);
+          throw new AppException(HttpStatus.BAD_REQUEST, EDIT_NEEDS_BUYER);
         }
 
         const patch: QueryDeepPartialEntity<Listing> = definedOnly({
@@ -419,6 +399,42 @@ export class ListingsService {
   }
 }
 
+/** The columns a publication change touches; a published listing needs a photo. */
+function publishPatch(
+  listing: Pick<Listing, "images" | "publishedAt">,
+  publication: Publication | undefined,
+): Partial<Pick<Listing, "publication" | "publishedAt">> {
+  if (publication === undefined) return {};
+  if (publication !== "published") return { publication };
+  if (!canPublish(listing.images.length)) {
+    throw new AppException(
+      HttpStatus.UNPROCESSABLE_ENTITY,
+      PUBLISH_REQUIRES_PHOTO,
+    );
+  }
+  return { publication, publishedAt: listing.publishedAt ?? new Date() };
+}
+
+/** The sale columns a status request writes: cleared on release, set on entering with a buyer. */
+async function statusSalePatch(
+  manager: EntityManager,
+  storeId: string,
+  transition: SaleTransition,
+  request: ListingStatusRequest,
+): Promise<QueryDeepPartialEntity<Listing>> {
+  if (transition.outcome === "release") return CLEARED_SALE;
+  if (transition.outcome !== "enter" || !transition.sale || !request.buyer) {
+    return {};
+  }
+  const buyer = await resolveBuyer(manager, storeId, request.buyer);
+  return {
+    buyerId: buyer.id,
+    agreedPriceCents: transition.sale.agreedPriceCents,
+    paid: transition.sale.paid,
+    saleNotes: transition.sale.notes,
+  };
+}
+
 const CLEARED_SALE = {
   buyerId: null,
   agreedPriceCents: null,
@@ -436,7 +452,7 @@ async function withSaleConflicts<T>(run: () => Promise<T>): Promise<T> {
         ? (err.driverError as { code?: string }).code
         : undefined;
     if (code === "23503") {
-      throw new AppException(HttpStatus.CONFLICT, INVALID_BUYER);
+      throw new AppException(HttpStatus.CONFLICT, BUYER_NOT_IN_STORE);
     }
     if (code === "40P01") {
       throw new AppException(HttpStatus.CONFLICT, TRY_AGAIN);

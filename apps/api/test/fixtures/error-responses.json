@@ -177,7 +177,8 @@
       "availability must be one of the following values: available, reserved, sold"
     ],
     "expectedDetail": [
-      "Informe o comprador. Os dados da venda só valem para um anúncio reservado ou vendido.",
+      "Informe o comprador para registrar os dados da venda.",
+      "Um anúncio disponível não tem comprador.",
       "Use até 1000 caracteres nas observações.",
       "Valor inválido."
     ]

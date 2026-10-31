@@ -2,6 +2,7 @@ import {
   adminImageSchema,
   adminListingDetailSchema,
   adminListingSummarySchema,
+  buyerSchema,
   buyerSummarySchema,
   categorySchema,
   dashboardCountsSchema,
@@ -406,6 +407,20 @@ describe("response contracts", () => {
         teamMemberSchema,
         res.body,
       );
+    });
+
+    it("parses a buyer update", async () => {
+      await client()
+        .patch(`${base()}/listings/${draft.id}/status`)
+        .send({ availability: "reserved", buyer: { name: "Ana" } })
+        .expect(200);
+      const [buyer] = (await client().get(`${base()}/buyers`).expect(200)).body
+        .items;
+      const res = await client()
+        .patch(`${base()}/buyers/${buyer.id}`)
+        .send({ name: "Ana Lima", whatsappNumber: "+55 11 98888-7777" })
+        .expect(200);
+      expectParses("PATCH /stores/:storeId/buyers/:id", buyerSchema, res.body);
     });
 
     it("parses a seller update and a new avatar", async () => {

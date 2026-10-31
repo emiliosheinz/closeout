@@ -1,5 +1,11 @@
-import type { BuyerSummary } from "@closeout/contracts/schemas";
-import { Controller, Get, UseGuards } from "@nestjs/common";
+import {
+  type Buyer,
+  type BuyerSummary,
+  type BuyerUpdateRequest,
+  buyerUpdateRequestSchema,
+  uuidSchema,
+} from "@closeout/contracts/schemas";
+import { Body, Controller, Get, Param, Patch, UseGuards } from "@nestjs/common";
 import { SessionGuard } from "@/auth/guards/session.guard";
 import { StoreMemberGuard } from "@/stores/guards/store-member.guard";
 import {
@@ -21,5 +27,15 @@ export class BuyersController {
     @CurrentMember() member: MembershipContext,
   ): Promise<{ items: BuyerSummary[] }> {
     return { items: await this.buyers.list(member) };
+  }
+
+  @Patch(":id")
+  @Roles(ANY_MEMBER)
+  update(
+    @CurrentMember() member: MembershipContext,
+    @Param("id", { schema: uuidSchema }) id: string,
+    @Body({ schema: buyerUpdateRequestSchema }) body: BuyerUpdateRequest,
+  ): Promise<Buyer> {
+    return this.buyers.update(member.storeId, id, body);
   }
 }

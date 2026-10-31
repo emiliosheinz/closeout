@@ -130,6 +130,7 @@ describe("sale info on listings", () => {
 
       const [buyer] = await buyerRows();
       expect(buyer?.name).toBe("Maria Silva");
+      expect(res.body.availability).toBe("reserved");
       expect(res.body.sale).toEqual({
         buyer: { id: buyer?.id, name: "Maria Silva" },
         agreedPriceCents: 12500,
@@ -192,10 +193,13 @@ describe("sale info on listings", () => {
       const foreign = await insertBuyer("Outra", "outra", other.storeId);
 
       for (const id of [crypto.randomUUID(), foreign]) {
-        await setStatus(listing.id, {
+        const res = await setStatus(listing.id, {
           availability: "reserved",
           buyer: { id },
         }).expect(409);
+        expect(res.body.detail).toBe(
+          "Esse comprador foi juntado ou removido. Escolha o comprador de novo.",
+        );
       }
 
       expect((await saleOf(listing.id)).availability).toBe("available");
@@ -239,6 +243,8 @@ describe("sale info on listings", () => {
         availability: "reserved",
         buyer: { id: ana },
         agreedPriceCents: 500,
+        paid: true,
+        notes: "retira sábado",
       }).expect(200);
 
       await setStatus(listing.id, { availability: "reserved" }).expect(200);
@@ -246,6 +252,33 @@ describe("sale info on listings", () => {
       expect(await saleOf(listing.id)).toMatchObject({
         buyer_id: ana,
         agreed_price_cents: 500,
+        paid: true,
+        sale_notes: "retira sábado",
+        availability: "reserved",
+      });
+    });
+
+    it("records the sale sent when moving from sold to reserved with a buyer", async () => {
+      const listing = await insertListing(ctx.dataSource, admin, {
+        availability: "sold",
+      });
+      const ana = await insertBuyer("Ana");
+      await sellTo(listing.id, ana, { price: 7000, paid: true, notes: "x" });
+
+      await setStatus(listing.id, {
+        availability: "reserved",
+        buyer: { id: ana },
+        agreedPriceCents: 7000,
+        paid: true,
+        notes: "x",
+      }).expect(200);
+
+      expect(await saleOf(listing.id)).toMatchObject({
+        buyer_id: ana,
+        agreed_price_cents: 7000,
+        paid: true,
+        sale_notes: "x",
+        availability: "reserved",
       });
     });
 
@@ -295,10 +328,13 @@ describe("sale info on listings", () => {
         availability: "reserved",
         paid: true,
       }).expect(400);
-      await setStatus(listing.id, {
+      const withBuyer = await setStatus(listing.id, {
         availability: "available",
         buyer: { name: "Ana" },
       }).expect(400);
+      expect(withBuyer.body.detail).toBe(
+        "Um anúncio disponível não tem comprador.",
+      );
 
       expect(await buyerRows()).toEqual([]);
     });
@@ -343,9 +379,10 @@ describe("sale info on listings", () => {
       return row;
     };
 
-    const soldTo = async (name = "Ana") => {
+    const soldTo = async (availability: "reserved" | "sold" = "sold") => {
+      const name = "Ana";
       const listing = await insertListing(ctx.dataSource, admin, {
-        availability: "sold",
+        availability,
       });
       const buyerId = await insertBuyer(name);
       await sellTo(listing.id, buyerId, {
@@ -381,7 +418,7 @@ describe("sale info on listings", () => {
     });
 
     it("sets paid without touching buyer, price or notes", async () => {
-      const { listing, buyerId } = await soldTo();
+      const { listing, buyerId } = await soldTo("reserved");
 
       await editSale(listing.id, { paid: true }).expect(200);
 
@@ -477,6 +514,16 @@ describe("sale info on listings", () => {
         .expect(200);
 
       expect(res.body).toMatchObject({ availability: "available", sale: null });
+      const [row] = await ctx.dataSource.query(
+        `SELECT buyer_id, agreed_price_cents, paid, sale_notes FROM listings WHERE id = $1`,
+        [listing.id],
+      );
+      expect(row).toEqual({
+        buyer_id: null,
+        agreed_price_cents: null,
+        paid: false,
+        sale_notes: null,
+      });
       const buyers = await ctx.dataSource.query(`SELECT name FROM buyers`);
       expect(buyers).toEqual([{ name: "Ana" }]);
     });
