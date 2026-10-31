@@ -727,6 +727,14 @@ describe("a row changed twice under a filter", () => {
     expect(titles()).toEqual(["Abajur", "Cadeira"]);
 
     await change("Reservado");
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.change(
+      within(dialog).getByRole("combobox", { name: "Nome do comprador" }),
+      { target: { value: "Zeca" } },
+    );
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Marcar como reservado" }),
+    );
     await waitFor(() => expect(listFetches).toBe(2));
     await settle();
 

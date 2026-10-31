@@ -7,10 +7,13 @@ import type { AdminListingSummary } from "../model/types";
 export function ListingTitle({
   listing,
   unreachableSellerIds = [],
+  footer,
 }: {
   listing: AdminListingSummary;
   /** Sellers without a WhatsApp number; an item none of whose sellers has one shows no contact button. */
   unreachableSellerIds?: string[];
+  /** Extra line under the category, for what a feature knows about the listing. */
+  footer?: React.ReactNode;
 }) {
   const unreachable = listing.sellers.every((seller) =>
     unreachableSellerIds.includes(seller.id),
@@ -47,6 +50,7 @@ export function ListingTitle({
           {listing.category.name}, por{" "}
           {joinNames(listing.sellers.map((seller) => seller.displayName))}
         </p>
+        {footer}
         {listing.publication === "published" &&
           listing.availability !== "sold" &&
           unreachable && (

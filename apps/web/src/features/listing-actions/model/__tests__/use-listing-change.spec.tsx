@@ -27,7 +27,7 @@ beforeEach(() => {
   listFetches = 0;
   vi.stubGlobal(
     "fetch",
-    vi.fn((url: string, init: RequestInit = {}) => {
+    vi.fn((_url: string, init: RequestInit = {}) => {
       if (init.method === "GET") {
         listFetches += 1;
         return Response.json({ items: [reservedRow] });

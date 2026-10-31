@@ -7,9 +7,11 @@ import {
   type Publication,
 } from "@closeout/contracts/enums";
 import { useMutation } from "@tanstack/react-query";
-import { Copy, Eye, Pencil, Trash2 } from "lucide-react";
+import { Copy, Eye, Pencil, Trash2, UserPlus, UserRound } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { buyerKeys } from "@/entities/buyer";
 import {
   type AdminListingSummary,
   LISTING_NOTICES,
@@ -17,7 +19,12 @@ import {
   listingKeys,
 } from "@/entities/listing";
 import { api, apiParsed, withId } from "@/shared/api";
-import { AVAILABILITY_LABELS, PUBLICATION_LABELS } from "@/shared/lib/format";
+import {
+  AVAILABILITY_LABELS,
+  formatPrice,
+  PAYMENT_LABELS,
+  PUBLICATION_LABELS,
+} from "@/shared/lib/format";
 import { itemPath } from "@/shared/lib/site";
 import { ConfirmDialog } from "@/shared/ui/confirm-dialog";
 import {
@@ -30,7 +37,11 @@ import {
 import { notify } from "@/shared/ui/sonner";
 import { Tooltip } from "@/shared/ui/tooltip";
 import type { StatusChange } from "../model/status-change";
-import { useListingChange } from "../model/use-listing-change";
+import {
+  useIsListingChanging,
+  useListingChange,
+} from "../model/use-listing-change";
+import { BuyerDialog } from "./buyer-dialog";
 
 const selectTriggerClass =
   "h-11 border-line bg-surface px-2 text-sm font-medium text-ink shadow-none";
@@ -39,7 +50,8 @@ const listingsPath = (storeId: string) => `/stores/${storeId}/listings`;
 
 /**
  * Inline publication and availability selects, so marking an item reserved
- * or sold never requires opening the full form.
+ * or sold never requires opening the full form. Reserving or selling asks
+ * for the buyer first; releasing an item that has one asks to confirm.
  */
 export function ListingStatusControls({
   storeId,
@@ -52,68 +64,170 @@ export function ListingStatusControls({
   onStatusChange?: (id: string) => void;
 }) {
   const change = useListingChange(storeId);
+  const changing = useIsListingChanging(storeId, listing.id);
+  const [selling, setSelling] = useState<"reserved" | "sold" | null>(null);
+  const sale = listing.sale;
 
-  function setStatus(patch: StatusChange["patch"]) {
-    if (change.isPending) return;
+  function setStatus(patch: StatusChange["patch"], body = patch) {
+    if (changing) return Promise.resolve();
     onStatusChange?.(listing.id);
-    change.mutate({
+    return change.mutateAsync({
       id: listing.id,
       title: listing.title,
       patch,
-      body: patch,
+      body,
+    });
+  }
+
+  function release() {
+    return setStatus(
+      { availability: "available", sale: null },
+      { availability: "available" },
+    );
+  }
+
+  function chooseAvailability(next: Availability, confirmRelease: () => void) {
+    if (next !== "available") {
+      onStatusChange?.(listing.id);
+      setSelling(next);
+      return;
+    }
+    if (sale) {
+      confirmRelease();
+      return;
+    }
+    setStatus({ availability: next, sale: null }, { availability: next }).catch(
+      () => {},
+    );
+  }
+
+  function togglePaid(paid: boolean) {
+    if (!sale || changing) return;
+    change.mutate({
+      id: listing.id,
+      title: listing.title,
+      patch: { sale: { ...sale, paid } },
+      body: { paid },
+      route: "sale",
     });
   }
 
   return (
-    <div className="grid grid-cols-2 gap-3 lg:flex">
-      <div className="flex min-w-0 flex-col gap-1 text-xs text-muted lg:w-36">
-        <span aria-hidden="true">Publicação</span>
-        <Select
-          value={listing.publication}
-          onValueChange={(next) =>
-            setStatus({ publication: next as Publication })
-          }
-        >
-          <SelectTrigger
-            aria-label={`Publicação de ${listing.title}`}
-            className={selectTriggerClass}
+    <div className="flex flex-col gap-1">
+      <div className="grid grid-cols-2 gap-3 lg:flex">
+        <div className="flex min-w-0 flex-col gap-1 text-xs text-muted lg:w-36">
+          <span aria-hidden="true">Publicação</span>
+          <Select
+            value={listing.publication}
+            onValueChange={(next) =>
+              setStatus({ publication: next as Publication }).catch(() => {})
+            }
           >
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {PUBLICATIONS.map((p) => (
-              <SelectItem key={p} value={p}>
-                {PUBLICATION_LABELS[p]}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+            <SelectTrigger
+              aria-label={`Publicação de ${listing.title}`}
+              className={selectTriggerClass}
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PUBLICATIONS.map((p) => (
+                <SelectItem key={p} value={p}>
+                  {PUBLICATION_LABELS[p]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <ConfirmDialog
+          title={`Voltar "${listing.title}" para disponível?`}
+          description={`${sale?.buyer.name ?? "O comprador"} deixa de ser o comprador e o valor combinado, o pagamento e as observações são apagados.`}
+          confirmLabel="Voltar para disponível"
+          pendingLabel="Salvando..."
+          onConfirm={release}
+          trigger={(open) => (
+            <div className="flex min-w-0 flex-col gap-1 text-xs text-muted lg:w-36">
+              <span aria-hidden="true">Disponibilidade</span>
+              <Select
+                value={listing.availability}
+                onValueChange={(next) =>
+                  chooseAvailability(next as Availability, open)
+                }
+              >
+                <SelectTrigger
+                  aria-label={`Disponibilidade de ${listing.title}`}
+                  className={selectTriggerClass}
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {AVAILABILITIES.map((a) => (
+                    <SelectItem key={a} value={a}>
+                      {AVAILABILITY_LABELS[a]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+        />
       </div>
-      <div className="flex min-w-0 flex-col gap-1 text-xs text-muted lg:w-36">
-        <span aria-hidden="true">Disponibilidade</span>
-        <Select
-          value={listing.availability}
-          onValueChange={(next) =>
-            setStatus({ availability: next as Availability })
-          }
-        >
-          <SelectTrigger
-            aria-label={`Disponibilidade de ${listing.title}`}
-            className={selectTriggerClass}
-          >
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {AVAILABILITIES.map((a) => (
-              <SelectItem key={a} value={a}>
-                {AVAILABILITY_LABELS[a]}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      {sale && listing.availability !== "available" && (
+        <label className="flex min-h-11 w-fit cursor-pointer items-center gap-2 text-sm font-medium text-ink-soft">
+          <input
+            type="checkbox"
+            checked={sale.paid}
+            onChange={(event) => togglePaid(event.target.checked)}
+            aria-label={`Pago — ${listing.title}`}
+            className="size-5 accent-ink"
+          />
+          {PAYMENT_LABELS.paid}
+        </label>
+      )}
+      {selling && (
+        <BuyerDialog
+          storeId={storeId}
+          listing={listing}
+          availability={selling}
+          onClose={() => setSelling(null)}
+        />
+      )}
     </div>
   );
+}
+
+/**
+ * The buyer of a reserved or sold listing, or a note that none was recorded.
+ * Meant for the title cell; renders nothing for an available listing.
+ */
+export function ListingBuyerLine({
+  listing,
+}: {
+  listing: AdminListingSummary;
+}) {
+  if (listing.availability === "available") return null;
+  if (!listing.sale) {
+    return <p className="mt-1 text-sm text-muted">Sem comprador</p>;
+  }
+  return (
+    <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+      <span className="font-semibold">{listing.sale.buyer.name}</span>
+      {!listing.sale.paid && (
+        <span className="rounded-full bg-stamp/10 px-2 py-0.5 text-xs font-semibold text-stamp">
+          {PAYMENT_LABELS.unpaid}
+        </span>
+      )}
+    </p>
+  );
+}
+
+/** What deleting costs when the buyer has not paid: the debt stops counting. */
+function unpaidDebtNote({ sale }: AdminListingSummary): string {
+  if (!sale || sale.paid) return "";
+  const owed =
+    sale.agreedPriceCents === null
+      ? ""
+      : ` (${formatPrice(sale.agreedPriceCents)})`;
+  return ` ${sale.buyer.name} ainda não pagou${owed}, e esse valor deixa de contar como dívida.`;
 }
 
 /** Edit, view or preview, duplicate and delete buttons for one listing. */
@@ -127,6 +241,7 @@ export function ListingRowActions({
   listing: AdminListingSummary;
 }) {
   const router = useRouter();
+  const [editingBuyer, setEditingBuyer] = useState(false);
   const base = listingsPath(storeId);
   const duplicate = useMutation({
     mutationFn: () =>
@@ -137,7 +252,7 @@ export function ListingRowActions({
     mutationFn: () => api("DELETE", `${base}/${listing.id}`),
     meta: {
       success: `"${listing.title}" foi excluído.`,
-      invalidates: [listingKeys.all(storeId)],
+      invalidates: [listingKeys.all(storeId), buyerKeys.all(storeId)],
     },
   });
 
@@ -152,6 +267,35 @@ export function ListingRowActions({
 
   return (
     <div className="flex flex-wrap gap-1 lg:flex-nowrap lg:justify-end">
+      {listing.availability !== "available" && (
+        <>
+          <Tooltip label={listing.sale ? "Comprador" : "Adicionar comprador"}>
+            <button
+              type="button"
+              onClick={() => setEditingBuyer(true)}
+              className="inline-flex size-11 items-center justify-center rounded-full hover:bg-ink/5"
+              aria-label={
+                listing.sale
+                  ? `Comprador de ${listing.title}`
+                  : `Adicionar comprador a ${listing.title}`
+              }
+            >
+              {listing.sale ? (
+                <UserRound className="size-4" aria-hidden="true" />
+              ) : (
+                <UserPlus className="size-4" aria-hidden="true" />
+              )}
+            </button>
+          </Tooltip>
+          {editingBuyer && (
+            <BuyerDialog
+              storeId={storeId}
+              listing={listing}
+              onClose={() => setEditingBuyer(false)}
+            />
+          )}
+        </>
+      )}
       <Tooltip label="Editar">
         <Link
           href={`/admin/listings/${listing.id}`}
@@ -207,7 +351,7 @@ export function ListingRowActions({
       />
       <ConfirmDialog
         title={`Excluir "${listing.title}"?`}
-        description="O anúncio e as fotos são apagados de vez, e o link compartilhado deixa de funcionar. Para só tirar da loja, mude a publicação para Arquivado."
+        description={`O anúncio e as fotos são apagados de vez, e o link compartilhado deixa de funcionar. Para só tirar da loja, mude a publicação para Arquivado.${unpaidDebtNote(listing)}`}
         confirmLabel="Excluir anúncio"
         pendingLabel="Excluindo..."
         onSuccess={() => document.getElementById("listings-heading")?.focus()}

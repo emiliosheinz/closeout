@@ -1,4 +1,8 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  useMutation,
+  useMutationState,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { buyerKeys } from "@/entities/buyer";
 import { type AdminListingSummary, listingKeys } from "@/entities/listing";
 import { ApiError, api, successFor } from "@/shared/api";
@@ -57,4 +61,12 @@ export function useListingChange(storeId: string) {
       handlesError: isStaleSale,
     },
   });
+}
+
+/** Whether a board change for this listing is still in flight, from any component. */
+export function useIsListingChanging(storeId: string, id: string): boolean {
+  return useMutationState({
+    filters: { mutationKey: statusMutationKey(storeId), status: "pending" },
+    select: (mutation) => (mutation.state.variables as StatusChange).id,
+  }).includes(id);
 }

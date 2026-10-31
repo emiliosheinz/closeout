@@ -12,6 +12,7 @@ import {
   tabCounts,
 } from "@/entities/listing";
 import {
+  ListingBuyerLine,
   ListingRowActions,
   ListingStatusControls,
   useListings,
@@ -65,6 +66,7 @@ const columns: DataTableColumns<Row> = [
       <ListingTitle
         listing={row.original.listing}
         unreachableSellerIds={row.original.unreachableSellerIds}
+        footer={<ListingBuyerLine listing={row.original.listing} />}
       />
     ),
   },
