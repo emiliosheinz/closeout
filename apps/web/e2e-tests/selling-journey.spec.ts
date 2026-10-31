@@ -20,7 +20,7 @@ test.describe
     }) => {
       await signIn(page);
       await page.getByRole("link", { name: "Novo anúncio" }).click();
-      await expect(page).toHaveURL(/\/admin\/anuncios\/novo$/);
+      await expect(page).toHaveURL(/\/admin\/listings\/new$/);
       await hydrated(page);
       await page.getByLabel("Nome do item").fill(TITLE);
       await page.getByLabel("Preço (R$)").fill("1.234,50");
@@ -53,7 +53,7 @@ test.describe
       await test.step("the category chip lists it", async () => {
         await page.goto(STORE);
         await page.getByRole("link", { name: /^Casa e decoração/ }).click();
-        await expect(page).toHaveURL(/categoria=casa-e-decoracao/);
+        await expect(page).toHaveURL(/category=casa-e-decoracao/);
         await expect(
           page.getByRole("link", { name: TITLE, exact: true }),
         ).toBeVisible();
@@ -109,7 +109,7 @@ test.describe
       ).toBeVisible();
 
       const visitor = await browser.newPage();
-      await visitor.goto(`${STORE}?disponibilidade=reservado`);
+      await visitor.goto(`${STORE}?availability=reserved`);
       await expect(
         visitor.getByRole("article").filter({ hasText: TITLE }),
       ).toContainText("Reservado");
@@ -125,7 +125,7 @@ test.describe
       await expect(
         visitor.getByRole("link", { name: TITLE, exact: true }),
       ).toHaveCount(0);
-      await visitor.goto(`${STORE}?disponibilidade=vendido`);
+      await visitor.goto(`${STORE}?availability=sold`);
       await visitor.getByRole("link", { name: TITLE, exact: true }).click();
       await expect(
         visitor.getByText("Este item já foi vendido.").first(),
@@ -148,7 +148,7 @@ test.describe
         await findInAdmin(page, TITLE);
         await page.getByRole("button", { name: `Duplicar ${TITLE}` }).click();
         await page.getByRole("button", { name: "Duplicar anúncio" }).click();
-        await expect(page).toHaveURL(/copiado=1/);
+        await expect(page).toHaveURL(/notice=copied/);
         await expect(page.getByRole("heading", { level: 1 })).toHaveText(
           `${TITLE} (cópia)`,
         );

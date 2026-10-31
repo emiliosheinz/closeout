@@ -114,7 +114,7 @@ describe("ListingView", () => {
     expect(screen.getAllByText("R$ 450,00")).toHaveLength(1);
     expect(screen.getByRole("link", { name: "Móveis" })).toHaveAttribute(
       "href",
-      "/store/nosso-desapego?categoria=moveis",
+      "/store/nosso-desapego?category=moveis",
     );
   });
 

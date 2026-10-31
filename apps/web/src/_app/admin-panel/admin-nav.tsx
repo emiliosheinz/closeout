@@ -9,8 +9,8 @@ import { cn } from "@/shared/lib/utils";
 
 const LINKS: { href: string; label: string; managersOnly?: boolean }[] = [
   { href: "/admin", label: "Anúncios" },
-  { href: "/admin/equipe", label: "Equipe" },
-  { href: "/admin/loja", label: "Loja", managersOnly: true },
+  { href: "/admin/team", label: "Equipe" },
+  { href: "/admin/store", label: "Loja", managersOnly: true },
 ];
 
 export function AdminNav() {
@@ -32,7 +32,7 @@ export function AdminNav() {
             const active =
               link.href === "/admin"
                 ? pathname === "/admin" ||
-                  pathname.startsWith("/admin/anuncios")
+                  pathname.startsWith("/admin/listings")
                 : pathname.startsWith(link.href);
             return (
               <Link

@@ -31,7 +31,7 @@ export async function DashboardPage() {
           Anúncios
         </h1>
         <Link
-          href="/admin/anuncios/novo"
+          href="/admin/listings/new"
           className="inline-flex h-11 items-center gap-2 rounded-full bg-ink px-5 text-sm font-semibold text-surface hover:bg-ink-soft"
         >
           <Plus className="size-4" aria-hidden="true" />

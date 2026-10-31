@@ -28,7 +28,7 @@ test("admin pages carry their data in the first server response", async ({
 }) => {
   await signIn(page);
   const firstListing = page
-    .locator('a[href^="/admin/anuncios/"]:not([href$="/novo"])')
+    .locator('a[href^="/admin/listings/"]:not([href$="/new"])')
     .first();
   const href = await firstListing.getAttribute("href");
   const title = (await firstListing.innerText()).trim();
@@ -37,14 +37,14 @@ test("admin pages carry their data in the first server response", async ({
 
   expect(await documentWithoutScripts(page, "/admin")).toContain(titleHtml);
 
-  expect(await documentWithoutScripts(page, "/admin/equipe")).toContain(
+  expect(await documentWithoutScripts(page, "/admin/team")).toContain(
     "Ana Teste",
   );
 
-  const store = await documentWithoutScripts(page, "/admin/loja");
+  const store = await documentWithoutScripts(page, "/admin/store");
   expect(store).toMatch(/<input[^>]*value="Loja E2E"/);
 
-  const newListing = await documentWithoutScripts(page, "/admin/anuncios/novo");
+  const newListing = await documentWithoutScripts(page, "/admin/listings/new");
   expect(newListing).toMatch(/<label[^>]*>Nome do item<\/label>/);
   expect(newListing).toMatch(/<input[^>]*id="title"/);
   expect(newListing).toMatch(
@@ -58,7 +58,7 @@ test("admin pages carry their data in the first server response", async ({
     ),
   );
 
-  expect(await documentWithoutScripts(page, `${href}/previa`)).toContain(
+  expect(await documentWithoutScripts(page, `${href}/preview`)).toContain(
     titleHtml,
   );
 });

@@ -35,9 +35,9 @@ const ids = (slug: string) => {
 
 describe("dashboard status filters", () => {
   it("filters drafts and archived listings by publication", () => {
-    expect(ids("rascunhos")).toEqual(["draft-available", "draft-sold"]);
-    expect(ids("arquivados")).toEqual(["archived-sold"]);
-    expect(ids("publicados")).toEqual([
+    expect(ids("draft")).toEqual(["draft-available", "draft-sold"]);
+    expect(ids("archived")).toEqual(["archived-sold"]);
+    expect(ids("published")).toEqual([
       "published-available",
       "published-reserved",
       "published-sold",
@@ -45,9 +45,9 @@ describe("dashboard status filters", () => {
   });
 
   it("filters availability among published listings only", () => {
-    expect(ids("disponiveis")).toEqual(["published-available"]);
-    expect(ids("reservados")).toEqual(["published-reserved"]);
-    expect(ids("vendidos")).toEqual(["published-sold"]);
+    expect(ids("available")).toEqual(["published-available"]);
+    expect(ids("reserved")).toEqual(["published-reserved"]);
+    expect(ids("sold")).toEqual(["published-sold"]);
   });
 
   it("treats an unknown status as no filter", () => {

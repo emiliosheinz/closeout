@@ -55,7 +55,7 @@ describe("AdminNav", () => {
     expect(linkNames()).toEqual(["Anúncios", "Equipe", "Loja"]);
     expect(screen.getByRole("link", { name: "Equipe" })).toHaveAttribute(
       "href",
-      "/admin/equipe",
+      "/admin/team",
     );
   });
 

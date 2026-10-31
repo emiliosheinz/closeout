@@ -176,7 +176,7 @@ export function ListingRowActions({
     <div className="flex flex-wrap gap-1 lg:flex-nowrap lg:justify-end">
       <Tooltip label="Editar">
         <Link
-          href={`/admin/anuncios/${listing.id}`}
+          href={`/admin/listings/${listing.id}`}
           className="inline-flex size-11 items-center justify-center rounded-full hover:bg-ink/5"
           aria-label={`Editar ${listing.title}`}
         >
@@ -192,7 +192,7 @@ export function ListingRowActions({
           href={
             listing.publication === "published"
               ? itemPath(storeSlug, listing.slug)
-              : `/admin/anuncios/${listing.id}/previa`
+              : `/admin/listings/${listing.id}/preview`
           }
           target="_blank"
           rel="noopener noreferrer"

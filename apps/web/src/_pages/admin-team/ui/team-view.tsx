@@ -86,15 +86,15 @@ const ROLE_ORDER: Record<TeamMember["role"], number> = {
 };
 
 const membersUrlState = createTableUrlState({
-  prefix: "membros-",
-  sorts: ["nome", "papel"],
+  prefix: "members-",
+  sorts: ["name", "role"],
   defaultSort: null,
 });
 
 const invitesUrlState = createTableUrlState({
-  prefix: "convites-",
-  sorts: ["validade"],
-  defaultSort: { column: "validade", direction: "asc" },
+  prefix: "invites-",
+  sorts: ["expires"],
+  defaultSort: { column: "expires", direction: "asc" },
 });
 
 function RoleCell({ role }: { role: TeamMember["role"] }) {
@@ -131,7 +131,7 @@ type MemberRow = {
 function memberColumns(canManage: boolean): DataTableColumns<MemberRow> {
   return [
     {
-      id: "nome",
+      id: "name",
       header: "Nome",
       accessorFn: (row) => row.member.displayName,
       enableSorting: canManage,
@@ -150,7 +150,7 @@ function memberColumns(canManage: boolean): DataTableColumns<MemberRow> {
       ),
     },
     {
-      id: "papel",
+      id: "role",
       header: "Papel",
       accessorFn: (row) => row.member.role,
       enableSorting: canManage,
@@ -248,13 +248,13 @@ const inviteColumns: DataTableColumns<InviteRow> = [
     cell: ({ row }) => <InviteIdentity invite={row.original.invite} />,
   },
   {
-    id: "papel",
+    id: "role",
     header: "Papel",
     enableSorting: false,
     cell: ({ row }) => <RoleCell role={row.original.invite.role} />,
   },
   {
-    id: "validade",
+    id: "expires",
     header: "Validade",
     accessorFn: (row) => row.invite.expiresAt,
     sortFn: (a, b) =>

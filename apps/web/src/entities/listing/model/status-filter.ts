@@ -17,37 +17,37 @@ const published = (listing: AdminListingSummary) =>
  */
 export const STATUS_FILTERS: StatusFilter[] = [
   {
-    slug: "publicados",
+    slug: "published",
     label: "Publicados",
     count: "published",
     matches: published,
   },
   {
-    slug: "disponiveis",
+    slug: "available",
     label: "Disponíveis",
     count: "available",
     matches: (l) => published(l) && l.availability === "available",
   },
   {
-    slug: "reservados",
+    slug: "reserved",
     label: "Reservados",
     count: "reserved",
     matches: (l) => published(l) && l.availability === "reserved",
   },
   {
-    slug: "vendidos",
+    slug: "sold",
     label: "Vendidos",
     count: "sold",
     matches: (l) => published(l) && l.availability === "sold",
   },
   {
-    slug: "rascunhos",
+    slug: "draft",
     label: "Rascunhos",
     count: "draft",
     matches: (l) => l.publication === "draft",
   },
   {
-    slug: "arquivados",
+    slug: "archived",
     label: "Arquivados",
     count: "archived",
     matches: (l) => l.publication === "archived",

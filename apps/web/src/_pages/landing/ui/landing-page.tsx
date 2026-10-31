@@ -59,7 +59,7 @@ export function LandingPage() {
       <div className="mt-12 flex flex-col items-start gap-3">
         <div className="flex flex-wrap items-center gap-3">
           <Link
-            href="/admin/entrar"
+            href="/admin/login"
             className="inline-flex h-12 items-center rounded-full bg-ink px-6 text-base font-semibold text-surface hover:bg-ink-soft"
           >
             Entrar para gerenciar sua loja

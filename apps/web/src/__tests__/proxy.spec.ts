@@ -35,15 +35,21 @@ describe("proxy", () => {
   });
 
   it("sends a catalog URL that is not in its clean form to the clean one", () => {
-    const { res } = run("/store/loja?min=&estado=bom");
+    const { res } = run("/store/loja?min=&condition=good");
     expect(res.status).toBe(307);
     expect(res.headers.get("location")).toBe(
-      "http://web:3000/store/loja?estado=bom",
+      "http://web:3000/store/loja?condition=good",
     );
   });
 
+  it("drops a catalog parameter that has an old Portuguese name", () => {
+    const { res } = run("/store/loja?estado=bom&q=a");
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toBe("http://web:3000/store/loja?q=a");
+  });
+
   it("lets a clean catalog URL through", () => {
-    const { res } = run("/store/loja?estado=bom");
+    const { res } = run("/store/loja?condition=good");
     expect(res.headers.get("location")).toBeNull();
     expect(res.headers.get("x-middleware-next")).toBe("1");
   });

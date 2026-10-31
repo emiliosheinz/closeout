@@ -32,7 +32,7 @@ const store = {
 const render = () =>
   CatalogPage({
     params: Promise.resolve({ slug: "loja" }),
-    searchParams: Promise.resolve({ pagina: "3" }),
+    searchParams: Promise.resolve({ page: "3" }),
   });
 
 describe("catalog page past the last page", () => {

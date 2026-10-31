@@ -17,7 +17,7 @@ describe("catalog controls", () => {
       <CategoryChips
         storeSlug="nosso-desapego"
         categories={categories}
-        filters={parseCatalogParams({ q: "mesa", categoria: "moveis" })}
+        filters={parseCatalogParams({ q: "mesa", category: "moveis" })}
       />,
     );
     expect(screen.getByRole("link", { name: "Tudo" })).toHaveAttribute(
@@ -26,7 +26,7 @@ describe("catalog controls", () => {
     );
     expect(screen.getByRole("link", { name: /^Cozinha\s*1$/ })).toHaveAttribute(
       "href",
-      "/store/nosso-desapego?q=mesa&categoria=cozinha",
+      "/store/nosso-desapego?q=mesa&category=cozinha",
     );
   });
 
@@ -44,7 +44,7 @@ describe("catalog controls", () => {
     );
     expect(screen.getByRole("link", { name: /^Móveis\s*2$/ })).toHaveAttribute(
       "href",
-      "/store/loja-da-bia?categoria=moveis",
+      "/store/loja-da-bia?category=moveis",
     );
   });
 
@@ -72,7 +72,7 @@ describe("catalog controls", () => {
     ["nosso-desapego", "/store/nosso-desapego"],
     ["loja-da-bia", "/store/loja-da-bia"],
   ])("removes active filters of %s without leaving it", (slug, path) => {
-    const filters = parseCatalogParams({ q: "mesa", categoria: "moveis" });
+    const filters = parseCatalogParams({ q: "mesa", category: "moveis" });
     render(
       <ActiveFilters
         storeSlug={slug}
@@ -90,8 +90,8 @@ describe("catalog controls", () => {
   it("reflects the search, category and sort of the URL in the controls", () => {
     const filters = parseCatalogParams({
       q: "mesa",
-      categoria: "moveis",
-      ordem: "menor-preco",
+      category: "moveis",
+      sort: "price_asc",
     });
     render(
       <>

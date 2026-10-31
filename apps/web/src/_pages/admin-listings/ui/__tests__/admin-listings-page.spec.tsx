@@ -115,7 +115,7 @@ describe("admin listings page", () => {
       "/stores/store-1/listings": { items: listings },
       "/stores/store-1/sellers": { items: [] },
     });
-    await show("?status=rascunhos&q=mesa");
+    await show("?status=draft&q=mesa");
     expect(titles()).toEqual(["Mesa de jantar"]);
     expect(screen.getByRole("button", { name: /Rascunhos/ })).toHaveAttribute(
       "aria-pressed",
@@ -145,7 +145,7 @@ describe("admin listings page", () => {
       "/stores/store-1/sellers": 401,
     });
     await expect(DashboardPage()).rejects.toMatchObject({
-      digest: expect.stringContaining("/admin/entrar?erro=sessao-expirada"),
+      digest: expect.stringContaining("/admin/login?error=session-expired"),
     });
   });
 
@@ -166,7 +166,7 @@ describe("admin listings page", () => {
       "/stores/store-1/listings": { items: listings },
       "/stores/store-1/sellers": { items: [] },
     });
-    await show("?status=vendidos");
+    await show("?status=sold");
     vi.stubGlobal(
       "fetch",
       vi.fn(() => new Promise<Response>(() => {})),
@@ -214,7 +214,7 @@ describe("admin listings page", () => {
       "/stores/store-1/listings": { items: listings },
       "/stores/store-1/sellers": { items: [] },
     });
-    await show("?status=vendidos");
+    await show("?status=sold");
     await changeCadeiraToAvailable(new Promise<Response>(() => {}));
     await waitFor(() =>
       expect(screen.getByTestId("count-sold")).toHaveTextContent("0"),
@@ -234,7 +234,7 @@ describe("admin listings page", () => {
       "/stores/store-1/listings": { items: listings },
       "/stores/store-1/sellers": { items: [] },
     });
-    await show("?status=vendidos");
+    await show("?status=sold");
     await changeCadeiraToAvailable(new Promise<Response>(() => {}));
     await waitFor(() =>
       expect(screen.getByTestId("count-sold")).toHaveTextContent("0"),
@@ -382,7 +382,7 @@ describe("sorting", () => {
 
   it("reads the sort from the URL", async () => {
     serve(["Banco", "Árvore"].map((title) => item(title)));
-    await show("?ordem=titulo-desc");
+    await show("?sort=title-desc");
     expect(titles()).toEqual(["Banco", "Árvore"]);
   });
 });
@@ -403,15 +403,16 @@ describe("status filters", () => {
 
   it.each([
     [
-      "publicados",
+      "published",
       ["publicado disponível", "publicado reservado", "publicado vendido"],
     ],
-    ["disponiveis", ["publicado disponível"]],
-    ["reservados", ["publicado reservado"]],
-    ["vendidos", ["publicado vendido"]],
-    ["rascunhos", ["rascunho disponível", "rascunho vendido"]],
-    ["arquivados", ["arquivado reservado"]],
+    ["available", ["publicado disponível"]],
+    ["reserved", ["publicado reservado"]],
+    ["sold", ["publicado vendido"]],
+    ["draft", ["rascunho disponível", "rascunho vendido"]],
+    ["archived", ["arquivado reservado"]],
     ["qualquer-coisa", all],
+    ["vendidos", all],
   ])("?status=%s shows exactly its listings", async (slug, expected) => {
     serve(everyStatus);
     await show(`?status=${slug}`);
@@ -426,7 +427,7 @@ describe("status filters", () => {
 
   it("keeps the store-wide counts while a search and a filter are active", async () => {
     serve(everyStatus);
-    await show("?status=vendidos&q=publicado");
+    await show("?status=sold&q=publicado");
     expect(titles()).toEqual(["publicado vendido"]);
     expect(tab(/Todos/)).toHaveTextContent("6");
     const counts = Object.fromEntries(
@@ -474,7 +475,7 @@ describe("search", () => {
 
   it("names the active tab when nothing matched under it", async () => {
     serve([item("Mesa")]);
-    await show("?status=vendidos&q=mesa");
+    await show("?status=sold&q=mesa");
     expect(
       screen.getByText('Nenhum anúncio em Vendidos com "mesa" no título.'),
     ).toBeInTheDocument();
@@ -537,7 +538,7 @@ describe("rows", () => {
         availability: "sold",
       }),
     ]);
-    await show("?ordem=preco-asc");
+    await show("?sort=price-asc");
     vi.stubGlobal(
       "fetch",
       vi.fn(() => new Promise<Response>(() => {})),
@@ -579,14 +580,14 @@ describe("pages", () => {
 
   it("shows the last page for a page past the end", async () => {
     serve(many);
-    await show("?pagina=9");
+    await show("?page=9");
     expect(screen.getByText("Página 2 de 2")).toBeInTheDocument();
     expect(titles()).toHaveLength(5);
   });
 
   it("goes back to page 1 when the filter, the search or the sort changes", async () => {
     serve(many);
-    await show("?pagina=2");
+    await show("?page=2");
     expect(screen.getByText("Página 2 de 2")).toBeInTheDocument();
 
     fireEvent.click(tab(/Publicados/));
@@ -616,7 +617,7 @@ describe("a row whose status changed under a filter", () => {
       }),
     ];
     serve(sold);
-    const { client } = renderWithFeedback(await atUrl("?status=vendidos"));
+    const { client } = renderWithFeedback(await atUrl("?status=sold"));
     // The server bumps the update time, which would put Cadeira first.
     let server = [
       sold[0],
@@ -684,7 +685,7 @@ describe("a row changed twice under a filter", () => {
       }),
     ];
     serve(sold);
-    renderWithFeedback(await atUrl("?status=vendidos"));
+    renderWithFeedback(await atUrl("?status=sold"));
     const server = [
       sold[0],
       {
@@ -761,7 +762,7 @@ describe("pinned rows and the view", () => {
 
   it("drops a pinned row once the sort changes", async () => {
     serve(sold);
-    await show("?status=vendidos");
+    await show("?status=sold");
     await pinCadeira();
 
     sortBy(/Título/);
@@ -780,10 +781,10 @@ describe("pinned rows and the view", () => {
         </NuqsTestingAdapter>
       </QueryClientProvider>
     );
-    const view = render(at("?status=vendidos&ordem=titulo-asc"));
+    const view = render(at("?status=sold&sort=title-asc"));
     await pinCadeira();
 
-    view.rerender(at("?status=vendidos"));
+    view.rerender(at("?status=sold"));
 
     await waitFor(() => expect(titles()).toEqual(["Abajur"]));
   });
@@ -793,7 +794,7 @@ describe("pinned rows and the view", () => {
       item(`Vendido ${String(i).padStart(2, "0")}`, { availability: "sold" }),
     );
     serve(soldMany);
-    await show("?status=vendidos&ordem=titulo-asc");
+    await show("?status=sold&sort=title-asc");
     const first = screen.getByRole("combobox", {
       name: "Disponibilidade de Vendido 00",
     });

@@ -44,7 +44,7 @@ describe("new listing page", () => {
   ])("sends the member to login when the %s read is unauthorized", async (_name, routes) => {
     stubAdminApi({ "/me": meResponse("owner"), ...routes });
     await expect(NewListingPage()).rejects.toMatchObject({
-      digest: expect.stringContaining("/admin/entrar?erro=sessao-expirada"),
+      digest: expect.stringContaining("/admin/login?error=session-expired"),
     });
   });
 });

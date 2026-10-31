@@ -10,14 +10,21 @@ beforeEach(() => {
   stubAdminApi({ "/me": 401 });
 });
 
-const renderPage = async (erro?: string) =>
-  render(await LoginPage({ searchParams: Promise.resolve({ erro }) }));
+const renderPage = async (error?: string) =>
+  render(await LoginPage({ searchParams: Promise.resolve({ error }) }));
 
 describe("login page", () => {
   it("explains an expired session", async () => {
-    await renderPage("sessao-expirada");
+    await renderPage("session-expired");
     expect(screen.getByRole("status")).toHaveTextContent(
       "Sua sessão expirou. Entre de novo.",
+    );
+  });
+
+  it("explains a missing store membership", async () => {
+    await renderPage("no-access");
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Esta conta não administra esta loja.",
     );
   });
 

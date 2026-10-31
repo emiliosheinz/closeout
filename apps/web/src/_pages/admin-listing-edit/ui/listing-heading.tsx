@@ -26,7 +26,7 @@ export function ListingHeading({
         href={
           published
             ? itemPath(storeSlug, listing.slug)
-            : `/admin/anuncios/${listing.id}/previa`
+            : `/admin/listings/${listing.id}/preview`
         }
         target="_blank"
         rel="noopener noreferrer"

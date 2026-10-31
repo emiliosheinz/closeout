@@ -32,8 +32,8 @@ export function lastPage(rowCount: number): number {
 
 /**
  * URL keys and parsers for one admin table. `prefix` keeps tables on the same
- * page from sharing keys (`membros-` gives `membros-q`, `membros-ordem`,
- * `membros-pagina`). Sort is `<column>-asc|desc`; defaults are left out of the
+ * page from sharing keys (`members-` gives `members-q`, `members-sort`,
+ * `members-page`). Sort is `<column>-asc|desc`; defaults are left out of the
  * URL and invalid values fall back to them. A `null` default means no sort.
  */
 export function createTableUrlState<Column extends string>({
@@ -68,8 +68,8 @@ export function createTableUrlState<Column extends string>({
     },
     urlKeys: {
       query: `${prefix}q`,
-      sort: `${prefix}ordem`,
-      page: `${prefix}pagina`,
+      sort: `${prefix}sort`,
+      page: `${prefix}page`,
     },
   };
 }

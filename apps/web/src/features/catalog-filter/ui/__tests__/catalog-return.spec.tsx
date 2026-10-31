@@ -8,13 +8,11 @@ describe("returning to the catalog", () => {
     screen.getByRole("link", { name: "Voltar ao catálogo" });
 
   it("goes back to the search and filters the visitor was browsing", () => {
-    render(
-      <RememberCatalogView href="/store/nosso-desapego?q=mesa&pagina=2" />,
-    );
+    render(<RememberCatalogView href="/store/nosso-desapego?q=mesa&page=2" />);
     render(<BackToCatalog storeSlug="nosso-desapego" />);
     expect(backLink()).toHaveAttribute(
       "href",
-      "/store/nosso-desapego?q=mesa&pagina=2",
+      "/store/nosso-desapego?q=mesa&page=2",
     );
   });
 

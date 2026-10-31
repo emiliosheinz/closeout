@@ -62,6 +62,10 @@ test("the running app serves robots rules, security headers and real 404s, and n
       "/pagina-que-nao-existe",
       `${STORE}/items/item-que-nao-existe`,
       "/itens/x",
+      "/admin/entrar",
+      "/admin/anuncios/novo",
+      "/admin/equipe",
+      "/admin/loja",
     ]) {
       expect((await page.request.get(path)).status(), path).toBe(404);
     }

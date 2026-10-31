@@ -13,7 +13,7 @@ test("a member signs in after a wrong password, gets a locked-down session cooki
   context,
 }) => {
   await test.step("a wrong password gets one generic message", async () => {
-    await page.goto("/admin/entrar");
+    await page.goto("/admin/login");
     await hydrated(page);
     await page.getByLabel("E-mail").fill(ADMIN_EMAIL);
     await page.getByLabel("Senha").fill("definitely-wrong");
@@ -38,7 +38,7 @@ test("a member signs in after a wrong password, gets a locked-down session cooki
 
   await test.step("signing out drops the cookie", async () => {
     await page.getByRole("button", { name: "Sair" }).click();
-    await expect(page).toHaveURL(/\/admin\/entrar$/);
+    await expect(page).toHaveURL(/\/admin\/login$/);
     expect(
       (await context.cookies()).find((c) => c.name === "closeout_session"),
     ).toBeUndefined();
@@ -47,7 +47,7 @@ test("a member signs in after a wrong password, gets a locked-down session cooki
   await test.step("the old token was revoked on the server", async () => {
     await context.addCookies([cookie]);
     await page.goto("/admin");
-    await expect(page).toHaveURL(/\/admin\/entrar$/);
+    await expect(page).toHaveURL(/\/admin\/login$/);
   });
 });
 
@@ -55,11 +55,11 @@ test("a write after the session is gone lands on the session-expired login", asy
   page,
 }) => {
   await signIn(page);
-  await page.goto("/admin/loja");
+  await page.goto("/admin/store");
   await hydrated(page);
   await page.context().clearCookies();
   await page.getByRole("button", { name: "Salvar loja" }).click();
-  await expect(page).toHaveURL(/\/admin\/entrar\?erro=sessao-expirada$/);
+  await expect(page).toHaveURL(/\/admin\/login\?error=session-expired$/);
   await expect(
     page.getByText("Sua sessão expirou. Entre de novo."),
   ).toBeVisible();
@@ -90,7 +90,7 @@ test("an admin renames the store and changes its headline, and the storefront sh
     .getByRole("navigation", { name: "Administração" })
     .getByRole("link", { name: "Loja", exact: true })
     .click();
-  await expect(page).toHaveURL(/\/admin\/loja$/);
+  await expect(page).toHaveURL(/\/admin\/store$/);
   await hydrated(page);
   await expect(
     page.getByText(`${BASE_URL}${STORE}`, { exact: true }),
@@ -118,7 +118,7 @@ test("an admin renames the store and changes its headline, and the storefront sh
   });
 
   await test.step("restore the fixture the other journeys expect", async () => {
-    await page.goto("/admin/loja");
+    await page.goto("/admin/store");
     await hydrated(page);
     await page.getByLabel("Nome da loja").fill("Loja E2E");
     await page.getByLabel("Chamada principal").fill(headline);

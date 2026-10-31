@@ -47,7 +47,16 @@ describe("panel layout", () => {
     await expect(
       PanelLayout({ children: <p>conteúdo</p> }),
     ).rejects.toMatchObject({
-      digest: expect.stringContaining("/admin/entrar"),
+      digest: expect.stringContaining("/admin/login"),
+    });
+  });
+
+  it("sends a signed-in user without a store membership to login with a reason", async () => {
+    stubAdminApi({ "/me": { ...meResponse("owner"), memberships: [] } });
+    await expect(
+      PanelLayout({ children: <p>conteúdo</p> }),
+    ).rejects.toMatchObject({
+      digest: expect.stringContaining("/admin/login?error=no-access"),
     });
   });
 

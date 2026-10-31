@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { SESSION_EXPIRED_ERROR } from "@/entities/session";
+import { NO_ACCESS_ERROR, SESSION_EXPIRED_ERROR } from "@/entities/session";
 import { getMe } from "@/entities/session/index.server";
 import { waitlistPath } from "@/shared/lib/site";
 import { LoginForm } from "./login-form";
@@ -11,11 +11,11 @@ export const metadata: Metadata = { title: "Entrar" };
 export async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ erro?: string }>;
+  searchParams: Promise<{ error?: string }>;
 }) {
-  const { erro } = await searchParams;
+  const { error } = await searchParams;
   // An unreachable API must not take the login form down with it.
-  const me = erro === "sem-acesso" ? null : await getMe().catch(() => null);
+  const me = error === NO_ACCESS_ERROR ? null : await getMe().catch(() => null);
   if (me) redirect("/admin");
   return (
     <main className="mx-auto flex min-h-dvh max-w-sm flex-col justify-center px-4 py-12">
@@ -24,7 +24,7 @@ export async function LoginPage({
         Área de quem está vendendo. Para comprar não precisa de conta: abra o
         link da loja que recebeu.
       </p>
-      {erro === SESSION_EXPIRED_ERROR && (
+      {error === SESSION_EXPIRED_ERROR && (
         <p
           role="status"
           className="mt-4 rounded-md bg-stamp/10 px-3 py-2 text-sm text-stamp"
@@ -32,7 +32,7 @@ export async function LoginPage({
           Sua sessão expirou. Entre de novo.
         </p>
       )}
-      {erro === "sem-acesso" && (
+      {error === NO_ACCESS_ERROR && (
         <p
           role="alert"
           className="mt-4 rounded-md bg-stamp/10 px-3 py-2 text-sm text-stamp"

@@ -14,7 +14,7 @@ describe("logout route", () => {
       }),
     );
     expect(res.status).toBe(303);
-    expect(res.headers.get("location")).toBe("http://web:3000/admin/entrar");
+    expect(res.headers.get("location")).toBe("http://web:3000/admin/login");
     expect(res.headers.get("set-cookie")).toContain("closeout_session=;");
   });
 

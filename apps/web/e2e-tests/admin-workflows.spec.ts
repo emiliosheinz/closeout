@@ -20,7 +20,7 @@ test("a member's new WhatsApp number and photo reach their public listings", asy
     .getByRole("navigation", { name: "Administração" })
     .getByRole("link", { name: "Equipe", exact: true })
     .click();
-  await expect(page).toHaveURL(/\/admin\/equipe$/);
+  await expect(page).toHaveURL(/\/admin\/team$/);
   await hydrated(page);
   const row = page.getByRole("row").filter({ hasText: ADMIN_EMAIL });
   const dialog = page.getByRole("dialog");
@@ -63,7 +63,7 @@ test("a member's new WhatsApp number and photo reach their public listings", asy
   });
 
   await test.step("restore the fixture number the other journeys expect", async () => {
-    await page.goto("/admin/equipe");
+    await page.goto("/admin/team");
     await hydrated(page);
     await openEdit();
     await saveNumber("+55 11 98888-7777");

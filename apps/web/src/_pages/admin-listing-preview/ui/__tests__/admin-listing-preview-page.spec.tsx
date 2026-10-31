@@ -52,7 +52,7 @@ describe("listing preview page", () => {
   it("sends the member to login when the preview read is unauthorized", async () => {
     stubAdminApi({ "/me": meResponse(), [path]: 401 });
     await expect(PreviewPage(props)).rejects.toMatchObject({
-      digest: expect.stringContaining("/admin/entrar?erro=sessao-expirada"),
+      digest: expect.stringContaining("/admin/login?error=session-expired"),
     });
   });
 

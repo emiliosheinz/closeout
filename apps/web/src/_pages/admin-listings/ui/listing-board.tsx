@@ -33,8 +33,8 @@ import { SearchInput } from "@/shared/ui/search-input";
 
 const listingsTable = createTableUrlState({
   prefix: "",
-  sorts: ["titulo", "preco", "atualizado"],
-  defaultSort: { column: "atualizado", direction: "desc" },
+  sorts: ["title", "price", "updated"],
+  defaultSort: { column: "updated", direction: "desc" },
 });
 
 const statusParser = { status: parseAsString.withDefault("") };
@@ -56,7 +56,7 @@ type Row = {
 // cell function on every render would remount the row's controls.
 const columns: DataTableColumns<Row> = [
   {
-    id: "titulo",
+    id: "title",
     header: "Título",
     accessorFn: (row) => row.sortAs.title,
     sortFn: (a, b, id) =>
@@ -69,7 +69,7 @@ const columns: DataTableColumns<Row> = [
     ),
   },
   {
-    id: "preco",
+    id: "price",
     header: "Preço",
     // "Preço a combinar" (no price) goes last in both directions.
     accessorFn: (row) => row.sortAs.priceCents ?? undefined,
@@ -82,7 +82,7 @@ const columns: DataTableColumns<Row> = [
     ),
   },
   {
-    id: "atualizado",
+    id: "updated",
     header: "Atualizado",
     accessorFn: (row) => row.sortAs.updatedAt,
     sortFn: (a, b, id) =>

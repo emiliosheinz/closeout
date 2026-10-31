@@ -1,10 +1,6 @@
 import { CONDITIONS } from "@closeout/contracts/enums";
 import Link from "next/link";
-import type {
-  AvailabilityFilter,
-  CatalogFilters,
-  CatalogSort,
-} from "@/entities/listing";
+import type { CatalogFilters } from "@/entities/listing";
 import {
   AVAILABILITY_FILTER_LABELS,
   CONDITION_LABELS,
@@ -12,20 +8,10 @@ import {
 } from "@/shared/lib/format";
 import { storePath } from "@/shared/lib/site";
 import {
-  AVAILABILITY_PARAM,
-  CONDITION_PARAM,
+  AVAILABILITY_FILTERS,
+  CATALOG_SORTS,
   catalogEntries,
-  SORT_PARAM,
 } from "../model/params";
-
-const AVAILABILITY_OPTIONS: AvailabilityFilter[] = [
-  "listed",
-  "available",
-  "reserved",
-  "sold",
-  "all",
-];
-const SORT_OPTIONS: CatalogSort[] = ["recent", "price_asc", "price_desc"];
 
 function Choice({
   name,
@@ -70,12 +56,12 @@ export function FilterForm({
       className="flex flex-col gap-6"
     >
       {catalogEntries(filters, [
-        "estado",
-        "disponibilidade",
+        "condition",
+        "availability",
         "min",
         "max",
-        "ordem",
-        "pagina",
+        "sort",
+        "page",
       ]).map(([name, value]) => (
         <input key={name} type="hidden" name={name} value={value} />
       ))}
@@ -84,7 +70,7 @@ export function FilterForm({
         <legend className="mb-2 text-sm font-semibold">Estado</legend>
         <div className="flex flex-wrap gap-2">
           <Choice
-            name="estado"
+            name="condition"
             value=""
             label="Qualquer"
             checked={!filters.condition}
@@ -92,8 +78,8 @@ export function FilterForm({
           {CONDITIONS.map((condition) => (
             <Choice
               key={condition}
-              name="estado"
-              value={CONDITION_PARAM[condition]}
+              name="condition"
+              value={condition}
               label={CONDITION_LABELS[condition]}
               checked={filters.condition === condition}
             />
@@ -104,11 +90,11 @@ export function FilterForm({
       <fieldset>
         <legend className="mb-2 text-sm font-semibold">Disponibilidade</legend>
         <div className="flex flex-wrap gap-2">
-          {AVAILABILITY_OPTIONS.map((option) => (
+          {AVAILABILITY_FILTERS.map((option) => (
             <Choice
               key={option}
-              name="disponibilidade"
-              value={option === "listed" ? "" : AVAILABILITY_PARAM[option]}
+              name="availability"
+              value={option === "listed" ? "" : option}
               label={AVAILABILITY_FILTER_LABELS[option]}
               checked={filters.availability === option}
             />
@@ -157,11 +143,11 @@ export function FilterForm({
       <fieldset>
         <legend className="mb-2 text-sm font-semibold">Ordenar por</legend>
         <div className="flex flex-wrap gap-2">
-          {SORT_OPTIONS.map((sort) => (
+          {CATALOG_SORTS.map((sort) => (
             <Choice
               key={sort}
-              name="ordem"
-              value={sort === "recent" ? "" : SORT_PARAM[sort]}
+              name="sort"
+              value={sort === "recent" ? "" : sort}
               label={SORT_LABELS[sort]}
               checked={filters.sort === sort}
             />
