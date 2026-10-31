@@ -57,6 +57,8 @@ interface DemoListing {
   images: number;
 }
 
+const DEMO_BUYER = "Comprador de demonstração";
+
 const DEMO_LISTINGS: DemoListing[] = [
   {
     title: "Sofá retrátil 3 lugares",
@@ -429,8 +431,11 @@ async function createDemoListing(
     );
     await deps.images.add(owner.storeId, listing.id, files);
   }
-  await deps.listings.update(owner, listing.id, {
+  await deps.listings.changeStatus(owner, listing.id, {
     publication: demo.publication,
     availability: demo.availability,
+    ...(demo.availability !== "available" && {
+      buyer: { name: DEMO_BUYER },
+    }),
   });
 }
