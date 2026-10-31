@@ -1,6 +1,8 @@
 import type {
   AdminListingDetail,
   AdminListingSummary,
+  Buyer,
+  BuyerSummary,
   Category,
   FieldError,
   Seller,
@@ -111,3 +113,21 @@ export async function expectProblem(
     requestId: expect.any(String),
   });
 }
+
+export const buyer = (overrides: Partial<Buyer> = {}): Buyer => ({
+  id: "b-maria",
+  name: "Maria Silva",
+  whatsappNumber: null,
+  ...overrides,
+});
+
+export const buyerSummary = (
+  overrides: Partial<BuyerSummary> = {},
+): BuyerSummary => ({
+  ...buyer(),
+  linkedCount: 0,
+  items: [],
+  owedCents: 0,
+  unpricedCount: 0,
+  ...overrides,
+});
