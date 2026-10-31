@@ -1,4 +1,4 @@
-import type { Availability, Publication } from "@closeout/contracts/enums";
+import type { Publication } from "@closeout/contracts/enums";
 import { type ListingNotice, uploadPhotos } from "@/entities/listing";
 import { ApiError, api, apiParsed, withId } from "@/shared/api";
 
@@ -23,7 +23,6 @@ export async function updateListing(
   storeId: string,
   id: string,
   fields: ListingFields & {
-    availability: Availability;
     publication: Publication;
   },
   publish: boolean,

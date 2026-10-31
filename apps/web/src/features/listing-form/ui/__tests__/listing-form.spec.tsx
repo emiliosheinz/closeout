@@ -822,24 +822,19 @@ describe("ListingForm", () => {
     expect(apiCalls()[0]?.body).toMatchObject({ categoryId: OTHER_CATEGORY });
   });
 
-  it("saves the publication and availability picked by keyboard on an edit", async () => {
+  it("saves the publication picked by keyboard on an edit without sending availability", async () => {
     renderForm({ listing });
     const publication = screen.getByLabelText("Publicação");
-    const availability = screen.getByLabelText("Disponibilidade");
     expect(publication).toHaveTextContent("Rascunho");
-    expect(availability).toHaveTextContent("Disponível");
+    expect(screen.queryByLabelText("Disponibilidade")).toBeNull();
 
     await pickByKeyboard(publication, 1);
     await waitFor(() => expect(publication).toHaveTextContent("Publicado"));
-    await pickByKeyboard(availability, 1);
-    await waitFor(() => expect(availability).toHaveTextContent("Reservado"));
     fireEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
 
     await waitFor(() => expect(apiCalls()).toHaveLength(1));
-    expect(apiCalls()[0]?.body).toMatchObject({
-      publication: "published",
-      availability: "reserved",
-    });
+    expect(apiCalls()[0]?.body).toMatchObject({ publication: "published" });
+    expect(apiCalls()[0]?.body).not.toHaveProperty("availability");
   });
 });
 

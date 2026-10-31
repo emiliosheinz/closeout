@@ -1,10 +1,6 @@
 "use client";
 
-import {
-  AVAILABILITIES,
-  CONDITIONS,
-  PUBLICATIONS,
-} from "@closeout/contracts/enums";
+import { CONDITIONS, PUBLICATIONS } from "@closeout/contracts/enums";
 import { listingRequestSchema } from "@closeout/contracts/schemas";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useSuspenseQuery } from "@tanstack/react-query";
@@ -25,7 +21,6 @@ import {
 } from "@/entities/listing";
 import { readQuery } from "@/shared/api";
 import {
-  AVAILABILITY_LABELS,
   CONDITION_LABELS,
   joinNames,
   PUBLICATION_LABELS,
@@ -83,7 +78,6 @@ function buildSchema(canAssignSellers: boolean) {
             }))
             .filter((row) => row.label && row.value),
         ),
-      availability: z.enum(AVAILABILITIES),
       publication: z.enum(PUBLICATIONS),
     })
     .transform((values, ctx) => {
@@ -176,7 +170,6 @@ function ListingFormBody({
     noPrice: editing ? listing.priceCents === null : false,
     condition: listing?.condition ?? "good",
     attributes: listing?.attributes ?? [],
-    availability: listing?.availability ?? "available",
     publication: listing?.publication ?? "draft",
   };
   const {
@@ -250,7 +243,6 @@ function ListingFormBody({
           listing.id,
           {
             ...fields,
-            availability: values.availability,
             publication: publish ? "published" : values.publication,
           },
           publish,
@@ -573,34 +565,6 @@ function ListingFormBody({
                     {PUBLICATIONS.map((value) => (
                       <SelectItem key={value} value={value}>
                         {PUBLICATION_LABELS[value]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            />
-          </Field>
-          <Field label="Disponibilidade" htmlFor="availability">
-            <Controller
-              control={control}
-              name="availability"
-              render={({ field }) => (
-                <Select
-                  value={field.value}
-                  onValueChange={(next) =>
-                    field.onChange(next as (typeof AVAILABILITIES)[number])
-                  }
-                >
-                  <SelectTrigger
-                    id="availability"
-                    className={selectTriggerClass}
-                  >
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {AVAILABILITIES.map((value) => (
-                      <SelectItem key={value} value={value}>
-                        {AVAILABILITY_LABELS[value]}
                       </SelectItem>
                     ))}
                   </SelectContent>
