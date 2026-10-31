@@ -1,3 +1,4 @@
+export * from "./buyer";
 export * from "./catalog";
 export * from "./category";
 export * from "./health";
