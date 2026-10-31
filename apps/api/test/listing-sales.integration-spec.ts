@@ -330,4 +330,127 @@ describe("sale info on listings", () => {
       expect(res.body).toMatchObject({ availability: "reserved", sale: null });
     });
   });
+
+  describe("editing the sale", () => {
+    const editSale = (id: string, body: object) =>
+      client().patch(`${base()}/${id}/sale`).send(body);
+
+    const saleOf = async (id: string) => {
+      const [row] = await ctx.dataSource.query(
+        `SELECT buyer_id, agreed_price_cents, paid, sale_notes, availability FROM listings WHERE id = $1`,
+        [id],
+      );
+      return row;
+    };
+
+    const soldTo = async (name = "Ana") => {
+      const listing = await insertListing(ctx.dataSource, admin, {
+        availability: "sold",
+      });
+      const buyerId = await insertBuyer(name);
+      await sellTo(listing.id, buyerId, {
+        price: 7000,
+        paid: false,
+        notes: "retira sábado",
+      });
+      return { listing, buyerId };
+    };
+
+    it("adds a buyer to a legacy sold listing and keeps it sold", async () => {
+      const listing = await insertListing(ctx.dataSource, admin, {
+        availability: "sold",
+      });
+
+      const res = await editSale(listing.id, {
+        buyer: { name: "João" },
+      }).expect(200);
+
+      expect(res.body).toMatchObject({
+        availability: "sold",
+        sale: { buyer: { name: "João" }, paid: false },
+      });
+    });
+
+    it("answers 409 and changes nothing for sale info on an available listing", async () => {
+      const listing = await insertListing(ctx.dataSource, admin);
+
+      const res = await editSale(listing.id, { paid: true }).expect(409);
+
+      expect(res.body.detail).toBe("O anúncio mudou. Recarregue a página.");
+      expect((await saleOf(listing.id)).paid).toBe(false);
+    });
+
+    it("sets paid without touching buyer, price or notes", async () => {
+      const { listing, buyerId } = await soldTo();
+
+      await editSale(listing.id, { paid: true }).expect(200);
+
+      expect(await saleOf(listing.id)).toMatchObject({
+        buyer_id: buyerId,
+        agreed_price_cents: 7000,
+        paid: true,
+        sale_notes: "retira sábado",
+      });
+    });
+
+    it("answers 400 and changes nothing for a null buyer", async () => {
+      const { listing, buyerId } = await soldTo();
+
+      await editSale(listing.id, { buyer: null }).expect(400);
+
+      expect((await saleOf(listing.id)).buyer_id).toBe(buyerId);
+    });
+
+    it("answers 400 for sale info on a legacy listing without a buyer", async () => {
+      const listing = await insertListing(ctx.dataSource, admin, {
+        availability: "reserved",
+      });
+
+      await editSale(listing.id, { paid: true }).expect(400);
+
+      expect((await saleOf(listing.id)).paid).toBe(false);
+    });
+
+    it("clears the agreed price with null and the notes with an empty string", async () => {
+      const { listing } = await soldTo();
+
+      await editSale(listing.id, { agreedPriceCents: null }).expect(200);
+      await editSale(listing.id, { notes: "" }).expect(200);
+
+      expect(await saleOf(listing.id)).toMatchObject({
+        agreed_price_cents: null,
+        sale_notes: null,
+      });
+    });
+
+    it("answers 409 and changes nothing for a buyer id that is unknown, deleted or from another store", async () => {
+      const { listing, buyerId } = await soldTo();
+      const other = await createStoreWithAdmin(ctx, "loja-b");
+      const foreign = await insertBuyer("Outra", "outra", other.storeId);
+      const deleted = await insertBuyer("Apagada", "apagada");
+      await ctx.dataSource.query(`DELETE FROM buyers WHERE id = $1`, [deleted]);
+
+      for (const id of [crypto.randomUUID(), foreign, deleted]) {
+        await editSale(listing.id, { buyer: { id } }).expect(409);
+      }
+
+      expect((await saleOf(listing.id)).buyer_id).toBe(buyerId);
+    });
+
+    it("answers 404 and changes nothing for a seller on an unassigned listing", async () => {
+      const { listing } = await soldTo();
+      const seller = await addMember(ctx, admin, {
+        email: "vera@example.com",
+        name: "Vera",
+        role: "seller",
+      });
+
+      await as(ctx.app, seller.cookie)
+        .patch(`${base()}/${listing.id}/sale`)
+        .send({ paid: true })
+        .expect(404);
+
+      expect((await saleOf(listing.id)).paid).toBe(false);
+    });
+  });
 });

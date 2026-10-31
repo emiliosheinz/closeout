@@ -56,6 +56,15 @@ const assigned = async (fx: Fixture) =>
       })
     ).id
   }`;
+const soldListing = async (fx: Fixture, sellerIds?: string[]) =>
+  `${store(fx)}/listings/${
+    (
+      await insertListing(dataSource(), fx.owner, {
+        availability: "sold",
+        sellerIds,
+      })
+    ).id
+  }`;
 const ownProfile = (fx: Fixture, role: Role) =>
   ({
     owner: fx.owner.sellerId,
@@ -174,6 +183,24 @@ const CAPABILITIES: Capability[] = [
       method: "patch",
       url: `${await assigned(fx)}/status`,
       body: { availability: "reserved" },
+    }),
+    expected: [200, 200, 200, 404],
+  },
+  {
+    name: "edit the sale of an unassigned listing",
+    call: async (fx) => ({
+      method: "patch",
+      url: `${await soldListing(fx)}/sale`,
+      body: { buyer: { name: "Ana" } },
+    }),
+    expected: [200, 200, 404, 404],
+  },
+  {
+    name: "edit the sale of an assigned listing",
+    call: async (fx) => ({
+      method: "patch",
+      url: `${await soldListing(fx, [fx.seller.sellerId])}/sale`,
+      body: { buyer: { name: "Ana" } },
     }),
     expected: [200, 200, 200, 404],
   },

@@ -327,6 +327,19 @@ describe("response contracts", () => {
       expect(res.body.sale.buyer.name).toBe("Ana");
     });
 
+    it("parses a sale edit", async () => {
+      const res = await client()
+        .patch(`${base()}/listings/${sold.id}/sale`)
+        .send({ buyer: { name: "Ana" }, paid: true })
+        .expect(200);
+
+      expectParses(
+        "PATCH /stores/:storeId/listings/:id/sale",
+        adminListingDetailSchema,
+        res.body,
+      );
+    });
+
     it("parses the image list after upload, reorder and delete", async () => {
       const url = `${base()}/listings/${withPhoto.id}/images`;
       const uploaded = await client()

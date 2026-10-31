@@ -5,9 +5,11 @@ import {
   type AdminListingsQuery,
   adminListingsQuerySchema,
   type ListingRequest,
+  type ListingSaleRequest,
   type ListingStatusRequest,
   type ListingUpdateRequest,
   listingRequestSchema,
+  listingSaleRequestSchema,
   listingStatusRequestSchema,
   listingUpdateRequestSchema,
   type PublicListingDetail,
@@ -120,6 +122,16 @@ export class ListingsController {
     @Body({ schema: listingStatusRequestSchema }) body: ListingStatusRequest,
   ): Promise<AdminListingDetail> {
     return this.listings.changeStatus(member, id, body);
+  }
+
+  @Patch(":id/sale")
+  @Roles(ANY_MEMBER)
+  editSale(
+    @CurrentMember() member: MembershipContext,
+    @Param("id", { schema: uuidSchema }) id: string,
+    @Body({ schema: listingSaleRequestSchema }) body: ListingSaleRequest,
+  ): Promise<AdminListingDetail> {
+    return this.listings.editSale(member, id, body);
   }
 
   @Post(":id/duplicate")

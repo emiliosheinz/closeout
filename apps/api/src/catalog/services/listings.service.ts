@@ -7,6 +7,7 @@ import type {
   AdminListingDetail,
   AdminListingSummary,
   DashboardCounts,
+  ListingSaleRequest,
   ListingStatusRequest,
   PublicListingDetail,
 } from "@closeout/contracts/schemas";
@@ -33,6 +34,7 @@ import { ListingImage } from "../entities/listing-image.entity";
 import { ListingSeller } from "../entities/listing-seller.entity";
 import { visibleListings } from "../listing-queries";
 import {
+  canEditSale,
   canPublish,
   canSetSellers,
   PUBLISH_REQUIRES_PHOTO,
@@ -73,6 +75,7 @@ const INVALID_CATEGORY = "Categoria inválida.";
 const NO_SELLER_CHOSEN = "Escolha ao menos um vendedor.";
 const SALE_NEEDS_BUYER =
   "Informe o comprador. Os dados da venda só valem para um anúncio reservado ou vendido.";
+const SALE_NEEDS_A_BUYER = "Informe o comprador da venda.";
 const INVALID_BUYER = "Comprador inválido.";
 const TRY_AGAIN = "Não foi possível salvar agora. Tente de novo.";
 const COPY_SUFFIX = " (cópia)";
@@ -317,6 +320,44 @@ export class ListingsService {
     );
   }
 
+  /** Edit the sale of a reserved or sold listing without changing its availability. */
+  async editSale(
+    actor: ListingActor,
+    id: string,
+    request: ListingSaleRequest,
+  ): Promise<AdminListingDetail> {
+    const { storeId } = actor;
+    return withSaleConflicts(() =>
+      this.dataSource.transaction(async (manager) => {
+        const listing = await lockListing(manager, storeId, id);
+        const outcome = canEditSale(
+          listing.availability,
+          listing.buyerId !== null,
+          request.buyer !== undefined,
+        );
+        if (outcome === "stale") {
+          throw new AppException(HttpStatus.CONFLICT, SALE_CHANGED);
+        }
+        if (outcome === "refuse") {
+          throw new AppException(HttpStatus.BAD_REQUEST, SALE_NEEDS_A_BUYER);
+        }
+
+        const patch: QueryDeepPartialEntity<Listing> = definedOnly({
+          agreedPriceCents: request.agreedPriceCents,
+          paid: request.paid,
+          saleNotes: request.notes,
+        });
+        if (request.buyer) {
+          patch.buyerId = (
+            await resolveBuyer(manager, storeId, request.buyer)
+          ).id;
+        }
+        await manager.getRepository(Listing).update({ id, storeId }, patch);
+        return toDetail(await this.findWithRelations(manager, storeId, id));
+      }),
+    );
+  }
+
   /** Copy a listing into a new draft without photos. */
   async duplicate(storeId: string, id: string): Promise<AdminListingDetail> {
     return this.dataSource.transaction(async (manager) => {
@@ -464,10 +505,10 @@ async function assertReferencesBelongToStore(
   }
 }
 
-function definedOnly(patch: Omit<ListingInput, "sellerIds">): Partial<Listing> {
+function definedOnly<T extends object>(patch: T): Partial<T> {
   return Object.fromEntries(
     Object.entries(patch).filter(([, value]) => value !== undefined),
-  ) as Partial<Listing>;
+  ) as Partial<T>;
 }
 
 function toSummary(
