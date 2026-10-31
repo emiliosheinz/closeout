@@ -102,10 +102,13 @@ export function saleTransition(
   current: Availability,
   request: SaleFields & { availability?: Availability; hasBuyer: boolean },
 ): SaleTransition {
-  const { hasBuyer, availability = current, ...fields } = request;
-  const hasSaleFields = Object.values(fields).some(
-    (value) => value !== undefined,
-  );
+  const { hasBuyer, availability = current } = request;
+  const fields = request;
+  const hasSaleFields = [
+    fields.agreedPriceCents,
+    fields.paid,
+    fields.notes,
+  ].some((value) => value !== undefined);
   if (hasSaleFields && !hasBuyer) return { outcome: "refuse" };
   if (availability === "available") {
     if (hasBuyer) return { outcome: "refuse" };

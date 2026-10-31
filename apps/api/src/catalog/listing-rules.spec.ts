@@ -224,4 +224,13 @@ describe("sale after a full update", () => {
     expect(saleAfterFullUpdate("available", "reserved")).toBe("keep");
     expect(saleAfterFullUpdate("reserved", "sold")).toBe("keep");
   });
+
+  it("ignores properties that are not sale fields", () => {
+    expect(
+      saleTransition("reserved", {
+        hasBuyer: false,
+        publication: "published",
+      } as Parameters<typeof saleTransition>[1]),
+    ).toEqual({ outcome: "keep" });
+  });
 });
