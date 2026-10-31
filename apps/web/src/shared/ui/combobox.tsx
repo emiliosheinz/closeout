@@ -21,7 +21,7 @@ export function Combobox({
   ...inputProps
 }: Omit<
   React.ComponentProps<"input">,
-  "value" | "onChange" | "role" | "type"
+  "value" | "onChange" | "onSelect" | "role" | "type"
 > & {
   value: string;
   onValueChange: (value: string) => void;
