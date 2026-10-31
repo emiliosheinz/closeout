@@ -4,8 +4,8 @@ import {
   canPublish,
   canRemovePhoto,
   canSetSellers,
+  changesAvailability,
   isPubliclyVisible,
-  saleAfterFullUpdate,
   saleTransition,
   sellersForNewListing,
 } from "./listing-rules";
@@ -114,13 +114,16 @@ describe("sale transition", () => {
     });
   });
 
-  it("enters a held state without a buyer and records no sale", () => {
+  it("refuses to enter a held state without a buyer", () => {
     expect(
       saleTransition("available", {
         availability: "reserved",
         hasBuyer: false,
       }),
-    ).toEqual({ outcome: "enter", sale: null });
+    ).toEqual({ outcome: "needs-buyer" });
+    expect(
+      saleTransition("reserved", { availability: "sold", hasBuyer: false }),
+    ).toEqual({ outcome: "needs-buyer" });
   });
 
   it("keeps the given values when a sold listing goes back to reserved", () => {
@@ -213,18 +216,21 @@ describe("sale edit", () => {
   });
 });
 
-describe("sale after a full update", () => {
-  it("clears the sale when the listing goes back to available", () => {
-    expect(saleAfterFullUpdate("reserved", "available")).toBe("release");
+describe("availability in a full update", () => {
+  it("refuses a different availability", () => {
+    expect(changesAvailability("reserved", "available")).toBe(true);
+    expect(changesAvailability("available", "reserved")).toBe(true);
+    expect(changesAvailability("reserved", "sold")).toBe(true);
   });
 
-  it("leaves the sale alone otherwise", () => {
-    expect(saleAfterFullUpdate("reserved", undefined)).toBe("keep");
-    expect(saleAfterFullUpdate("available", "available")).toBe("keep");
-    expect(saleAfterFullUpdate("available", "reserved")).toBe("keep");
-    expect(saleAfterFullUpdate("reserved", "sold")).toBe("keep");
+  it("allows the current availability or none", () => {
+    expect(changesAvailability("reserved", undefined)).toBe(false);
+    expect(changesAvailability("available", "available")).toBe(false);
+    expect(changesAvailability("sold", "sold")).toBe(false);
   });
+});
 
+describe("sale transition ignoring extra properties", () => {
   it("ignores properties that are not sale fields", () => {
     expect(
       saleTransition("reserved", {

@@ -153,6 +153,7 @@
       "sellerIds must contain at least 1 elements"
     ],
     "expectedDetail": [
+      "Altere a disponibilidade pelo quadro de anúncios.",
       "Campo não permitido.",
       "Escolha ao menos uma pessoa para receber as mensagens.",
       "Escolha cada pessoa uma vez só.",
@@ -178,6 +179,7 @@
     ],
     "expectedDetail": [
       "Informe o comprador para registrar os dados da venda.",
+      "Informe o comprador. Se o campo não aparecer, recarregue a página.",
       "Um anúncio disponível não tem comprador.",
       "Use até 1000 caracteres nas observações.",
       "Valor inválido."

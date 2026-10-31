@@ -282,63 +282,6 @@ describe("sale info on listings", () => {
       });
     });
 
-    it("keeps the sale when moving from sold to reserved without a buyer", async () => {
-      const listing = await insertListing(ctx.dataSource, admin, {
-        availability: "sold",
-      });
-      const ana = await insertBuyer("Ana");
-      await sellTo(listing.id, ana, { price: 7000, paid: true, notes: "x" });
-
-      await setStatus(listing.id, { availability: "reserved" }).expect(200);
-
-      expect(await saleOf(listing.id)).toMatchObject({
-        buyer_id: ana,
-        agreed_price_cents: 7000,
-        paid: true,
-        sale_notes: "x",
-        availability: "reserved",
-      });
-    });
-
-    it("clears the sale and keeps the buyer when releasing to available", async () => {
-      const listing = await insertListing(ctx.dataSource, admin, {
-        availability: "reserved",
-      });
-      const ana = await insertBuyer("Ana");
-      await sellTo(listing.id, ana, { price: 7000, paid: true, notes: "x" });
-
-      const res = await setStatus(listing.id, {
-        availability: "available",
-      }).expect(200);
-
-      expect(res.body.sale).toBeNull();
-      expect(await saleOf(listing.id)).toMatchObject({
-        buyer_id: null,
-        agreed_price_cents: null,
-        paid: false,
-        sale_notes: null,
-      });
-      expect(await buyerRows()).toHaveLength(1);
-    });
-
-    it("answers 400 for sale fields without a buyer or on a return to available", async () => {
-      const listing = await insertListing(ctx.dataSource, admin);
-
-      await setStatus(listing.id, {
-        availability: "reserved",
-        paid: true,
-      }).expect(400);
-      const withBuyer = await setStatus(listing.id, {
-        availability: "available",
-        buyer: { name: "Ana" },
-      }).expect(400);
-      expect(withBuyer.body.detail).toBe(
-        "Um anúncio disponível não tem comprador.",
-      );
-
-      expect(await buyerRows()).toEqual([]);
-    });
-
     it("answers 404 and changes nothing for a seller on an unassigned listing", async () => {
       const listing = await insertListing(ctx.dataSource, admin);
       const seller = await addMember(ctx, admin, {
@@ -356,14 +299,32 @@ describe("sale info on listings", () => {
       expect(await buyerRows()).toEqual([]);
     });
 
-    it("still reserves without a buyer", async () => {
+    it("refuses to reserve without a buyer and leaves the listing available", async () => {
       const listing = await insertListing(ctx.dataSource, admin);
 
       const res = await setStatus(listing.id, {
         availability: "reserved",
-      }).expect(200);
+      }).expect(400);
 
-      expect(res.body).toMatchObject({ availability: "reserved", sale: null });
+      expect(res.body.detail).toBe(
+        "Informe o comprador. Se o campo não aparecer, recarregue a página.",
+      );
+      expect((await saleOf(listing.id)).availability).toBe("available");
+    });
+
+    it("refuses to sell a legacy reserved listing without a buyer and leaves it reserved", async () => {
+      const listing = await insertListing(ctx.dataSource, admin, {
+        availability: "reserved",
+      });
+
+      const res = await setStatus(listing.id, {
+        availability: "sold",
+      }).expect(400);
+
+      expect(res.body.detail).toBe(
+        "Informe o comprador. Se o campo não aparecer, recarregue a página.",
+      );
+      expect((await saleOf(listing.id)).availability).toBe("reserved");
     });
   });
 
@@ -505,27 +466,23 @@ describe("sale info on listings", () => {
       return listing;
     };
 
-    it("clears the sale and keeps the buyer when a full update releases the listing", async () => {
+    it("refuses a different availability in a full update and changes nothing", async () => {
       const listing = await sold();
 
       const res = await client()
         .patch(`${base()}/${listing.id}`)
-        .send({ availability: "available" })
-        .expect(200);
+        .send({ title: "Novo título", availability: "available" })
+        .expect(400);
 
-      expect(res.body).toMatchObject({ availability: "available", sale: null });
+      expect(res.body.detail).toBe(
+        "Altere a disponibilidade pelo quadro de anúncios.",
+      );
       const [row] = await ctx.dataSource.query(
-        `SELECT buyer_id, agreed_price_cents, paid, sale_notes FROM listings WHERE id = $1`,
+        `SELECT availability, paid, title FROM listings WHERE id = $1`,
         [listing.id],
       );
-      expect(row).toEqual({
-        buyer_id: null,
-        agreed_price_cents: null,
-        paid: false,
-        sale_notes: null,
-      });
-      const buyers = await ctx.dataSource.query(`SELECT name FROM buyers`);
-      expect(buyers).toEqual([{ name: "Ana" }]);
+      expect(row).toMatchObject({ availability: "reserved", paid: true });
+      expect(row.title).not.toBe("Novo título");
     });
 
     it("keeps the sale when a full update changes something else", async () => {
@@ -542,15 +499,18 @@ describe("sale info on listings", () => {
       });
     });
 
-    it("accepts availability in a full update", async () => {
-      const listing = await insertListing(ctx.dataSource, admin);
+    it("saves the other fields when a full update sends the current availability", async () => {
+      const listing = await sold();
 
       const res = await client()
         .patch(`${base()}/${listing.id}`)
-        .send({ availability: "reserved" })
+        .send({ title: "Novo título", availability: "reserved" })
         .expect(200);
 
-      expect(res.body.availability).toBe("reserved");
+      expect(res.body).toMatchObject({
+        title: "Novo título",
+        availability: "reserved",
+      });
     });
 
     it("answers 400 for a sale key in a full update", async () => {

@@ -180,7 +180,7 @@ const CAPABILITIES: Capability[] = [
     call: async (fx) => ({
       method: "patch",
       url: `${await unassigned(fx)}/status`,
-      body: { availability: "reserved" },
+      body: { availability: "reserved", buyer: { name: "Ana" } },
     }),
     expected: [200, 200, 404, 404],
   },
@@ -189,7 +189,7 @@ const CAPABILITIES: Capability[] = [
     call: async (fx) => ({
       method: "patch",
       url: `${await assigned(fx)}/status`,
-      body: { availability: "reserved" },
+      body: { availability: "reserved", buyer: { name: "Ana" } },
     }),
     expected: [200, 200, 200, 404],
   },

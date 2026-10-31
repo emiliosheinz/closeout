@@ -124,7 +124,7 @@ describe("listing administration", () => {
 
       const reserved = await client()
         .patch(`${base()}/${listing.id}/status`)
-        .send({ availability: "reserved" })
+        .send({ availability: "reserved", buyer: { name: "Ana" } })
         .expect(200);
       expect(reserved.body).toMatchObject({
         publication: "published",
@@ -355,7 +355,11 @@ describe("listing administration", () => {
       await upload(listing.id, [await photo()]).expect(201);
       await client()
         .patch(`${base()}/${listing.id}/status`)
-        .send({ publication: "published", availability: "reserved" })
+        .send({
+          publication: "published",
+          availability: "reserved",
+          buyer: { name: "Ana" },
+        })
         .expect(200);
       const copy = await client()
         .post(`${base()}/${listing.id}/duplicate`)
@@ -410,7 +414,7 @@ describe("listing administration", () => {
       const publicUrl = `/public/stores/loja-a/listings/${listing.slug}`;
       const server = ctx.app.getHttpServer();
 
-      await status({ availability: "reserved" });
+      await status({ availability: "reserved", buyer: { name: "Ana" } });
       expect(
         (await request(server).get(publicUrl).expect(200)).body,
       ).toMatchObject({
@@ -418,7 +422,7 @@ describe("listing administration", () => {
         canContact: true,
       });
 
-      await status({ availability: "sold" });
+      await status({ availability: "sold", buyer: { name: "Ana" } });
       expect(
         (await request(server).get(publicUrl).expect(200)).body,
       ).toMatchObject({
@@ -944,7 +948,7 @@ describe("listing administration", () => {
 
       await asSeller()
         .patch(`${url}/status`)
-        .send({ availability: "reserved" })
+        .send({ availability: "reserved", buyer: { name: "Ana" } })
         .expect(200);
       await asSeller()
         .patch(url)

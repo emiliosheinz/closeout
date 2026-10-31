@@ -38,10 +38,10 @@ import {
   canEditSale,
   canPublish,
   canSetSellers,
+  changesAvailability,
   PUBLISH_REQUIRES_PHOTO,
   SALE_CHANGED,
   type SaleTransition,
-  saleAfterFullUpdate,
   saleTransition,
   sellersForNewListing,
 } from "../listing-rules";
@@ -79,6 +79,10 @@ const NO_SELLER_CHOSEN = "Escolha ao menos um vendedor.";
 const SALE_FIELDS_NEED_BUYER =
   "Informe o comprador para registrar os dados da venda.";
 const AVAILABLE_HAS_NO_BUYER = "Um anúncio disponível não tem comprador.";
+const BUYER_REQUIRED =
+  "Informe o comprador. Se o campo não aparecer, recarregue a página.";
+const AVAILABILITY_VIA_BOARD =
+  "Altere a disponibilidade pelo quadro de anúncios.";
 const EDIT_NEEDS_BUYER = "Informe o comprador da venda.";
 const COPY_SUFFIX = " (cópia)";
 
@@ -227,6 +231,9 @@ export class ListingsService {
       // photo cannot slip in between the photo check and the publish.
       await lockListing(manager, storeId, id);
       const listing = await this.findWithRelations(manager, storeId, id);
+      if (changesAvailability(listing.availability, patch.availability)) {
+        throw new AppException(HttpStatus.BAD_REQUEST, AVAILABILITY_VIA_BOARD);
+      }
       const current = listing.sellers.map((row) => row.sellerId);
       if (!canSetSellers(actor, current, patch.sellerIds)) throw forbidden();
       await assertReferencesBelongToStore(manager, storeId, patch);
@@ -245,10 +252,6 @@ export class ListingsService {
         ...row,
         ...definedOnly(fields),
         ...published,
-        ...(saleAfterFullUpdate(listing.availability, patch.availability) ===
-        "release"
-          ? CLEARED_SALE
-          : {}),
       });
       if (sellerIds) await setSellers(manager, id, sellerIds);
       return toDetail(await this.findWithRelations(manager, storeId, id));
@@ -287,6 +290,9 @@ export class ListingsService {
             HttpStatus.BAD_REQUEST,
             AVAILABLE_HAS_NO_BUYER,
           );
+        }
+        if (transition.outcome === "needs-buyer") {
+          throw new AppException(HttpStatus.BAD_REQUEST, BUYER_REQUIRED);
         }
         if (transition.outcome === "stale") {
           throw new AppException(HttpStatus.CONFLICT, SALE_CHANGED);
@@ -423,7 +429,7 @@ async function statusSalePatch(
   request: ListingStatusRequest,
 ): Promise<QueryDeepPartialEntity<Listing>> {
   if (transition.outcome === "release") return CLEARED_SALE;
-  if (transition.outcome !== "enter" || !transition.sale || !request.buyer) {
+  if (transition.outcome !== "enter" || !request.buyer) {
     return {};
   }
   const buyer = await resolveBuyer(manager, storeId, request.buyer);

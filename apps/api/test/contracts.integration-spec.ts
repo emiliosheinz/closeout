@@ -315,7 +315,7 @@ describe("response contracts", () => {
       );
       const status = await client()
         .patch(`${base()}/listings/${draft.id}/status`)
-        .send({ availability: "reserved" })
+        .send({ availability: "reserved", buyer: { name: "Ana" } })
         .expect(200);
       expectParses(
         "PATCH /stores/:storeId/listings/:id/status",

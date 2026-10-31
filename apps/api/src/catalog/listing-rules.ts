@@ -88,13 +88,14 @@ export interface SaleFields {
 }
 
 export type SaleTransition =
-  | { outcome: "enter"; sale: Required<SaleFields> | null }
+  | { outcome: "enter"; sale: Required<SaleFields> }
   | {
       outcome:
         | "release"
         | "keep"
         | "stale"
         | "fields-need-buyer"
+        | "needs-buyer"
         | "available-has-no-buyer";
     };
 
@@ -102,8 +103,8 @@ export type SaleTransition =
  * How a status request changes a listing's sale info. Entering a held state
  * records the sale (paid defaults to false); returning to available clears
  * it; repeating the current state is a no-op, unless it carries a buyer,
- * which means the listing changed under the requester. Sale fields need a
- * buyer, and none may accompany a return to available.
+ * which means the listing changed under the requester. Entering a held
+ * state and sale fields both need a buyer, and none may accompany a return to available.
  */
 export function saleTransition(
   current: Availability,
@@ -123,7 +124,7 @@ export function saleTransition(
   if (availability === current) {
     return { outcome: hasBuyer ? "stale" : "keep" };
   }
-  if (!hasBuyer) return { outcome: "enter", sale: null };
+  if (!hasBuyer) return { outcome: "needs-buyer" };
   return {
     outcome: "enter",
     sale: {
@@ -147,12 +148,10 @@ export function canEditSale(
   return hasCurrentBuyer || hasBuyerInRequest ? "ok" : "refuse";
 }
 
-/** A full update only touches sale info by returning a listing to available. */
-export function saleAfterFullUpdate(
+/** Availability changes only through the status change, never a full update. */
+export function changesAvailability(
   current: Availability,
   requested: Availability | undefined,
-): "release" | "keep" {
-  return requested === "available" && current !== "available"
-    ? "release"
-    : "keep";
+): boolean {
+  return requested !== undefined && requested !== current;
 }
