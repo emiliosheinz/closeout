@@ -10,6 +10,7 @@ import {
 } from "./helpers";
 
 const TITLE = `Luminária de teste ${Date.now()}`;
+const BUYER = "Ana Comprou";
 
 test.describe
   .serial("from listing to WhatsApp and back", () => {
@@ -103,10 +104,26 @@ test.describe
       });
       await availability.click();
       await page.getByRole("option", { name: "Reservado" }).click();
+      const dialog = page.getByRole("dialog");
+      await expect(dialog.getByLabel("Valor combinado (R$)")).toHaveValue(
+        "1234,50",
+      );
+      await dialog.getByLabel("Nome do comprador").fill(BUYER);
+      await dialog
+        .getByRole("button", { name: "Marcar como reservado" })
+        .click();
+      await expect(dialog).toBeHidden();
       await expect(availability).toHaveText("Reservado");
+      await expect(row).toContainText(BUYER);
+      await expect(row).toContainText("Não pago");
+
+      await row.getByRole("checkbox", { name: `Pago — ${TITLE}` }).check();
+      await expect(row).not.toContainText("Não pago");
+      await page.reload();
+      await hydrated(page);
       await expect(
-        page.getByText(`"${TITLE}" marcado como reservado.`),
-      ).toBeVisible();
+        row.getByRole("checkbox", { name: `Pago — ${TITLE}` }),
+      ).toBeChecked();
 
       const visitor = await browser.newPage();
       await visitor.goto(`${STORE}?availability=reserved`);
@@ -116,10 +133,10 @@ test.describe
 
       await availability.click();
       await page.getByRole("option", { name: "Vendido" }).click();
+      await expect(dialog.getByLabel("Nome do comprador")).toHaveValue(BUYER);
+      await dialog.getByRole("button", { name: "Marcar como vendido" }).click();
+      await expect(dialog).toBeHidden();
       await expect(availability).toHaveText("Vendido");
-      await expect(
-        page.getByText(`"${TITLE}" marcado como vendido.`),
-      ).toBeVisible();
 
       await visitor.goto(STORE);
       await expect(
@@ -137,6 +154,14 @@ test.describe
         }),
       ).toBeVisible();
       await visitor.close();
+
+      await availability.click();
+      await page.getByRole("option", { name: "Disponível" }).click();
+      await page
+        .getByRole("button", { name: "Voltar para disponível" })
+        .click();
+      await expect(availability).toHaveText("Disponível");
+      await expect(row).not.toContainText(BUYER);
     });
 
     test("a copy is made as a draft, and deleting the listing takes it off its public URL", async ({
