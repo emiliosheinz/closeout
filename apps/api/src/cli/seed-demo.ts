@@ -390,6 +390,11 @@ export async function seedDemo(
     // Leave no half-seeded store behind: the "store has listings" guard
     // would otherwise skip every later run.
     for (const id of created) await deps.listings.remove(store.id, id);
+    await dataSource.query(
+      `DELETE FROM buyers b WHERE b.store_id = $1 AND b.name = $2
+         AND NOT EXISTS (SELECT 1 FROM listings l WHERE l.buyer_id = b.id)`,
+      [store.id, DEMO_BUYER],
+    );
     if (createdUsers.length > 0) {
       await dataSource
         .getRepository(User)

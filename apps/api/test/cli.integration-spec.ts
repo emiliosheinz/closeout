@@ -643,7 +643,7 @@ describe("operator commands", () => {
       const failing = {
         add: (...args: Parameters<ListingImagesService["add"]>) => {
           calls += 1;
-          if (calls === 2) return Promise.reject(new Error("disk full"));
+          if (calls === 3) return Promise.reject(new Error("disk full"));
           return images.add(...args);
         },
       } as ListingImagesService;
@@ -661,10 +661,17 @@ describe("operator commands", () => {
       const [counts] = await ctx.dataSource.query(
         `SELECT (SELECT COUNT(*)::int FROM listings) AS listings,
                 (SELECT COUNT(*)::int FROM listing_images) AS images,
+                (SELECT COUNT(*)::int FROM buyers) AS buyers,
                 (SELECT COUNT(*)::int FROM sellers) AS sellers,
                 (SELECT COUNT(*)::int FROM users) AS users`,
       );
-      expect(counts).toEqual({ listings: 0, images: 0, sellers: 0, users: 0 });
+      expect(counts).toEqual({
+        listings: 0,
+        images: 0,
+        buyers: 0,
+        sellers: 0,
+        users: 0,
+      });
       expect((await seed()).skipped).toBe(false);
     });
 
