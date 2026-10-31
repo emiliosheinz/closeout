@@ -34,3 +34,9 @@ export function sellerContactUrl(
     `Oi! Vi o catálogo "${storeName}" e queria tirar uma dúvida.`,
   )}`;
 }
+
+/** Plain `wa.me` chat link, or null when the number is not a stored number. */
+export function chatUrl(whatsappNumber: string | null): string | null {
+  if (!whatsappNumber || !isStoredNumber(whatsappNumber)) return null;
+  return `https://wa.me/${whatsappNumber}`;
+}

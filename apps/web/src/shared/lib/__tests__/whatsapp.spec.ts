@@ -1,4 +1,4 @@
-import { listingContactUrl, sellerContactUrl } from "../whatsapp";
+import { chatUrl, listingContactUrl, sellerContactUrl } from "../whatsapp";
 
 describe("listingContactUrl", () => {
   it("links to the seller's number with the encoded message", () => {
@@ -64,5 +64,17 @@ describe("number validation", () => {
     expect(query).toContain("%26");
     expect(query).toContain("%22");
     expect(query).not.toMatch(/[&"]/);
+  });
+});
+
+describe("chatUrl", () => {
+  it("links to the number without a message", () => {
+    expect(chatUrl("5511911112222")).toBe("https://wa.me/5511911112222");
+  });
+
+  it("returns null when the stored value fails the digits guard", () => {
+    expect(chatUrl(null)).toBeNull();
+    expect(chatUrl("+5511911112222")).toBeNull();
+    expect(chatUrl("abc")).toBeNull();
   });
 });
