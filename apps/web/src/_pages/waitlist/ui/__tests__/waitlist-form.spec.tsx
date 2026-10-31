@@ -5,11 +5,12 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
-import confetti from "canvas-confetti";
+import { create } from "canvas-confetti";
 import { problem } from "@/test/fixtures";
 import { WaitlistForm } from "../waitlist-form";
 
-vi.mock("canvas-confetti", () => ({ default: vi.fn() }));
+const confetti = vi.hoisted(() => vi.fn());
+vi.mock("canvas-confetti", () => ({ create: vi.fn(() => confetti) }));
 
 let fetchMock: ReturnType<typeof vi.fn>;
 
@@ -26,7 +27,7 @@ const reply = (status: number, body?: unknown) => ({
 });
 
 beforeEach(() => {
-  vi.mocked(confetti).mockClear();
+  confetti.mockClear();
   stubMotion(false);
   fetchMock = vi.fn().mockResolvedValue(reply(204));
   global.fetch = fetchMock as unknown as typeof fetch;
@@ -199,6 +200,11 @@ describe("WaitlistForm", () => {
         .getAttribute("href"),
     ).toBe("/store/loja-x");
     await waitFor(() => expect(confetti).toHaveBeenCalledTimes(1));
+    // Drawn on the main thread: the site's CSP refuses blob workers.
+    expect(create).toHaveBeenCalledWith(null, {
+      resize: true,
+      useWorker: false,
+    });
   });
 
   it("shows no back link without a store href", async () => {

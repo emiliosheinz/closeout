@@ -5,5 +5,9 @@ declare module "canvas-confetti" {
     origin?: { x?: number; y?: number };
     disableForReducedMotion?: boolean;
   }
-  export default function confetti(options?: Options): Promise<null> | null;
+  type Fire = (options?: Options) => Promise<null> | null;
+  export function create(
+    canvas: HTMLCanvasElement | null,
+    options?: { resize?: boolean; useWorker?: boolean },
+  ): Fire;
 }

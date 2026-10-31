@@ -46,7 +46,9 @@ const FIELD_BY_POINTER = new Map<string, "name" | "contact">([
 
 async function celebrate() {
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-  const { default: confetti } = await import("canvas-confetti");
+  const { create } = await import("canvas-confetti");
+  // The default instance draws from a blob worker, which the site's CSP blocks.
+  const confetti = create(null, { resize: true, useWorker: false });
   confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
 }
 
