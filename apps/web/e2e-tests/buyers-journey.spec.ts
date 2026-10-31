@@ -49,7 +49,7 @@ test.describe
     let firstTitle = "";
     let secondTitle = "";
 
-    test("a reserved item shows on Compradores as owed until it is marked paid", async ({
+    test("a reserved item shows on Compradores as owed, at the price agreed on the board", async ({
       page,
     }) => {
       await signIn(page);
@@ -72,19 +72,22 @@ test.describe
 
       await page.goto("/admin");
       await findInAdmin(page, firstTitle);
-      await listingRows(page)
-        .filter({ hasText: firstTitle })
-        .getByRole("checkbox", { name: `Pago — ${firstTitle}` })
+      const board = listingRows(page).filter({ hasText: firstTitle });
+      await board
+        .getByRole("button", { name: `Comprador de ${firstTitle}` })
         .click();
+      const dialog = page.getByRole("dialog");
+      await dialog.getByLabel("Valor combinado (R$)").fill("60,00");
+      await dialog.getByRole("button", { name: "Salvar" }).click();
+      await expect(dialog).toBeHidden();
       await expect(
-        listingRows(page)
-          .filter({ hasText: firstTitle })
-          .getByRole("checkbox", { name: `Pago — ${firstTitle}` }),
-      ).toBeChecked();
+        board.getByRole("combobox", {
+          name: `Disponibilidade de ${firstTitle}`,
+        }),
+      ).toHaveText("Reservado");
 
       await openBuyers(page);
-      await expect(buyerRow(page, RITA)).toContainText("R$ 0,00");
-      await expect(buyerRow(page, RITA)).not.toContainText("Não pago");
+      await expect(buyerRow(page, RITA)).toContainText("R$ 60,00");
     });
 
     test("merging a buyer moves their items to the other and removes them", async ({
@@ -112,7 +115,7 @@ test.describe
       const row = buyerRow(page, RITA);
       await expect(row).toContainText(firstTitle);
       await expect(row).toContainText(secondTitle);
-      await expect(row).toContainText("R$ 40,00");
+      await expect(row).toContainText("R$ 100,00");
     });
 
     test("releasing the items lets the buyer be deleted", async ({ page }) => {
