@@ -16,6 +16,17 @@ export const DEFAULT_CURRENCY = "BRL";
 /** Fixed so server and browser render the same calendar day. */
 export const DEFAULT_TIME_ZONE = "America/Sao_Paulo";
 
+/** An amount of money, zero included ("R$ 0,00"); a price treats zero as "Grátis". */
+export function formatMoney(
+  cents: number,
+  locale = DEFAULT_LOCALE,
+  currency = DEFAULT_CURRENCY,
+): string {
+  return new Intl.NumberFormat(locale, { style: "currency", currency })
+    .format(cents / 100)
+    .replace(/ /g, " ");
+}
+
 /** `null` means "a combinar"; zero is a real price ("grátis"). */
 export function formatPrice(
   priceCents: number | null,
