@@ -1,4 +1,10 @@
 import { z } from "zod";
+import { INVALID_VALUE } from "./problem";
+
+/** Lowercase letters and digits joined by single dashes. */
+export const storeSlugSchema = z
+  .string(INVALID_VALUE)
+  .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, INVALID_VALUE);
 
 export const storeSettingsSchema = z.object({
   id: z.string(),
