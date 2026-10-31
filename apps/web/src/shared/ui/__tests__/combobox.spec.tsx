@@ -37,6 +37,7 @@ describe("Combobox", () => {
     expect(input()).toHaveAttribute("aria-expanded", "false");
 
     rerender(<Harness />);
+    fireEvent.change(input(), { target: { value: "mar" } });
     expect(input()).toHaveAttribute("aria-expanded", "true");
     expect(input()).toHaveAttribute(
       "aria-controls",
@@ -62,6 +63,7 @@ describe("Combobox", () => {
   it("selects an option on click", () => {
     const onSelect = vi.fn();
     render(<Harness onSelect={onSelect} />);
+    fireEvent.change(input(), { target: { value: "mar" } });
 
     fireEvent.click(screen.getByRole("option", { name: "Maria Sílva" }));
 
@@ -87,6 +89,55 @@ describe("Combobox", () => {
 
     expect(input()).toHaveValue("Fulano");
     expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it("stays closed until focused input is typed into or navigated", () => {
+    render(<Harness />);
+    expect(input()).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("closes when the input loses focus", () => {
+    render(<Harness />);
+    fireEvent.change(input(), { target: { value: "mar" } });
+    expect(input()).toHaveAttribute("aria-expanded", "true");
+
+    fireEvent.blur(input());
+
+    expect(input()).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("selects on click without moving focus off the input", () => {
+    const onSelect = vi.fn();
+    render(<Harness onSelect={onSelect} />);
+    fireEvent.change(input(), { target: { value: "mar" } });
+    input().focus();
+    const option = screen.getByRole("option", { name: "Maria Sílva" });
+
+    const proceeded = fireEvent.mouseDown(option);
+    fireEvent.click(option);
+
+    expect(proceeded).toBe(false);
+    expect(onSelect).toHaveBeenCalledWith(OPTIONS[0]);
+    expect(input()).toHaveFocus();
+  });
+
+  it("names the listbox and still runs the caller's key handler", () => {
+    const onKeyDown = vi.fn();
+    render(
+      <Combobox
+        aria-label="Comprador"
+        value="m"
+        onValueChange={() => undefined}
+        options={OPTIONS}
+        onSelect={() => undefined}
+        onKeyDown={onKeyDown}
+      />,
+    );
+    fireEvent.change(input(), { target: { value: "ma" } });
+    fireEvent.keyDown(input(), { key: "ArrowDown" });
+
+    expect(screen.getByRole("listbox", { name: "Comprador" })).toBeVisible();
+    expect(onKeyDown).toHaveBeenCalled();
   });
 
   it("renders exactly the options passed without filtering", () => {

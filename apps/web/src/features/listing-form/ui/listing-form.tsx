@@ -543,36 +543,31 @@ function ListingFormBody({
       </fieldset>
 
       {editing && (
-        <div className="grid gap-6 sm:grid-cols-2">
-          <Field label="Publicação" htmlFor="publication">
-            <Controller
-              control={control}
-              name="publication"
-              render={({ field }) => (
-                <Select
-                  value={field.value}
-                  onValueChange={(next) =>
-                    field.onChange(next as (typeof PUBLICATIONS)[number])
-                  }
-                >
-                  <SelectTrigger
-                    id="publication"
-                    className={selectTriggerClass}
-                  >
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PUBLICATIONS.map((value) => (
-                      <SelectItem key={value} value={value}>
-                        {PUBLICATION_LABELS[value]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            />
-          </Field>
-        </div>
+        <Field label="Publicação" htmlFor="publication" className="sm:max-w-xs">
+          <Controller
+            control={control}
+            name="publication"
+            render={({ field }) => (
+              <Select
+                value={field.value}
+                onValueChange={(next) =>
+                  field.onChange(next as (typeof PUBLICATIONS)[number])
+                }
+              >
+                <SelectTrigger id="publication" className={selectTriggerClass}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PUBLICATIONS.map((value) => (
+                    <SelectItem key={value} value={value}>
+                      {PUBLICATION_LABELS[value]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          />
+        </Field>
       )}
 
       <div className="sticky bottom-0 -mx-4 flex flex-wrap items-center gap-3 border-t border-line bg-paper/95 px-4 py-3 backdrop-blur sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:px-0">

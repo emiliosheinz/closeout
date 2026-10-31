@@ -17,7 +17,10 @@ export function Combobox({
   onValueChange,
   options,
   onSelect,
+  listboxLabel,
   className,
+  onKeyDown: callerOnKeyDown,
+  onBlur: callerOnBlur,
   ...inputProps
 }: Omit<
   React.ComponentProps<"input">,
@@ -27,31 +30,40 @@ export function Combobox({
   onValueChange: (value: string) => void;
   options: ComboboxOption[];
   onSelect: (option: ComboboxOption) => void;
+  /** Accessible name of the suggestion list; defaults to the input's `aria-label`. */
+  listboxLabel?: string;
 }) {
   const listboxId = useId();
-  const [dismissed, setDismissed] = useState(false);
-  const [activeIndex, setActiveIndex] = useState(-1);
+  const [dismissed, setDismissed] = useState(true);
+  const [activeId, setActiveId] = useState<string | null>(null);
   const expanded = !dismissed && options.length > 0;
-  const active = expanded ? options[activeIndex] : undefined;
+  const activeIndex = expanded
+    ? options.findIndex((option) => option.id === activeId)
+    : -1;
+  const active = options[activeIndex];
   const optionId = (index: number) => `${listboxId}-${index}`;
+
+  function close() {
+    setDismissed(true);
+    setActiveId(null);
+  }
 
   function select(option: ComboboxOption) {
     onSelect(option);
-    setDismissed(true);
-    setActiveIndex(-1);
+    close();
   }
 
   function onKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+    callerOnKeyDown?.(event);
+    if (event.defaultPrevented) return;
     if (event.key === "ArrowDown" || event.key === "ArrowUp") {
       if (options.length === 0) return;
       event.preventDefault();
       setDismissed(false);
       const step = event.key === "ArrowDown" ? 1 : -1;
-      setActiveIndex((current) => {
-        const next = current + step;
-        if (next < 0) return options.length - 1;
-        return next % options.length;
-      });
+      const next = activeIndex + step;
+      const target = next < 0 ? options.length - 1 : next % options.length;
+      setActiveId(options[target]?.id ?? null);
       return;
     }
     if (event.key === "Enter" && active) {
@@ -61,8 +73,7 @@ export function Combobox({
     }
     if (event.key === "Escape" && expanded) {
       event.preventDefault();
-      setDismissed(true);
-      setActiveIndex(-1);
+      close();
     }
   }
 
@@ -80,17 +91,23 @@ export function Combobox({
         value={value}
         onChange={(event) => {
           setDismissed(false);
-          setActiveIndex(-1);
+          setActiveId(null);
           onValueChange(event.target.value);
         }}
         onKeyDown={onKeyDown}
+        onBlur={(event) => {
+          callerOnBlur?.(event);
+          close();
+        }}
         className={cn(inputClass, className)}
       />
       <div
         id={listboxId}
         role="listbox"
+        aria-label={listboxLabel ?? inputProps["aria-label"]}
+        aria-labelledby={inputProps["aria-labelledby"]}
         hidden={!expanded}
-        className="overflow-hidden rounded-md border border-line bg-surface"
+        className="max-h-60 overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md"
       >
         {expanded &&
           options.map((option, index) => (
@@ -103,7 +120,7 @@ export function Combobox({
               aria-selected={index === activeIndex}
               onMouseDown={(event) => event.preventDefault()}
               onClick={() => select(option)}
-              className="flex min-h-11 cursor-pointer items-center px-3 text-base text-ink aria-selected:bg-paper hover:bg-paper"
+              className="flex min-h-11 cursor-pointer select-none items-center rounded-sm px-2 text-base aria-selected:bg-accent aria-selected:text-accent-foreground hover:bg-accent hover:text-accent-foreground"
             >
               {option.label}
             </div>
