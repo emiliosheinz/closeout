@@ -386,6 +386,7 @@ describe("waitlist signups", () => {
         const res = await unsigned(valid).expect(403);
         expect(res.body.detail).toBe(FORBIDDEN);
       }
+      expect(await stored()).toEqual([]);
       for (let i = 0; i < 20; i++) await signup(valid).expect(204);
       expect(await stored()).toHaveLength(1);
     });
@@ -410,6 +411,16 @@ describe("waitlist signups", () => {
         .post("/waitlist/signups")
         .set("x-internal-secret", INTERNAL_SECRET)
         .send({ name: "x" })
+        .expect(400);
+      expect(res.body.detail).toBe(NO_CLIENT_IP);
+      expect(await stored()).toEqual([]);
+    });
+
+    it("stores nothing from a valid signup that comes without a client IP", async () => {
+      const res = await request(ctx.app.getHttpServer())
+        .post("/waitlist/signups")
+        .set("x-internal-secret", INTERNAL_SECRET)
+        .send(valid)
         .expect(400);
       expect(res.body.detail).toBe(NO_CLIENT_IP);
       expect(await stored()).toEqual([]);
