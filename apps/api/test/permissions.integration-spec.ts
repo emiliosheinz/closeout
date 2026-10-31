@@ -311,6 +311,11 @@ const CAPABILITIES: Capability[] = [
     expected: [200, 200, 200, 404],
   },
   {
+    name: "list buyers",
+    call: async (fx) => ({ method: "get", url: `${store(fx)}/buyers` }),
+    expected: [200, 200, 200, 404],
+  },
+  {
     name: "list contact profiles",
     call: async (fx) => ({ method: "get", url: `${store(fx)}/sellers` }),
     expected: [200, 200, 200, 404],

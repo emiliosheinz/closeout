@@ -2,6 +2,7 @@ import {
   adminImageSchema,
   adminListingDetailSchema,
   adminListingSummarySchema,
+  buyerSummarySchema,
   categorySchema,
   dashboardCountsSchema,
   healthResponseSchema,
@@ -228,6 +229,18 @@ describe("response contracts", () => {
       expect(res.body.items.length).toBeGreaterThan(0);
       for (const item of res.body.items)
         expectParses("GET /stores/:storeId/categories", categorySchema, item);
+    });
+
+    it("parses the buyers", async () => {
+      await client()
+        .patch(`${base()}/listings/${draft.id}/status`)
+        .send({ availability: "reserved", buyer: { name: "Ana" } })
+        .expect(200);
+      const res = await client().get(`${base()}/buyers`).expect(200);
+      expect(res.body.items).toHaveLength(1);
+      for (const item of res.body.items) {
+        expectParses("GET /stores/:storeId/buyers", buyerSummarySchema, item);
+      }
     });
 
     it("parses the sellers, with and without a contact number", async () => {
