@@ -220,7 +220,7 @@ export function ListingBuyerLine({
   return (
     <p className="mt-1 flex min-w-0 items-center gap-1.5 text-sm text-ink-soft">
       <UserRound className="size-3.5 shrink-0 text-muted" aria-hidden="true" />
-      <span className="min-w-0 truncate" title={name}>
+      <span className="min-w-0 max-w-56 truncate" title={name}>
         {name}
       </span>
       {!listing.sale.paid && (
