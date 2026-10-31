@@ -9,17 +9,17 @@ import {
 import golden from "./fixtures/golden.json";
 
 describe("catalog URL parameters", () => {
-  it("reads every filter from Portuguese parameters", () => {
+  it("reads every filter from English parameters", () => {
     expect(
       parseCatalogParams({
         q: " sofá ",
-        categoria: "moveis",
-        estado: "como-novo",
-        disponibilidade: "vendido",
+        category: "moveis",
+        condition: "like_new",
+        availability: "sold",
         min: "100",
         max: "500",
-        ordem: "menor-preco",
-        pagina: "3",
+        sort: "price_asc",
+        page: "3",
       }),
     ).toEqual({
       q: "sofá",
@@ -36,13 +36,13 @@ describe("catalog URL parameters", () => {
   it("falls back to defaults for invalid values instead of failing", () => {
     expect(
       parseCatalogParams({
-        categoria: "../etc",
-        estado: "quebrado",
-        disponibilidade: "talvez",
+        category: "../etc",
+        condition: "quebrado",
+        availability: "talvez",
         min: "-5",
         max: "abc",
-        ordem: "aleatorio",
-        pagina: "0",
+        sort: "aleatorio",
+        page: "0",
       }),
     ).toEqual({
       q: "",
@@ -54,7 +54,28 @@ describe("catalog URL parameters", () => {
       sort: "recent",
       page: 1,
     });
-    expect(parseCatalogParams({ pagina: "99999" }).page).toBe(1);
+    expect(parseCatalogParams({ page: "99999" }).page).toBe(1);
+  });
+
+  it("ignores a kebab-case condition", () => {
+    expect(parseCatalogParams({ condition: "like-new" }).condition).toBeNull();
+  });
+
+  it("builds the exact URL for a fully filtered view", () => {
+    expect(
+      catalogHref("s", {
+        ...DEFAULT_FILTERS,
+        category: "cozinha",
+        condition: "like_new",
+        availability: "sold",
+        minPrice: 10,
+        maxPrice: 50,
+        sort: "price_desc",
+        page: 2,
+      }),
+    ).toBe(
+      "/store/s?category=cozinha&condition=like_new&availability=sold&min=10&max=50&sort=price_desc&page=2",
+    );
   });
 
   it("swaps an inverted price range", () => {
@@ -74,7 +95,7 @@ describe("catalog URL parameters", () => {
       page: 2,
     });
     expect(href).toBe(
-      "/store/nosso-desapego?q=mesa+%26+cadeira&estado=conserto&ordem=maior-preco&pagina=2",
+      "/store/nosso-desapego?q=mesa+%26+cadeira&condition=for_parts&sort=price_desc&page=2",
     );
     const params = Object.fromEntries(new URLSearchParams(href.split("?")[1]));
     expect(parseCatalogParams(params)).toMatchObject({
@@ -113,18 +134,18 @@ describe("catalog URL edge cases", () => {
         condition: "like_new",
         sort: "price_asc",
       }),
-    ).toBe("/store/loja-da-bia?estado=como-novo&ordem=menor-preco");
+    ).toBe("/store/loja-da-bia?condition=like_new&sort=price_asc");
   });
 
   it("offers one chip per active filter, each removing only itself", () => {
     const filters = parseCatalogParams({
       q: "mesa",
-      categoria: "moveis",
-      estado: "como-novo",
-      disponibilidade: "vendido",
+      category: "moveis",
+      condition: "like_new",
+      availability: "sold",
       max: "500",
-      ordem: "menor-preco",
-      pagina: "2",
+      sort: "price_asc",
+      page: "2",
     });
     expect(
       activeFilterChips("nosso-desapego", filters, (categorySlug) =>
@@ -133,23 +154,23 @@ describe("catalog URL edge cases", () => {
     ).toEqual([
       {
         label: "“mesa”",
-        href: "/store/nosso-desapego?categoria=moveis&estado=como-novo&disponibilidade=vendido&max=500&ordem=menor-preco",
+        href: "/store/nosso-desapego?category=moveis&condition=like_new&availability=sold&max=500&sort=price_asc",
       },
       {
         label: "Móveis",
-        href: "/store/nosso-desapego?q=mesa&estado=como-novo&disponibilidade=vendido&max=500&ordem=menor-preco",
+        href: "/store/nosso-desapego?q=mesa&condition=like_new&availability=sold&max=500&sort=price_asc",
       },
       {
         label: "Como novo",
-        href: "/store/nosso-desapego?q=mesa&categoria=moveis&disponibilidade=vendido&max=500&ordem=menor-preco",
+        href: "/store/nosso-desapego?q=mesa&category=moveis&availability=sold&max=500&sort=price_asc",
       },
       {
         label: "Vendidos",
-        href: "/store/nosso-desapego?q=mesa&categoria=moveis&estado=como-novo&max=500&ordem=menor-preco",
+        href: "/store/nosso-desapego?q=mesa&category=moveis&condition=like_new&max=500&sort=price_asc",
       },
       {
         label: "Até R$ 500",
-        href: "/store/nosso-desapego?q=mesa&categoria=moveis&estado=como-novo&disponibilidade=vendido&ordem=menor-preco",
+        href: "/store/nosso-desapego?q=mesa&category=moveis&condition=like_new&availability=sold&sort=price_asc",
       },
     ]);
   });
@@ -175,9 +196,9 @@ describe("clean catalog query", () => {
     canonicalCatalogSearch(new URLSearchParams(query));
 
   it("drops the empty fields a filter form sends", () => {
-    expect(
-      clean("estado=bom&disponibilidade=&min=&max=&ordem=menor-preco"),
-    ).toBe("estado=bom&ordem=menor-preco");
+    expect(clean("condition=good&availability=&min=&max=&sort=price_asc")).toBe(
+      "condition=good&sort=price_asc",
+    );
   });
 
   it("drops keys the catalog does not read", () => {
@@ -197,8 +218,8 @@ describe("clean catalog query", () => {
   });
 
   it("puts the parameters in their usual order", () => {
-    expect(clean("ordem=menor-preco&categoria=moveis")).toBe(
-      "categoria=moveis&ordem=menor-preco",
+    expect(clean("sort=price_asc&category=moveis")).toBe(
+      "category=moveis&sort=price_asc",
     );
   });
 

@@ -32,11 +32,11 @@ describe("filters sheet", () => {
     expect(form).toHaveAttribute("method", "get");
     expect(screen.getByRole("radio", { name: "Como novo" })).toHaveAttribute(
       "name",
-      "estado",
+      "condition",
     );
     expect(screen.getByRole("radio", { name: "Menor preço" })).toHaveAttribute(
       "name",
-      "ordem",
+      "sort",
     );
     expect(
       screen.getByRole("button", { name: "Aplicar filtros" }),

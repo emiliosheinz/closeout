@@ -1,4 +1,4 @@
-import type { Condition } from "@closeout/contracts/enums";
+import { CONDITIONS } from "@closeout/contracts/enums";
 import type {
   AvailabilityFilter,
   CatalogFilters,
@@ -13,28 +13,24 @@ import { storePath } from "@/shared/lib/site";
 
 /*
  * Catalog state lives in the URL so a filtered view can be shared and the
- * back button works. Parameter names and values are Portuguese because
- * visitors read and share these links.
+ * back button works. Parameter names are English; option values reuse the
+ * enum values verbatim.
  */
 
-const CONDITION_SLUGS: Record<string, Condition> = {
-  novo: "new",
-  "como-novo": "like_new",
-  bom: "good",
-  "marcas-de-uso": "fair",
-  conserto: "for_parts",
-};
-const AVAILABILITY_SLUGS: Record<string, AvailabilityFilter> = {
-  disponivel: "available",
-  reservado: "reserved",
-  vendido: "sold",
-  todos: "all",
-};
-const SORT_SLUGS: Record<string, CatalogSort> = {
-  recentes: "recent",
-  "menor-preco": "price_asc",
-  "maior-preco": "price_desc",
-};
+/** Every availability filter, in the order the filter form shows them. */
+export const AVAILABILITY_FILTERS: readonly AvailabilityFilter[] = [
+  "listed",
+  "available",
+  "reserved",
+  "sold",
+  "all",
+];
+/** Every catalog sort, in the order the filter form shows them. */
+export const CATALOG_SORTS: readonly CatalogSort[] = [
+  "recent",
+  "price_asc",
+  "price_desc",
+];
 const CATEGORY_PATTERN = /^[a-z0-9-]{1,60}$/;
 const MAX_PAGE = 1000;
 
@@ -42,6 +38,13 @@ type RawParams = Record<string, string | string[] | undefined>;
 
 function first(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
+}
+
+function oneOf<T extends string>(
+  options: readonly T[],
+  value: string | undefined,
+): T | null {
+  return options.find((option) => option === value) ?? null;
 }
 
 function wholeNumber(value: string | undefined, max: number): number | null {
@@ -52,7 +55,7 @@ function wholeNumber(value: string | undefined, max: number): number | null {
 
 /** Read the URL; anything invalid falls back to its default instead of erroring. */
 export function parseCatalogParams(params: RawParams): CatalogFilters {
-  const category = first(params.categoria);
+  const category = first(params.category);
   let minPrice = wholeNumber(first(params.min), 1_000_000);
   let maxPrice = wholeNumber(first(params.max), 1_000_000);
   if (minPrice !== null && maxPrice !== null && minPrice > maxPrice) {
@@ -61,25 +64,25 @@ export function parseCatalogParams(params: RawParams): CatalogFilters {
   return {
     q: (first(params.q) ?? "").trim().slice(0, 100),
     category: category && CATEGORY_PATTERN.test(category) ? category : null,
-    condition: CONDITION_SLUGS[first(params.estado) ?? ""] ?? null,
+    condition: oneOf(CONDITIONS, first(params.condition)),
     availability:
-      AVAILABILITY_SLUGS[first(params.disponibilidade) ?? ""] ?? "listed",
+      oneOf(AVAILABILITY_FILTERS, first(params.availability)) ?? "listed",
     minPrice,
     maxPrice,
-    sort: SORT_SLUGS[first(params.ordem) ?? ""] ?? "recent",
-    page: wholeNumber(first(params.pagina), MAX_PAGE) || 1,
+    sort: oneOf(CATALOG_SORTS, first(params.sort)) ?? "recent",
+    page: wholeNumber(first(params.page), MAX_PAGE) || 1,
   };
 }
 
 export type CatalogParam =
   | "q"
-  | "categoria"
-  | "estado"
-  | "disponibilidade"
+  | "category"
+  | "condition"
+  | "availability"
   | "min"
   | "max"
-  | "ordem"
-  | "pagina";
+  | "sort"
+  | "page";
 
 /**
  * The URL parameters for `filters`, defaults omitted. The single source for
@@ -91,18 +94,16 @@ export function catalogEntries(
 ): [CatalogParam, string][] {
   const entries: [CatalogParam, string | null][] = [
     ["q", filters.q || null],
-    ["categoria", filters.category],
-    ["estado", filters.condition && CONDITION_PARAM[filters.condition]],
+    ["category", filters.category],
+    ["condition", filters.condition],
     [
-      "disponibilidade",
-      filters.availability === "listed"
-        ? null
-        : AVAILABILITY_PARAM[filters.availability],
+      "availability",
+      filters.availability === "listed" ? null : filters.availability,
     ],
     ["min", filters.minPrice === null ? null : String(filters.minPrice)],
     ["max", filters.maxPrice === null ? null : String(filters.maxPrice)],
-    ["ordem", filters.sort === "recent" ? null : SORT_PARAM[filters.sort]],
-    ["pagina", filters.page > 1 ? String(filters.page) : null],
+    ["sort", filters.sort === "recent" ? null : filters.sort],
+    ["page", filters.page > 1 ? String(filters.page) : null],
   ];
   return entries.filter(
     (entry): entry is [CatalogParam, string] =>
@@ -186,16 +187,4 @@ export function activeFilterChips(
       ? [{ label, href: catalogHref(slug, withFilters(filters, patch)) }]
       : [],
   );
-}
-
-/** URL value for each option, used by plain GET forms. */
-export const CONDITION_PARAM: Record<Condition, string> =
-  invert(CONDITION_SLUGS);
-export const AVAILABILITY_PARAM = invert(AVAILABILITY_SLUGS);
-export const SORT_PARAM = invert(SORT_SLUGS);
-
-function invert<T extends string>(map: Record<string, T>): Record<T, string> {
-  return Object.fromEntries(
-    Object.entries(map).map(([slug, value]) => [value, slug]),
-  ) as Record<T, string>;
 }

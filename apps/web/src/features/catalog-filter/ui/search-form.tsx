@@ -31,7 +31,7 @@ export function SearchForm({
           autoComplete="off"
           className="h-12 w-full rounded-full border border-line-strong bg-surface pr-4 pl-12 text-base shadow-[0_1px_0_rgba(23,32,43,0.04)] placeholder:text-muted"
         />
-        {catalogEntries(filters, ["q", "pagina"]).map(([name, value]) => (
+        {catalogEntries(filters, ["q", "page"]).map(([name, value]) => (
           <input key={name} type="hidden" name={name} value={value} />
         ))}
       </form>

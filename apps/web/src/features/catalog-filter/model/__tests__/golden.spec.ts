@@ -17,15 +17,15 @@ describe("storefront URL behavior", () => {
     expect(filters).toEqual(row.filters);
     expect(catalogEntries(filters)).toEqual(row.entries);
     expect(catalogHref("nosso-desapego", filters)).toBe(row.href);
-    expect(catalogEntries(filters, ["q", "pagina"])).toEqual(row.searchHidden);
+    expect(catalogEntries(filters, ["q", "page"])).toEqual(row.searchHidden);
     expect(
       catalogEntries(filters, [
-        "estado",
-        "disponibilidade",
+        "condition",
+        "availability",
         "min",
         "max",
-        "ordem",
-        "pagina",
+        "sort",
+        "page",
       ]),
     ).toEqual(row.filterHidden);
     expect(

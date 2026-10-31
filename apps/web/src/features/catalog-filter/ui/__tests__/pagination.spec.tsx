@@ -7,7 +7,7 @@ describe("Pagination", () => {
     render(
       <Pagination
         storeSlug="nosso-desapego"
-        filters={parseCatalogParams({ categoria: "moveis" })}
+        filters={parseCatalogParams({ category: "moveis" })}
         total={50}
         pageSize={24}
       />,
@@ -15,10 +15,7 @@ describe("Pagination", () => {
     expect(screen.getByText("Página 1 de 3")).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: "Ver mais itens" }),
-    ).toHaveAttribute(
-      "href",
-      "/store/nosso-desapego?categoria=moveis&pagina=2",
-    );
+    ).toHaveAttribute("href", "/store/nosso-desapego?category=moveis&page=2");
     expect(screen.queryByRole("link", { name: "Anteriores" })).toBeNull();
   });
 
@@ -26,14 +23,14 @@ describe("Pagination", () => {
     const { rerender } = render(
       <Pagination
         storeSlug="loja-da-bia"
-        filters={parseCatalogParams({ pagina: "3" })}
+        filters={parseCatalogParams({ page: "3" })}
         total={50}
         pageSize={24}
       />,
     );
     expect(screen.getByRole("link", { name: "Anteriores" })).toHaveAttribute(
       "href",
-      "/store/loja-da-bia?pagina=2",
+      "/store/loja-da-bia?page=2",
     );
     expect(screen.queryByRole("link", { name: "Ver mais itens" })).toBeNull();
 
