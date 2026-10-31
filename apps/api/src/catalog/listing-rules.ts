@@ -78,3 +78,72 @@ export function canSetSellers(
     wanted.size === current.length && current.every((id) => wanted.has(id))
   );
 }
+
+export const SALE_CHANGED = "O anúncio mudou. Recarregue a página.";
+
+export interface SaleFields {
+  agreedPriceCents?: number | null;
+  paid?: boolean;
+  notes?: string | null;
+}
+
+export type SaleTransition =
+  | { outcome: "enter"; sale: Required<SaleFields> | null }
+  | { outcome: "release" | "keep" | "stale" | "refuse" };
+
+/**
+ * How a status request changes a listing's sale info. Entering a held state
+ * records the sale (paid defaults to false); returning to available clears
+ * it; repeating the current state is a no-op, unless it carries a buyer,
+ * which means the listing changed under the requester. Sale fields need a
+ * buyer, and none may accompany a return to available.
+ */
+export function saleTransition(
+  current: Availability,
+  request: SaleFields & { availability?: Availability; hasBuyer: boolean },
+): SaleTransition {
+  const { hasBuyer, availability = current, ...fields } = request;
+  const hasSaleFields = Object.values(fields).some(
+    (value) => value !== undefined,
+  );
+  if (hasSaleFields && !hasBuyer) return { outcome: "refuse" };
+  if (availability === "available") {
+    if (hasBuyer) return { outcome: "refuse" };
+    return { outcome: current === "available" ? "keep" : "release" };
+  }
+  if (availability === current) {
+    return { outcome: hasBuyer ? "stale" : "keep" };
+  }
+  if (!hasBuyer) return { outcome: "enter", sale: null };
+  return {
+    outcome: "enter",
+    sale: {
+      agreedPriceCents: fields.agreedPriceCents ?? null,
+      paid: fields.paid ?? false,
+      notes: fields.notes ?? null,
+    },
+  };
+}
+
+/**
+ * Whether the sale of a listing may be edited: not once it is available
+ * again, and a listing with no buyer needs one in the edit.
+ */
+export function canEditSale(
+  current: Availability,
+  hasCurrentBuyer: boolean,
+  hasBuyerInRequest: boolean,
+): "ok" | "stale" | "refuse" {
+  if (current === "available") return "stale";
+  return hasCurrentBuyer || hasBuyerInRequest ? "ok" : "refuse";
+}
+
+/** A full update only touches sale info by returning a listing to available. */
+export function saleAfterFullUpdate(
+  current: Availability,
+  requested: Availability | undefined,
+): "release" | "keep" {
+  return requested === "available" && current !== "available"
+    ? "release"
+    : "keep";
+}

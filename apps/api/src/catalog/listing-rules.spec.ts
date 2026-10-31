@@ -1,9 +1,12 @@
 import {
   canContact,
+  canEditSale,
   canPublish,
   canRemovePhoto,
   canSetSellers,
   isPubliclyVisible,
+  saleAfterFullUpdate,
+  saleTransition,
   sellersForNewListing,
 } from "./listing-rules";
 
@@ -98,5 +101,127 @@ describe("listing assignment", () => {
     expect(
       canSetSellers(actor(role), [...current], submitted && [...submitted]),
     ).toBe(allowed);
+  });
+});
+
+describe("sale transition", () => {
+  it("enters a held state with the buyer's sale, unpaid by default", () => {
+    expect(
+      saleTransition("available", { availability: "reserved", hasBuyer: true }),
+    ).toEqual({
+      outcome: "enter",
+      sale: { agreedPriceCents: null, paid: false, notes: null },
+    });
+  });
+
+  it("enters a held state without a buyer and records no sale", () => {
+    expect(
+      saleTransition("available", {
+        availability: "reserved",
+        hasBuyer: false,
+      }),
+    ).toEqual({ outcome: "enter", sale: null });
+  });
+
+  it("keeps the given values when a sold listing goes back to reserved", () => {
+    expect(
+      saleTransition("sold", {
+        availability: "reserved",
+        hasBuyer: true,
+        agreedPriceCents: 7000,
+        paid: true,
+        notes: "x",
+      }),
+    ).toEqual({
+      outcome: "enter",
+      sale: { agreedPriceCents: 7000, paid: true, notes: "x" },
+    });
+  });
+
+  it("releases a held listing back to available", () => {
+    expect(
+      saleTransition("reserved", {
+        availability: "available",
+        hasBuyer: false,
+      }),
+    ).toEqual({ outcome: "release" });
+  });
+
+  it("keeps the sale when the availability is repeated or not sent", () => {
+    expect(
+      saleTransition("reserved", { availability: "reserved", hasBuyer: false }),
+    ).toEqual({ outcome: "keep" });
+    expect(saleTransition("sold", { hasBuyer: false })).toEqual({
+      outcome: "keep",
+    });
+    expect(
+      saleTransition("available", {
+        availability: "available",
+        hasBuyer: false,
+      }),
+    ).toEqual({ outcome: "keep" });
+  });
+
+  it("reports a stale request when a buyer is sent for the state already held", () => {
+    expect(
+      saleTransition("reserved", { availability: "reserved", hasBuyer: true }),
+    ).toEqual({ outcome: "stale" });
+  });
+
+  it("refuses sale fields on a return to available", () => {
+    expect(
+      saleTransition("reserved", {
+        availability: "available",
+        hasBuyer: true,
+        paid: true,
+      }),
+    ).toEqual({ outcome: "refuse" });
+    expect(
+      saleTransition("available", {
+        availability: "available",
+        hasBuyer: true,
+      }),
+    ).toEqual({ outcome: "refuse" });
+  });
+
+  it("refuses sale fields without a buyer", () => {
+    expect(
+      saleTransition("available", {
+        availability: "reserved",
+        hasBuyer: false,
+        agreedPriceCents: 1000,
+      }),
+    ).toEqual({ outcome: "refuse" });
+    expect(saleTransition("reserved", { hasBuyer: false, notes: "x" })).toEqual(
+      { outcome: "refuse" },
+    );
+  });
+});
+
+describe("sale edit", () => {
+  it("reports an available listing as changed", () => {
+    expect(canEditSale("available", false, true)).toBe("stale");
+  });
+
+  it("refuses an edit that leaves a held listing without a buyer", () => {
+    expect(canEditSale("sold", false, false)).toBe("refuse");
+  });
+
+  it("allows an edit on a held listing with a buyer, current or new", () => {
+    expect(canEditSale("reserved", true, false)).toBe("ok");
+    expect(canEditSale("sold", false, true)).toBe("ok");
+  });
+});
+
+describe("sale after a full update", () => {
+  it("clears the sale when the listing goes back to available", () => {
+    expect(saleAfterFullUpdate("reserved", "available")).toBe("release");
+  });
+
+  it("leaves the sale alone otherwise", () => {
+    expect(saleAfterFullUpdate("reserved", undefined)).toBe("keep");
+    expect(saleAfterFullUpdate("available", "available")).toBe("keep");
+    expect(saleAfterFullUpdate("available", "reserved")).toBe("keep");
+    expect(saleAfterFullUpdate("reserved", "sold")).toBe("keep");
   });
 });
