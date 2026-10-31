@@ -133,12 +133,14 @@ export function WaitlistForm({
   if (done)
     return (
       <div ref={thanksRef} tabIndex={-1} className="outline-none">
-        <h2 className="text-xl font-bold">Pronto, você está na lista!</h2>
-        <p className="mt-1 text-ink-soft">Vamos entrar em contato em breve.</p>
+        <h2 className="text-2xl leading-tight font-extrabold tracking-[-0.02em] text-balance">
+          Pronto, você está na lista!
+        </h2>
+        <p className="mt-2 text-ink-soft">Vamos entrar em contato em breve.</p>
         {storeHref && (
           <a
             href={storeHref}
-            className="mt-5 inline-flex h-11 items-center rounded-full border border-line bg-surface px-5 text-sm font-semibold hover:border-ink/40"
+            className="mt-6 inline-flex h-11 items-center rounded-full border border-line bg-surface px-5 text-sm font-semibold hover:border-ink/40"
           >
             Voltar para a loja
           </a>
@@ -148,6 +150,10 @@ export function WaitlistForm({
 
   return (
     <form onSubmit={guarded} noValidate className="flex flex-col gap-5">
+      <div>
+        <h2 className="text-xl font-bold">Entre na lista</h2>
+        <p className="mt-1 text-sm text-ink-soft">Leva menos de um minuto.</p>
+      </div>
       <Field
         label="Seu nome"
         htmlFor="waitlist-name"
@@ -156,21 +162,27 @@ export function WaitlistForm({
         <input
           id="waitlist-name"
           autoComplete="name"
+          autoCapitalize="words"
+          spellCheck={false}
           aria-invalid={Boolean(errors.name)}
           aria-describedby={errors.name ? "waitlist-name-error" : undefined}
           className={inputClass}
           {...register("name")}
         />
       </Field>
-      <fieldset className="flex flex-col gap-1.5">
-        <legend className="text-sm font-semibold">
+      <fieldset>
+        <legend className="mb-1.5 text-sm font-semibold">
           Como prefere receber o contato?
         </legend>
-        <div className="flex gap-5">
+        <div className="grid h-11 grid-cols-2 rounded-full bg-paper p-1 ring-1 ring-line ring-inset">
           {WAITLIST_CHANNELS.map((value) => (
-            <label key={value} className="flex h-11 items-center gap-2">
+            <label
+              key={value}
+              className="flex cursor-pointer items-center justify-center rounded-full px-4 text-sm font-semibold text-ink-soft transition-colors duration-150 ease-out hover:text-ink has-[:checked]:bg-surface has-[:checked]:text-ink has-[:checked]:shadow-sm has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-focus"
+            >
               <input
                 type="radio"
+                className="sr-only"
                 value={value}
                 {...register("channel", {
                   onChange: (event) => {
@@ -197,6 +209,8 @@ export function WaitlistForm({
           id="waitlist-contact"
           defaultValue={ui.initial}
           type={ui.type}
+          inputMode={ui.type}
+          spellCheck={false}
           autoComplete={ui.type === "tel" ? "tel" : "email"}
           aria-invalid={Boolean(errors.contact)}
           aria-describedby={
@@ -222,13 +236,15 @@ export function WaitlistForm({
           {errors.root.message}
         </p>
       )}
-      <Button type="submit" size="lg" disabled={isSubmitting} className="mt-1">
-        {isSubmitting ? "Enviando..." : "Entrar na lista"}
-      </Button>
-      <p className="text-xs text-muted">
-        Usamos seu nome e contato só para falar com você sobre o lançamento do
-        closeout. Ao enviar, você concorda com isso.
-      </p>
+      <div className="mt-1 flex flex-col gap-3">
+        <Button type="submit" size="lg" disabled={isSubmitting}>
+          {isSubmitting ? "Enviando..." : "Entrar na lista"}
+        </Button>
+        <p className="text-xs leading-relaxed text-pretty text-muted">
+          Usamos seu nome e contato só para falar com você sobre o lançamento do
+          closeout. Ao enviar, você concorda com isso.
+        </p>
+      </div>
     </form>
   );
 }

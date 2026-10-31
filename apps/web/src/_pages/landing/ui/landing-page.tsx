@@ -66,7 +66,7 @@ export function LandingPage() {
           </Link>
           <Link
             href={waitlistPath({ src: "landing" })}
-            className="inline-flex h-12 items-center rounded-full border border-ink px-6 text-base font-semibold text-ink hover:bg-ink/5"
+            className="inline-flex h-12 items-center rounded-full border border-line-strong bg-surface px-6 text-base font-semibold text-ink transition-colors duration-150 ease-out hover:border-ink"
           >
             Quero vender meus desapegos
           </Link>

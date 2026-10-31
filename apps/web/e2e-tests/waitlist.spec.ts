@@ -10,7 +10,10 @@ test("a storefront visitor joins the waitlist from the catalog footer", async ({
   await hydrated(page);
 
   await page.getByLabel("Seu nome").fill("Visitante E2E");
-  await page.getByRole("radio", { name: "E-mail" }).check();
+  const email = page.getByRole("radio", { name: "E-mail" });
+  // The radio is visually hidden; people click its segment, the label.
+  await email.locator("xpath=ancestor::label").click();
+  await expect(email).toBeChecked();
   await page.getByLabel("Seu e-mail").fill(`lista-${Date.now()}@e2e.test`);
   await page.getByRole("button", { name: "Entrar na lista" }).click();
 

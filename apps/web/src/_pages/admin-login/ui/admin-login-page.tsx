@@ -41,9 +41,12 @@ export async function LoginPage({
         </p>
       )}
       <LoginForm />
-      <p className="mt-6 text-sm text-muted">
+      <p className="mt-8 border-t border-line pt-6 text-sm text-muted">
         Ainda não tem uma loja?{" "}
-        <Link href={waitlistPath({ src: "login" })} className="underline">
+        <Link
+          href={waitlistPath({ src: "login" })}
+          className="font-semibold text-ink underline decoration-line-strong underline-offset-4 hover:decoration-ink"
+        >
           Entre na lista de espera
         </Link>
         .
