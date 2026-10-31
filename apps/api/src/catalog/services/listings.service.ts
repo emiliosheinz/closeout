@@ -24,7 +24,7 @@ import { AppException } from "@/problem/app-exception";
 import { Seller } from "@/sellers/entities/seller.entity";
 import { Category } from "@/stores/entities/category.entity";
 import { forbidden, type MembershipContext } from "@/stores/membership";
-import { toAdminImage } from "../admin-mappers";
+import { toAdminImage, toAdminSale } from "../admin-mappers";
 import { Listing } from "../entities/listing.entity";
 import { ListingImage } from "../entities/listing-image.entity";
 import { ListingSeller } from "../entities/listing-seller.entity";
@@ -92,6 +92,7 @@ export class ListingsService {
       .innerJoinAndSelect("l.category", "category")
       .leftJoinAndSelect("l.sellers", "listingSeller")
       .leftJoinAndSelect("listingSeller.seller", "seller")
+      .leftJoinAndSelect("l.buyer", "buyer")
       .orderBy("l.updated_at", "DESC");
     if (q) {
       query.andWhere(
@@ -230,6 +231,7 @@ export class ListingsService {
         images: _images,
         category: _category,
         sellers: _sellers,
+        buyer: _buyer,
         ...row
       } = listing;
       const { sellerIds, ...fields } = patch;
@@ -285,7 +287,12 @@ export class ListingsService {
   ): Promise<Listing> {
     const listing = await manager.getRepository(Listing).findOne({
       where: { id, storeId },
-      relations: { category: true, sellers: { seller: true }, images: true },
+      relations: {
+        category: true,
+        sellers: { seller: true },
+        images: true,
+        buyer: true,
+      },
       order: { images: { position: "ASC" } },
     });
     if (!listing) throw listingNotFound();
@@ -384,6 +391,7 @@ function toSummary(
     })),
     coverUrl: coverKey ? mediaUrls(coverKey).sm : null,
     imageCount,
+    sale: toAdminSale(listing),
     updatedAt: listing.updatedAt.toISOString(),
   };
 }

@@ -139,6 +139,36 @@ describe("response contracts", () => {
       }
     });
 
+    it("parses the list and detail of a listing with a buyer", async () => {
+      const [buyer] = await ctx.dataSource.query(
+        `INSERT INTO buyers (store_id, name, name_key) VALUES ($1, 'Ana', 'ana') RETURNING id`,
+        [admin.storeId],
+      );
+      await ctx.dataSource.query(
+        `UPDATE listings SET buyer_id = $2, agreed_price_cents = 900, paid = true, sale_notes = 'ok' WHERE id = $1`,
+        [sold.id, buyer.id],
+      );
+
+      const list = await client().get(`${base()}/listings`).expect(200);
+      const detail = await client()
+        .get(`${base()}/listings/${sold.id}`)
+        .expect(200);
+
+      for (const item of list.body.items) {
+        expectParses(
+          "GET /stores/:storeId/listings",
+          adminListingSummarySchema,
+          item,
+        );
+      }
+      expectParses(
+        "GET /stores/:storeId/listings/:id",
+        adminListingDetailSchema,
+        detail.body,
+      );
+      expect(detail.body.sale.buyer.name).toBe("Ana");
+    });
+
     it("parses a listing with photos and one without", async () => {
       for (const id of [withPhoto.id, draft.id]) {
         const res = await client().get(`${base()}/listings/${id}`).expect(200);
