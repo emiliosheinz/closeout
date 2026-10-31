@@ -14,6 +14,8 @@ type ResolvedBuyer = Pick<Buyer, "id" | "name" | "whatsappNumber">;
  * An id must belong to the store. A name finds the buyer under the same
  * normalized key or creates it, keeping the first spelling. Either way a
  * given phone is stored only when the buyer has none.
+ *
+ * Call after locking the listing: lock order is listings before buyers.
  */
 export async function resolveBuyer(
   manager: EntityManager,

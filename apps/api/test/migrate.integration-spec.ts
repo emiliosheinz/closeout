@@ -217,6 +217,10 @@ describe("production migrator", () => {
         ${listing(STORE_A, "dividido")}
         ${listing(STORE_A, "duplicado")}
         ${listing(STORE_A, "de-fora")}
+        ${listing(STORE_A, "reservado")}
+        ${listing(STORE_A, "vendido")}
+        UPDATE listings SET availability = 'reserved' WHERE slug = 'reservado';
+        UPDATE listings SET availability = 'sold' WHERE slug = 'vendido';
         INSERT INTO listing_sellers (listing_id, seller_id)
         SELECT l.id, s.id FROM listings l JOIN sellers s ON (l.slug, s.id) IN (
           ('orfao', '${LOGINLESS}'::uuid),
@@ -229,6 +233,22 @@ describe("production migrator", () => {
         "MembersOwnContactProfiles1792802868935",
         "WaitlistSignups1793408283963",
         "BuyersAndSaleInfo1793461192669",
+      ]);
+
+      expect(
+        await query(
+          database,
+          `SELECT slug, availability, buyer_id, paid FROM listings
+            WHERE slug IN ('reservado', 'vendido') ORDER BY slug`,
+        ),
+      ).toEqual([
+        {
+          slug: "reservado",
+          availability: "reserved",
+          buyer_id: null,
+          paid: false,
+        },
+        { slug: "vendido", availability: "sold", buyer_id: null, paid: false },
       ]);
 
       const profiles = await query(
@@ -261,6 +281,8 @@ describe("production migrator", () => {
         { slug: "dividido", seller_id: OWNER_PROFILE },
         { slug: "duplicado", seller_id: OWNER_PROFILE },
         { slug: "orfao", seller_id: OWNER_PROFILE },
+        { slug: "reservado", seller_id: OWNER_PROFILE },
+        { slug: "vendido", seller_id: OWNER_PROFILE },
       ]);
     });
 

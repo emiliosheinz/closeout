@@ -90,16 +90,29 @@ describe("resolving a buyer", () => {
       const held = new Promise<void>((resolveHeld) => {
         release = resolveHeld;
       });
+      let inserted = () => {};
+      const firstInserted = new Promise<void>((r) => {
+        inserted = r;
+      });
       const first = ctx.dataSource.transaction(async (manager) => {
         const buyer = await resolveBuyer(manager, store.storeId, {
           name: "Zé",
         });
+        inserted();
         await held;
         return buyer;
       });
-      await new Promise((r) => setTimeout(r, 100));
+      const lockWaiters = () =>
+        ctx.dataSource.query(
+          `SELECT 1 FROM pg_stat_activity WHERE wait_event_type = 'Lock'`,
+        );
+      await firstInserted;
       const second = resolve({ name: "ZÉ" });
-      await new Promise((r) => setTimeout(r, 200));
+      const deadline = Date.now() + 5000;
+      while ((await lockWaiters()).length === 0) {
+        if (Date.now() > deadline) throw new Error("second never blocked");
+        await new Promise((r) => setTimeout(r, 20));
+      }
       release();
 
       const [a, b] = await Promise.all([first, second]);
