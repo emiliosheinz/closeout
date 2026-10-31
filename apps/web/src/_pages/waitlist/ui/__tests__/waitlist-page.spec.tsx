@@ -98,4 +98,26 @@ describe("WaitlistPage", () => {
     await renderPage(params);
     expect(getStore).not.toHaveBeenCalled();
   });
+
+  it("sends the valid ref and src from the query with the signup", async () => {
+    vi.mocked(getStore).mockResolvedValue({ slug: "loja-x" } as never);
+    await renderPage({ ref: "loja-x", src: "landing" });
+    await signUp();
+    const init = vi.mocked(fetch).mock.calls[0]?.[1] as { body: string };
+    expect(JSON.parse(init.body)).toMatchObject({
+      ref: "loja-x",
+      src: "landing",
+    });
+  });
+
+  it("sends the signup without a malformed ref and src", async () => {
+    await renderPage({ ref: "Loja X", src: "footer" });
+    await signUp();
+    expect(fetch).toHaveBeenCalledTimes(1);
+    const init = vi.mocked(fetch).mock.calls[0]?.[1] as { body: string };
+    const body = JSON.parse(init.body);
+    expect(body).not.toHaveProperty("ref");
+    expect(body).not.toHaveProperty("src");
+    expect(body.name).toBe("Ana");
+  });
 });

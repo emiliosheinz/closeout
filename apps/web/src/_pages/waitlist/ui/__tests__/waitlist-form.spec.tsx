@@ -46,12 +46,8 @@ describe("WaitlistForm", () => {
     expect(
       screen.getByRole("group", { name: "Como prefere receber o contato?" }),
     ).toBeTruthy();
-    expect(
-      (screen.getByLabelText("WhatsApp") as HTMLInputElement).checked,
-    ).toBe(true);
-    expect((screen.getByLabelText("E-mail") as HTMLInputElement).checked).toBe(
-      false,
-    );
+    expect(screen.getByRole("radio", { name: "WhatsApp" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "E-mail" })).not.toBeChecked();
     const contact = screen.getByLabelText("Seu WhatsApp") as HTMLInputElement;
     expect(contact.type).toBe("tel");
     expect(contact.value).toBe("+55 ");
@@ -64,7 +60,9 @@ describe("WaitlistForm", () => {
     type("Seu WhatsApp", "11 9999");
     fireEvent.click(submitButton());
     expect(
-      await screen.findByText(/WhatsApp/, { selector: "p[role=alert]" }),
+      await screen.findByText(
+        "Informe o WhatsApp com o código do país, por exemplo +55 11 99999-8888.",
+      ),
     ).toBeTruthy();
 
     fireEvent.click(screen.getByLabelText("E-mail"));
@@ -96,11 +94,14 @@ describe("WaitlistForm", () => {
     type("Seu nome", "Ana");
     type("Seu WhatsApp", "11 9999");
     fireEvent.click(submitButton());
-    await waitFor(() =>
-      expect(
-        screen.getByLabelText("Seu WhatsApp").getAttribute("aria-invalid"),
-      ).toBe("true"),
-    );
+    expect(
+      await screen.findByText(
+        "Informe o WhatsApp com o código do país, por exemplo +55 11 99999-8888.",
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.getByLabelText("Seu WhatsApp").getAttribute("aria-invalid"),
+    ).toBe("true");
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -110,11 +111,10 @@ describe("WaitlistForm", () => {
     type("Seu nome", "Ana");
     type("Seu e-mail", "ana@");
     fireEvent.click(submitButton());
-    await waitFor(() =>
-      expect(
-        screen.getByLabelText("Seu e-mail").getAttribute("aria-invalid"),
-      ).toBe("true"),
-    );
+    expect(await screen.findByText("Informe um e-mail válido.")).toBeTruthy();
+    expect(
+      screen.getByLabelText("Seu e-mail").getAttribute("aria-invalid"),
+    ).toBe("true");
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -261,6 +261,10 @@ describe("WaitlistForm", () => {
       "TOO_MANY_ATTEMPTS",
     );
     expect((nameInput() as HTMLInputElement).value).toBe("Ana");
+    expect(
+      (screen.getByLabelText("Seu WhatsApp") as HTMLInputElement).value,
+    ).toBe("+55 11 99999-8888");
+    expect(screen.getByRole("radio", { name: "WhatsApp" })).toBeChecked();
     expect(confetti).not.toHaveBeenCalled();
   });
 
@@ -272,6 +276,10 @@ describe("WaitlistForm", () => {
       "Sem conexão. Verifique a internet e tente de novo.",
     );
     expect((nameInput() as HTMLInputElement).value).toBe("Ana");
+    expect(
+      (screen.getByLabelText("Seu WhatsApp") as HTMLInputElement).value,
+    ).toBe("+55 11 99999-8888");
+    expect(screen.getByRole("radio", { name: "WhatsApp" })).toBeChecked();
     expect(confetti).not.toHaveBeenCalled();
   });
 

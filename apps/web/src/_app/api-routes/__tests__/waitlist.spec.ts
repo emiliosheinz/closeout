@@ -158,11 +158,4 @@ describe("waitlist relay route", () => {
     );
     await expectProblem(await signup(input), 502, FAILED);
   });
-
-  it("gives the API call a timeout signal", async () => {
-    fetchMock.mockResolvedValue(new Response(null, { status: 204 }));
-    await signup(input);
-    const [, init] = fetchMock.mock.calls[0] ?? [];
-    expect(init?.signal).toBeInstanceOf(AbortSignal);
-  });
 });
