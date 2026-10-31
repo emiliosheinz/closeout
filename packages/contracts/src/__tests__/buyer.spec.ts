@@ -73,7 +73,7 @@ describe("buyer name key", () => {
     ["Ｍａｒｉａ Silva"],
     ["Mar​ia Silva"],
   ])("gives %j the key of Maria Silva", (name) => {
-    expect(buyerNameKey(name)).toBe(buyerNameKey("Maria Silva"));
+    expect(buyerNameKey(name)).toBe("maria silva");
   });
 
   it("is lowercase, unaccented and single-spaced", () => {
