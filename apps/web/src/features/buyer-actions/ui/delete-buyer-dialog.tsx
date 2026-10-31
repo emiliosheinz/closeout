@@ -1,8 +1,9 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { type BuyerSummary, buyerKeys } from "@/entities/buyer";
+import { listingKeys } from "@/entities/listing";
 import { ApiError, api } from "@/shared/api";
 import { pluralize } from "@/shared/lib/format";
 import { Button } from "@/shared/ui/button";
@@ -34,7 +35,7 @@ export function DeleteBuyerDialog({
   buyer: BuyerSummary;
   onClose: () => void;
   onMerge: () => void;
-  /** Called once the buyer is deleted, before the dialog closes. */
+  /** Called once the buyer is deleted and the dialog has closed, to place focus. */
   onDeleted?: () => void;
 }) {
   const [linkedLate, setLinkedLate] = useState(false);
@@ -51,33 +52,49 @@ export function DeleteBuyerDialog({
     },
     meta: {
       success: `${buyer.name} foi excluído.`,
-      invalidates: [buyerKeys.all(storeId)],
+      invalidates: [buyerKeys.all(storeId), listingKeys.all(storeId)],
       handlesError: isStillLinked,
     },
   });
   const deleting = remove.isPending;
+  const mounted = useRef(true);
+  const deleted = useRef(false);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
 
   const reason =
     buyer.linkedCount > 0
       ? `${buyer.name} tem ${pluralize(buyer.linkedCount, "item", "itens")} e não pode ser excluído.`
       : `${buyer.name} acabou de ser ligado a um item e não pode ser excluído.`;
 
-  function confirm() {
+  async function confirm() {
     if (deleting) return;
-    remove.mutate(undefined, {
-      onSuccess: () => {
-        onDeleted?.();
-        onClose();
-      },
-      onError: (error) => {
-        if (error instanceof StillLinkedError) setLinkedLate(true);
-      },
-    });
+    try {
+      await remove.mutateAsync();
+    } catch (error) {
+      if (error instanceof StillLinkedError && mounted.current)
+        setLinkedLate(true);
+      return;
+    }
+    // The delete can remove the row (and this dialog) before it resolves.
+    if (!mounted.current) return onDeleted?.();
+    deleted.current = true;
+    onClose();
   }
 
   return (
     <Dialog open onOpenChange={(next) => !next && !deleting && onClose()}>
       <DialogContent
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          if (!deleted.current) return;
+          deleted.current = false;
+          onDeleted?.();
+        }}
         onInteractOutside={(event) => deleting && event.preventDefault()}
         onEscapeKeyDown={(event) => deleting && event.preventDefault()}
       >

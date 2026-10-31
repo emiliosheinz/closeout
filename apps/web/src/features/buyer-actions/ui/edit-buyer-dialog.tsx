@@ -8,8 +8,8 @@ import { useMutation } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { type BuyerSummary, buyerKeys } from "@/entities/buyer";
 import { listingKeys } from "@/entities/listing";
-import { displayNumber } from "@/entities/member";
 import { ApiError, api } from "@/shared/api";
+import { displayNumber } from "@/shared/lib/whatsapp";
 import { Button } from "@/shared/ui/button";
 import {
   Dialog,

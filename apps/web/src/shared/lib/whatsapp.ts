@@ -40,3 +40,8 @@ export function chatUrl(whatsappNumber: string | null): string | null {
   if (!whatsappNumber || !isStoredNumber(whatsappNumber)) return null;
   return `https://wa.me/${whatsappNumber}`;
 }
+
+/** Shows a stored digits-only number the way people type it back. */
+export function displayNumber(number: string | null): string {
+  return number ? `+${number}` : "";
+}

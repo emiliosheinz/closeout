@@ -4,6 +4,14 @@ import { useId, useState } from "react";
 import { cn } from "@/shared/lib/utils";
 import { inputClass } from "./field";
 
+/** Whether an event target is a combobox with its suggestion list open (Escape should close the list, not a dialog). */
+export function isExpandedCombobox(target: EventTarget | null): boolean {
+  return (
+    target instanceof Element &&
+    target.closest("[role=combobox][aria-expanded=true]") !== null
+  );
+}
+
 export type ComboboxOption = { id: string; label: string };
 
 /**

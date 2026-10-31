@@ -41,15 +41,22 @@ async function openAction(
   name: string,
 ) {
   renderWithFeedback(
-    <table>
-      <tbody>
-        <tr>
-          <td>
-            <BuyerActions storeId="store" buyer={buyer} />
-          </td>
-        </tr>
-      </tbody>
-    </table>,
+    <>
+      <h2 tabIndex={-1}>Lista de compradores</h2>
+      <table>
+        <tbody>
+          <tr>
+            <td>
+              <BuyerActions
+                storeId="store"
+                buyer={buyer}
+                onGone={() => screen.getByRole("heading").focus()}
+              />
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </>,
   );
   const trigger = screen.getByRole("button", {
     name: `Ações para ${buyer.name}`,
@@ -136,6 +143,17 @@ describe("BuyerActions", () => {
       url: "/stores/store/buyers/b-ana",
       method: "DELETE",
     });
+  });
+
+  it("moves focus to the list heading after a delete", async () => {
+    await openAction(ana, "Excluir");
+    fireEvent.click(await screen.findByRole("button", { name: "Excluir" }));
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole("heading", { name: "Lista de compradores" }),
+      ).toHaveFocus(),
+    );
   });
 
   it("offers a merge when the delete is refused because the buyer got linked", async () => {

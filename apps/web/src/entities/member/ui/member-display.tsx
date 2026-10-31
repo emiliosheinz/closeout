@@ -1,10 +1,6 @@
 import { cn } from "@/shared/lib/utils";
+import { displayNumber } from "@/shared/lib/whatsapp";
 import type { TeamMember } from "../model/types";
-
-/** Shows a stored digits-only number the way people type it back. */
-export function displayNumber(number: string | null): string {
-  return number ? `+${number}` : "";
-}
 
 /** Up to two initials for the avatar placeholder. */
 function initials(name: string): string {

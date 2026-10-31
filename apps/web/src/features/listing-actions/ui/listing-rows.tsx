@@ -21,7 +21,7 @@ import {
 import { api, apiParsed, withId } from "@/shared/api";
 import {
   AVAILABILITY_LABELS,
-  formatPrice,
+  formatMoney,
   PAYMENT_LABELS,
   PUBLICATION_LABELS,
 } from "@/shared/lib/format";
@@ -238,7 +238,7 @@ function unpaidDebtNote({ sale }: AdminListingSummary): string {
   const owed =
     sale.agreedPriceCents === null
       ? ""
-      : ` (${formatPrice(sale.agreedPriceCents)})`;
+      : ` (${formatMoney(sale.agreedPriceCents)})`;
   return ` ${sale.buyer.name} ainda não pagou${owed}, e esse valor deixa de contar como dívida.`;
 }
 

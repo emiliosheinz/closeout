@@ -10,13 +10,13 @@ import { useQuery } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { buyerReads } from "@/entities/buyer";
 import type { AdminListingSummary } from "@/entities/listing";
-import { displayNumber } from "@/entities/member";
 import { readQuery } from "@/shared/api";
 import { AVAILABILITY_LABELS, BUYER_MATCH_LABELS } from "@/shared/lib/format";
 import { centsToInput, parsePriceToCents } from "@/shared/lib/money";
 import { matchesSearch } from "@/shared/lib/text";
+import { displayNumber } from "@/shared/lib/whatsapp";
 import { Button } from "@/shared/ui/button";
-import { Combobox } from "@/shared/ui/combobox";
+import { Combobox, isExpandedCombobox } from "@/shared/ui/combobox";
 import {
   Dialog,
   DialogClose,
@@ -169,13 +169,7 @@ export function BuyerDialog({
             return;
           }
           // Escape on an open suggestion list closes the list, not the dialog.
-          const target = event.target;
-          if (
-            target instanceof Element &&
-            target.closest("[role=combobox][aria-expanded=true]")
-          ) {
-            event.preventDefault();
-          }
+          if (isExpandedCombobox(event.target)) event.preventDefault();
         }}
       >
         <div className="border-b border-line px-6 py-5">

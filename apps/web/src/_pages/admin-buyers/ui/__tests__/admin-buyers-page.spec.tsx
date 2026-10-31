@@ -94,6 +94,13 @@ describe("buyers page", () => {
     expect(within(row).getByText("1 sem preço")).toBeInTheDocument();
   });
 
+  it("marks a settled item as paid", async () => {
+    await renderBuyers([alvaro]);
+    const row = screen.getByRole("row", { name: /Álvaro/ });
+    expect(within(row).getByText("Pago")).toBeInTheDocument();
+    expect(within(row).queryByText("Não pago")).toBeNull();
+  });
+
   it("totals what the shown buyers owe", async () => {
     await renderBuyers([ana, bruno]);
     expect(screen.getByTestId("buyers-total")).toHaveTextContent("R$ 125,00");

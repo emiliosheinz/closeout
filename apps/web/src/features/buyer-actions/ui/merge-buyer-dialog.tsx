@@ -1,15 +1,15 @@
 "use client";
 
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { type BuyerSummary, buyerKeys, buyerReads } from "@/entities/buyer";
 import { listingKeys } from "@/entities/listing";
-import { displayNumber } from "@/entities/member";
-import { api, readQuery } from "@/shared/api";
+import { api, readQuery, successFor } from "@/shared/api";
 import { pluralize } from "@/shared/lib/format";
 import { matchesSearch } from "@/shared/lib/text";
+import { displayNumber } from "@/shared/lib/whatsapp";
 import { Button } from "@/shared/ui/button";
-import { Combobox } from "@/shared/ui/combobox";
+import { Combobox, isExpandedCombobox } from "@/shared/ui/combobox";
 import {
   Dialog,
   DialogClose,
@@ -51,11 +51,11 @@ export function MergeBuyerDialog({
   storeId: string;
   source: BuyerSummary;
   onClose: () => void;
-  /** Called once the merge is saved, before the dialog closes. */
+  /** Called once the merge is saved and the dialog has closed, to place focus. */
   onMerged?: () => void;
 }) {
   const id = useId();
-  const { data } = useQuery(readQuery(buyerReads.list(storeId)));
+  const { data, isError } = useQuery(readQuery(buyerReads.list(storeId)));
   const others = (data?.items ?? []).filter((buyer) => buyer.id !== source.id);
   const [search, setSearch] = useState("");
   const [targetId, setTargetId] = useState<string | null>(null);
@@ -67,12 +67,21 @@ export function MergeBuyerDialog({
         targetId: picked.id,
       }),
     meta: {
-      success: (picked) =>
-        `${source.name} foi juntado com ${(picked as BuyerSummary).name}.`,
+      success: successFor<BuyerSummary>(
+        (picked) => `${source.name} foi juntado com ${picked.name}.`,
+      ),
       invalidates: [buyerKeys.all(storeId), listingKeys.all(storeId)],
     },
   });
   const saving = merge.isPending;
+  const mounted = useRef(true);
+  const merged = useRef(false);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
 
   const options = search
     ? others
@@ -81,15 +90,18 @@ export function MergeBuyerDialog({
         .map((buyer) => ({ id: buyer.id, label: buyer.name }))
     : [];
 
-  function submit(event: React.FormEvent) {
+  async function submit(event: React.FormEvent) {
     event.preventDefault();
     if (!target || saving) return;
-    merge.mutate(target, {
-      onSuccess: () => {
-        onMerged?.();
-        onClose();
-      },
-    });
+    const failed = await merge.mutateAsync(target).then(
+      () => false,
+      () => true,
+    );
+    if (failed) return;
+    // The merge can remove the row (and this dialog) before it resolves.
+    if (!mounted.current) return onMerged?.();
+    merged.current = true;
+    onClose();
   }
 
   const searchId = `${id}-target`;
@@ -97,6 +109,12 @@ export function MergeBuyerDialog({
     <Dialog open onOpenChange={(next) => !next && !saving && onClose()}>
       <DialogContent
         className="max-w-lg overflow-hidden p-0"
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          if (!merged.current) return;
+          merged.current = false;
+          onMerged?.();
+        }}
         onInteractOutside={(event) => saving && event.preventDefault()}
         onEscapeKeyDown={(event) => {
           if (saving) {
@@ -104,13 +122,7 @@ export function MergeBuyerDialog({
             return;
           }
           // Escape on an open suggestion list closes the list, not the dialog.
-          const focused = event.target;
-          if (
-            focused instanceof Element &&
-            focused.closest("[role=combobox][aria-expanded=true]")
-          ) {
-            event.preventDefault();
-          }
+          if (isExpandedCombobox(event.target)) event.preventDefault();
         }}
       >
         <div className="border-b border-line px-6 py-5">
@@ -147,6 +159,11 @@ export function MergeBuyerDialog({
             >
               {target && mergeSummary(source, target)}
             </p>
+            {isError && (
+              <p role="alert" className="text-sm font-medium text-stamp">
+                Não foi possível carregar os compradores. Feche e tente de novo.
+              </p>
+            )}
           </div>
           <div className="flex justify-end gap-2 border-t border-line bg-paper/70 px-6 py-3.5">
             <DialogClose asChild>

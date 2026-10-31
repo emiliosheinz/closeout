@@ -3,7 +3,6 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { BuyerContact, type BuyerSummary, buyerReads } from "@/entities/buyer";
-import { displayNumber } from "@/entities/member";
 import { BuyerActions } from "@/features/buyer-actions";
 import { readQuery } from "@/shared/api";
 import {
@@ -17,6 +16,7 @@ import {
 } from "@/shared/lib/table-url-state";
 import { compareText, matchesSearch } from "@/shared/lib/text";
 import { cn } from "@/shared/lib/utils";
+import { displayNumber } from "@/shared/lib/whatsapp";
 import {
   DataTable,
   type DataTableColumns,
@@ -49,6 +49,7 @@ function ItemLine({ item }: { item: BuyerSummary["items"][number] }) {
     <li className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
       <Link
         href={`/admin/listings/${item.listingId}`}
+        title={item.title}
         className="min-w-0 max-w-full truncate font-medium hover:underline"
       >
         {item.title}

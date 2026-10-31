@@ -35,9 +35,7 @@ export function formatPrice(
 ): string {
   if (priceCents === null) return "Preço a combinar";
   if (priceCents === 0) return "Grátis";
-  return new Intl.NumberFormat(locale, { style: "currency", currency })
-    .format(priceCents / 100)
-    .replace(/ /g, " ");
+  return formatMoney(priceCents, locale, currency);
 }
 
 /** Short form for price stickers: whole reais drop the cents. */
