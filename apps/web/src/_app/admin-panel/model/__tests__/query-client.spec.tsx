@@ -5,7 +5,7 @@ import { ConfirmDialog } from "@/shared/ui/confirm-dialog";
 import oracle from "@/test/copy-oracle.json";
 import { renderWithFeedback } from "@/test/feedback-harness";
 
-const SESSION_EXPIRED_HREF = "/admin/entrar?erro=sessao-expirada";
+const SESSION_EXPIRED_HREF = "/admin/login?error=session-expired";
 
 function Mutate({
   fn,

@@ -53,7 +53,7 @@ describe("edit listing page", () => {
   ])("sends the member to login when the %s read is unauthorized", async (_name, override) => {
     stubAdminApi({ ...api(listingDetail()), ...override });
     await expect(EditListingPage(props)).rejects.toMatchObject({
-      digest: expect.stringContaining("/admin/entrar?erro=sessao-expirada"),
+      digest: expect.stringContaining("/admin/login?error=session-expired"),
     });
   });
 

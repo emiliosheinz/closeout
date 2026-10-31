@@ -28,7 +28,7 @@ export async function signIn(
   email = ADMIN_EMAIL,
   password = ADMIN_PASSWORD,
 ): Promise<void> {
-  await page.goto("/admin/entrar");
+  await page.goto("/admin/login");
   await hydrated(page);
   await page.getByLabel("E-mail").fill(email);
   await page.getByLabel("Senha").fill(password);

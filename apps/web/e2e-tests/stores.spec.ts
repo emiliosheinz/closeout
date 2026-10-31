@@ -37,7 +37,7 @@ test("a second store's owner publishes there, each store shows only its own list
         page.getByRole("banner").getByRole("link", { name: "Outra Loja" }),
       ).toBeVisible();
       await page.getByRole("link", { name: "Novo anúncio" }).click();
-      await expect(page).toHaveURL(/\/admin\/anuncios\/novo$/);
+      await expect(page).toHaveURL(/\/admin\/listings\/new$/);
       await hydrated(page);
       await page.getByLabel("Nome do item").fill(OTHER_TITLE);
       await page.getByLabel("Preço (R$)").fill("300");

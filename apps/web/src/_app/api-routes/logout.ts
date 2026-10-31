@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
     }
   }
   const result = NextResponse.redirect(
-    new URL("/admin/entrar", requireEnv("PUBLIC_BASE_URL")),
+    new URL("/admin/login", requireEnv("PUBLIC_BASE_URL")),
     303,
   );
   clearSessionCookie(result.cookies);

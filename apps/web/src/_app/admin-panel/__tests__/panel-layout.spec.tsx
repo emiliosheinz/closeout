@@ -47,7 +47,7 @@ describe("panel layout", () => {
     await expect(
       PanelLayout({ children: <p>conteúdo</p> }),
     ).rejects.toMatchObject({
-      digest: expect.stringContaining("/admin/entrar"),
+      digest: expect.stringContaining("/admin/login"),
     });
   });
 

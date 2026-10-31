@@ -14,7 +14,7 @@ describe("listing notice", () => {
     ["upload-failed", "erro=envio"],
   ] as const)("builds a href for %s that parses back", (notice, query) => {
     const href = listingEditHref("abc", notice);
-    expect(href).toBe(`/admin/anuncios/abc?${query}`);
+    expect(href).toBe(`/admin/listings/abc?${query}`);
     const search = new URLSearchParams(href.split("?")[1]);
     expect(parseListingNotice(search)).toBe(notice);
     // Clearing the notice from the URL must reach every param it travels in.

@@ -41,7 +41,7 @@ function Unavailable({ message }: { message: string }) {
         </h1>
         <p className="mt-3 text-lg text-ink-soft">{message}</p>
         <a
-          href="/admin/entrar"
+          href="/admin/login"
           className="mt-6 inline-flex h-11 w-fit items-center rounded-full border border-line bg-surface px-5 text-sm font-semibold hover:border-ink/40"
         >
           Já tenho conta: entrar

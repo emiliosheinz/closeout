@@ -106,14 +106,14 @@ describe("team page", () => {
   ])("sends a manager to login when the %s read is unauthorized", async (_name, routes) => {
     stubAdminApi({ ...asMember("owner"), ...routes });
     await expect(TeamPage()).rejects.toMatchObject({
-      digest: expect.stringContaining("/admin/entrar?erro=sessao-expirada"),
+      digest: expect.stringContaining("/admin/login?error=session-expired"),
     });
   });
 
   it("sends a seller to login when the sellers read is unauthorized", async () => {
     stubAdminApi({ ...asMember("seller"), "/stores/store-1/sellers": 401 });
     await expect(TeamPage()).rejects.toMatchObject({
-      digest: expect.stringContaining("/admin/entrar?erro=sessao-expirada"),
+      digest: expect.stringContaining("/admin/login?error=session-expired"),
     });
   });
 

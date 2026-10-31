@@ -31,7 +31,7 @@ async function invite(
   email: string,
   role: "Vendedor(a)" | "Admin",
 ): Promise<string> {
-  await page.goto("/admin/equipe");
+  await page.goto("/admin/team");
   await hydrated(page);
   await page.getByRole("button", { name: "Convidar pessoas" }).click();
   const form = page.getByRole("dialog", { name: "Convidar pessoas" });
@@ -95,7 +95,7 @@ test.describe
     }) => {
       await signIn(page, SELLER.email, SELLER.password);
       await page.getByRole("link", { name: "Novo anúncio" }).click();
-      await expect(page).toHaveURL(/\/admin\/anuncios\/novo$/);
+      await expect(page).toHaveURL(/\/admin\/listings\/new$/);
       await hydrated(page);
       await expect(page.getByRole("group", { name: "Quem vende" })).toHaveCount(
         0,
@@ -138,7 +138,7 @@ test.describe
       ).toHaveCount(0);
       await visitor.close();
 
-      const settings = await page.goto("/admin/loja");
+      const settings = await page.goto("/admin/store");
       expect(settings?.status()).toBe(404);
     });
 
@@ -183,7 +183,7 @@ test.describe
 
       // Leaving the no-referrer invite page must not blank the login's Origin.
       await page.getByRole("link", { name: "Já tenho conta: entrar" }).click();
-      await expect(page).toHaveURL(/\/admin\/entrar$/);
+      await expect(page).toHaveURL(/\/admin\/login$/);
       await hydrated(page);
       await page.getByLabel("E-mail").fill(ADMIN_EMAIL);
       await page.getByLabel("Senha").fill(ADMIN_PASSWORD);
@@ -203,7 +203,7 @@ test.describe
       const leaverLink = await invite(page, LEAVER.email, "Admin");
       const leaver = await accept(browser, leaverLink, LEAVER);
 
-      await page.goto("/admin/equipe");
+      await page.goto("/admin/team");
       await hydrated(page);
       const card = page.getByRole("row").filter({ hasText: LEAVER.email });
       await card
@@ -217,7 +217,7 @@ test.describe
       await expect(card).toHaveCount(0);
 
       await leaver.goto("/admin");
-      await expect(leaver).toHaveURL(/\/admin\/entrar$/);
+      await expect(leaver).toHaveURL(/\/admin\/login$/);
       await leaver.context().close();
     });
   });

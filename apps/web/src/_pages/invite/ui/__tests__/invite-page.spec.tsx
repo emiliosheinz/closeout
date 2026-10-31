@@ -126,7 +126,7 @@ describe("invite page", () => {
     expect(document.body.innerHTML).toBe(notFound);
     expect(screen.getByText(INVALID)).toBeInTheDocument();
     const signIn = screen.getByRole("link", { name: "Já tenho conta: entrar" });
-    expect(signIn).toHaveAttribute("href", "/admin/entrar");
+    expect(signIn).toHaveAttribute("href", "/admin/login");
     expect(screen.queryByLabelText("Senha")).toBeNull();
   });
 

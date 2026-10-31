@@ -11,7 +11,7 @@ describe("landing page", () => {
       name: "Quero vender meus desapegos",
     });
     expect(waitlist).toHaveAttribute("href", "/waitlist?src=landing");
-    expect(login).toHaveAttribute("href", "/admin/entrar");
+    expect(login).toHaveAttribute("href", "/admin/login");
     expect(waitlist.parentElement).toBe(login.parentElement);
   });
 });

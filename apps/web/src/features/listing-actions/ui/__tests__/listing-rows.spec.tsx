@@ -148,7 +148,7 @@ describe("listing row cells", () => {
     renderRows([row("b", { publication: "draft" })]);
     expect(
       screen.getByRole("link", { name: "Pré-visualizar Item b" }),
-    ).toHaveAttribute("href", "/admin/anuncios/b/previa");
+    ).toHaveAttribute("href", "/admin/listings/b/preview");
   });
 
   it("names each status control after its item and shows the selected label", () => {
@@ -499,7 +499,7 @@ describe("listing row cells", () => {
       );
 
       await waitFor(() =>
-        expect(push).toHaveBeenCalledWith("/admin/anuncios/copy-1?copiado=1"),
+        expect(push).toHaveBeenCalledWith("/admin/listings/copy-1?copiado=1"),
       );
       expect(writes("POST")).toEqual([
         { url: "/stores/store/listings/b/duplicate", body: undefined },

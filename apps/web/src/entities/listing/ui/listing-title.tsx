@@ -38,7 +38,7 @@ export function ListingTitle({
       </div>
       <div className="min-w-0">
         <Link
-          href={`/admin/anuncios/${listing.id}`}
+          href={`/admin/listings/${listing.id}`}
           className="font-semibold hover:underline"
         >
           {listing.title}
@@ -51,7 +51,7 @@ export function ListingTitle({
           listing.availability !== "sold" &&
           unreachable && (
             <Link
-              href="/admin/equipe"
+              href="/admin/team"
               className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-stamp/10 px-2.5 py-1 text-xs font-semibold text-stamp hover:bg-stamp/15"
               title="Este item aparece na loja sem botão de contato."
             >

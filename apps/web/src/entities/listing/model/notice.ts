@@ -37,7 +37,7 @@ export const LISTING_NOTICE_PARAMS = [
 
 /** The edit page's URL carrying a one-time notice for the destination to toast. */
 export function listingEditHref(id: string, notice: ListingNotice) {
-  return `/admin/anuncios/${id}?${QUERY[notice]}`;
+  return `/admin/listings/${id}?${QUERY[notice]}`;
 }
 
 /** Reads the notice a URL carries; unknown values are no notice. */

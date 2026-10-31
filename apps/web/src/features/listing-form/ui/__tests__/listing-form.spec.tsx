@@ -417,7 +417,7 @@ describe("ListingForm", () => {
 
       await waitFor(() =>
         expect(push).toHaveBeenCalledWith(
-          "/admin/anuncios/listing-1?salvo=publicado",
+          "/admin/listings/listing-1?salvo=publicado",
         ),
       );
       expect(apiCalls()[0]?.body).toMatchObject({ publication: "published" });
@@ -431,7 +431,7 @@ describe("ListingForm", () => {
       );
 
       await waitFor(() =>
-        expect(push).toHaveBeenCalledWith("/admin/anuncios/listing-1?salvo=1"),
+        expect(push).toHaveBeenCalledWith("/admin/listings/listing-1?salvo=1"),
       );
       expect(apiCalls()[0]?.body).toMatchObject({ publication: "archived" });
     });
@@ -443,7 +443,7 @@ describe("ListingForm", () => {
       );
 
       await waitFor(() =>
-        expect(push).toHaveBeenCalledWith("/admin/anuncios/listing-1?salvo=1"),
+        expect(push).toHaveBeenCalledWith("/admin/listings/listing-1?salvo=1"),
       );
       expect(apiCalls()[0]?.body).toMatchObject({ publication: "draft" });
     });
@@ -455,7 +455,7 @@ describe("ListingForm", () => {
 
       await waitFor(() =>
         expect(push).toHaveBeenCalledWith(
-          "/admin/anuncios/new-listing?salvo=1",
+          "/admin/listings/new-listing?salvo=1",
         ),
       );
       expect(apiCalls().map((c) => `${c.method} ${c.path}`)).toEqual([
@@ -474,7 +474,7 @@ describe("ListingForm", () => {
 
       await waitFor(() =>
         expect(push).toHaveBeenCalledWith(
-          "/admin/anuncios/new-listing?salvo=publicado",
+          "/admin/listings/new-listing?salvo=publicado",
         ),
       );
       expect(apiCalls().map((c) => `${c.method} ${c.path}`)).toEqual([
@@ -521,7 +521,7 @@ describe("ListingForm", () => {
 
       await waitFor(() =>
         expect(push).toHaveBeenCalledWith(
-          "/admin/anuncios/new-listing?erro=envio",
+          "/admin/listings/new-listing?erro=envio",
         ),
       );
       expect(toast.getToasts()).toHaveLength(0);
@@ -537,7 +537,7 @@ describe("ListingForm", () => {
       );
 
       await waitFor(() =>
-        expect(push).toHaveBeenCalledWith("/admin/anuncios/listing-1?salvo=1"),
+        expect(push).toHaveBeenCalledWith("/admin/listings/listing-1?salvo=1"),
       );
     });
 

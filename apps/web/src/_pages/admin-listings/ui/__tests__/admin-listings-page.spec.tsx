@@ -145,7 +145,7 @@ describe("admin listings page", () => {
       "/stores/store-1/sellers": 401,
     });
     await expect(DashboardPage()).rejects.toMatchObject({
-      digest: expect.stringContaining("/admin/entrar?erro=sessao-expirada"),
+      digest: expect.stringContaining("/admin/login?error=session-expired"),
     });
   });
 

@@ -7,13 +7,13 @@ const PANEL = join(process.cwd(), "src/app/admin/(panel)");
 
 const LOADINGS: [string, () => Promise<{ default: ComponentType }>][] = [
   ["(listings)", () => import("@/app/admin/(panel)/(listings)/loading")],
-  ["equipe", () => import("@/app/admin/(panel)/equipe/loading")],
-  ["loja", () => import("@/app/admin/(panel)/loja/loading")],
-  ["anuncios/novo", () => import("@/app/admin/(panel)/anuncios/novo/loading")],
-  ["anuncios/[id]", () => import("@/app/admin/(panel)/anuncios/[id]/loading")],
+  ["team", () => import("@/app/admin/(panel)/team/loading")],
+  ["store", () => import("@/app/admin/(panel)/store/loading")],
+  ["listings/new", () => import("@/app/admin/(panel)/listings/new/loading")],
+  ["listings/[id]", () => import("@/app/admin/(panel)/listings/[id]/loading")],
   [
-    "anuncios/[id]/previa",
-    () => import("@/app/admin/(panel)/anuncios/[id]/previa/loading"),
+    "listings/[id]/preview",
+    () => import("@/app/admin/(panel)/listings/[id]/preview/loading"),
   ],
 ];
 

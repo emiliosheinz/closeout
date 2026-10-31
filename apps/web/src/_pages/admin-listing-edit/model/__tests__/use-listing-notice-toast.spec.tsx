@@ -10,7 +10,7 @@ const nav = vi.hoisted(() => ({
 }));
 vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(nav.query),
-  usePathname: () => "/admin/anuncios/abc",
+  usePathname: () => "/admin/listings/abc",
   useRouter: () => ({ replace: nav.replace }),
 }));
 
@@ -40,7 +40,7 @@ describe("listing notice toast", () => {
     mount(query);
     expect(await screen.findByText(message)).toBeInTheDocument();
     expect(toast.getToasts()).toHaveLength(1);
-    expect(nav.replace).toHaveBeenCalledWith("/admin/anuncios/abc", {
+    expect(nav.replace).toHaveBeenCalledWith("/admin/listings/abc", {
       scroll: false,
     });
   });
@@ -67,7 +67,7 @@ describe("listing notice toast", () => {
   it("keeps unrelated params when clearing", async () => {
     mount("salvo=1&aba=fotos");
     await screen.findByText("Alterações salvas.");
-    expect(nav.replace).toHaveBeenCalledWith("/admin/anuncios/abc?aba=fotos", {
+    expect(nav.replace).toHaveBeenCalledWith("/admin/listings/abc?aba=fotos", {
       scroll: false,
     });
   });

@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { cache } from "react";
 import { loadRead } from "@/shared/api/index.server";
+import { NO_ACCESS_ERROR } from "../model/session-expired";
 import { toMember } from "../model/to-member";
 import type { Me, Member } from "../model/types";
 import { sessionReads } from "./reads";
@@ -19,8 +20,8 @@ export const getMe = cache(
  */
 export async function requireMember(): Promise<Member> {
   const me = await getMe();
-  if (!me) redirect("/admin/entrar");
+  if (!me) redirect("/admin/login");
   const member = toMember(me);
-  if (!member) redirect("/admin/entrar?erro=sem-acesso");
+  if (!member) redirect(`/admin/login?error=${NO_ACCESS_ERROR}`);
   return member;
 }
