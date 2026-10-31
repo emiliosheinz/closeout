@@ -84,6 +84,8 @@ belongs to one store.
 bin/closeout cli admin:create --store <slug> --store-name <name> --email <email> --name <name> [--whatsapp "+55 ..."]
 bin/closeout cli seed:demo --store <slug> --store-name <name> [--whatsapp "+55 ..."]
 bin/closeout cli admin:password --email <email>   # also signs the user out everywhere
+bin/closeout cli waitlist:list                    # waitlist as CSV, newest first
+bin/closeout cli waitlist:remove --contact <email or phone>
 ```
 
 `admin:create` creates the store (with the default categories) when the slug is new,

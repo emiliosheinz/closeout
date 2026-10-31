@@ -12,4 +12,5 @@ export * from "./problem";
 export * from "./seller";
 export * from "./session";
 export * from "./store";
+export * from "./waitlist";
 export * from "./whatsapp";

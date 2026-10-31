@@ -405,6 +405,27 @@
     "recorded": ["Not Found", "Vendedor não encontrado."],
     "expectedDetail": ["Não encontrado.", "Vendedor não encontrado."]
   },
+  "POST /waitlist/signups 400": {
+    "recorded": [],
+    "expectedDetail": [
+      "Campo não permitido.",
+      "Escolha WhatsApp ou e-mail.",
+      "Informe o WhatsApp com o código do país, por exemplo +55 11 99999-8888.",
+      "Informe seu nome.",
+      "Informe um e-mail válido.",
+      "Não foi possível identificar a origem da requisição.",
+      "Use até 100 caracteres no nome.",
+      "Valor inválido."
+    ]
+  },
+  "POST /waitlist/signups 403": {
+    "recorded": [],
+    "expectedDetail": "Você não tem permissão para esta ação."
+  },
+  "POST /waitlist/signups 429": {
+    "recorded": [],
+    "expectedDetail": "Muitas tentativas. Tente novamente em alguns minutos."
+  },
   "POST <unmatched /stores/:uuid/sellers> 403": {
     "recorded": ["Forbidden"],
     "expectedDetail": "Origem não permitida."

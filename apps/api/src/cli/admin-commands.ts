@@ -3,6 +3,7 @@ import {
   acceptInviteRequestSchema,
   inviteRequestSchema,
   parseRequest,
+  storeSlugSchema,
   whatsappInputSchema,
 } from "@closeout/contracts/schemas";
 import type { DataSource, EntityManager } from "typeorm";
@@ -33,8 +34,6 @@ function parseInput<Schema extends z.ZodType>(
   return result.data;
 }
 
-const SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
-
 export interface StoreIdentity {
   slug: string;
   /** Only used when the store does not exist yet. */
@@ -47,7 +46,7 @@ export async function ensureStore(
   stores: StoresService,
   identity: StoreIdentity,
 ): Promise<Store> {
-  if (!SLUG_PATTERN.test(identity.slug)) {
+  if (!storeSlugSchema.safeParse(identity.slug).success) {
     throw new CommandError(
       `Invalid store slug "${identity.slug}": use lowercase letters, digits and dashes.`,
     );

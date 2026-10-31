@@ -19,3 +19,14 @@ export type StoreRole = (typeof STORE_ROLES)[number];
 /** Roles a manager can give: the owner is set only by the operator CLI. */
 export const ASSIGNABLE_ROLES = ["admin", "seller"] as const;
 export type AssignableRole = (typeof ASSIGNABLE_ROLES)[number];
+
+export const WAITLIST_CHANNELS = ["whatsapp", "email"] as const;
+export type WaitlistChannel = (typeof WAITLIST_CHANNELS)[number];
+
+/** Where on the site a waitlist signup started. */
+export const WAITLIST_PLACEMENTS = [
+  "catalog-footer",
+  "landing",
+  "login",
+] as const;
+export type WaitlistPlacement = (typeof WAITLIST_PLACEMENTS)[number];

@@ -26,4 +26,12 @@ describe("login page", () => {
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
+
+  it("points people without a store to the waitlist", async () => {
+    await renderPage();
+    expect(screen.getByText(/Ainda não tem uma loja\?/)).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Entre na lista de espera" }),
+    ).toHaveAttribute("href", "/waitlist?src=login");
+  });
 });

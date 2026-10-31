@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import {
   activeFilterCount,
@@ -23,7 +24,7 @@ import {
   SearchForm,
 } from "@/features/catalog-filter";
 import { pluralize } from "@/shared/lib/format";
-import { storePath } from "@/shared/lib/site";
+import { storePath, waitlistPath } from "@/shared/lib/site";
 import { sellerContactUrl } from "@/shared/lib/whatsapp";
 import { EmptyState } from "./empty-state";
 import { FiltersSheet } from "./filters-sheet";
@@ -187,7 +188,21 @@ export async function CatalogPage({ params, searchParams }: PageProps) {
         </div>
       </main>
       <footer className="mx-auto max-w-6xl px-4 pb-10 text-sm text-muted sm:px-6 lg:px-8">
-        {store.name}. Sem cadastro, sem carrinho: viu algo, chama no WhatsApp.
+        <div className="flex flex-col gap-2 border-t border-line pt-6 sm:flex-row sm:items-baseline sm:justify-between sm:gap-8">
+          <p>
+            {store.name}. Sem cadastro, sem carrinho: viu algo, chama no
+            WhatsApp.
+          </p>
+          <p>
+            Feito com closeout. Quer vender seus desapegos?{" "}
+            <Link
+              href={waitlistPath({ ref: slug, src: "catalog-footer" })}
+              className="font-semibold whitespace-nowrap text-ink underline decoration-line-strong underline-offset-4 hover:decoration-ink"
+            >
+              Crie sua loja
+            </Link>
+          </p>
+        </div>
       </footer>
     </>
   );

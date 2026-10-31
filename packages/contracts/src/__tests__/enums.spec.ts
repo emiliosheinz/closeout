@@ -5,6 +5,8 @@ import {
   CONDITIONS,
   PUBLICATIONS,
   STORE_ROLES,
+  WAITLIST_CHANNELS,
+  WAITLIST_PLACEMENTS,
 } from "../enums";
 
 describe("enum value lists", () => {
@@ -32,5 +34,14 @@ describe("enum value lists", () => {
 
   it("lists assignable roles without the owner", () => {
     expect([...ASSIGNABLE_ROLES]).toEqual(["admin", "seller"]);
+  });
+
+  it("lists waitlist channels and placements", () => {
+    expect([...WAITLIST_CHANNELS]).toEqual(["whatsapp", "email"]);
+    expect([...WAITLIST_PLACEMENTS]).toEqual([
+      "catalog-footer",
+      "landing",
+      "login",
+    ]);
   });
 });

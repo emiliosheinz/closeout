@@ -8,6 +8,7 @@ import { Seller } from "@/sellers/entities/seller.entity";
 import { Category } from "@/stores/entities/category.entity";
 import { Store } from "@/stores/entities/store.entity";
 import { StoreMember } from "@/stores/entities/store-member.entity";
+import { WaitlistSignup } from "@/waitlist/entities/waitlist-signup.entity";
 
 export const ENTITIES = [
   User,
@@ -20,4 +21,5 @@ export const ENTITIES = [
   ListingImage,
   ListingSeller,
   StoreInvite,
+  WaitlistSignup,
 ];
