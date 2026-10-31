@@ -27,6 +27,7 @@ const detail = (images: AdminImage[]) => ({
   sellers: [],
   coverUrl: null,
   imageCount: images.length,
+  sale: null,
   updatedAt: "2026-10-17T12:00:00.000Z",
   description: "",
   attributes: [],

@@ -89,6 +89,7 @@ const listing: AdminListingDetail = {
   ],
   coverUrl: null,
   imageCount: 0,
+  sale: null,
   updatedAt: "2026-10-17T12:00:00.000Z",
   description: "",
   attributes: [],

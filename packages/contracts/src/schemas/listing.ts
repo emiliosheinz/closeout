@@ -34,8 +34,7 @@ export const adminListingSummarySchema = z.object({
       paid: z.boolean(),
       notes: z.string().nullable(),
     })
-    .nullable()
-    .optional(),
+    .nullable(),
   updatedAt: z.iso.datetime(),
 });
 export type AdminListingSummary = z.infer<typeof adminListingSummarySchema>;

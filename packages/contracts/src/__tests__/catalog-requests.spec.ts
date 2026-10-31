@@ -360,7 +360,6 @@ describe("admin listing summary sale", () => {
   };
 
   it.each([
-    ["absent", undefined],
     ["null", null],
     [
       "an object",
@@ -375,6 +374,10 @@ describe("admin listing summary sale", () => {
     expect(
       adminListingSummarySchema.safeParse({ ...summary, sale }).success,
     ).toBe(true);
+  });
+
+  it("refuses a summary without the sale key", () => {
+    expect(adminListingSummarySchema.safeParse(summary).success).toBe(false);
   });
 
   it("refuses a sale without a buyer", () => {
