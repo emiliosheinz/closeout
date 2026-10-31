@@ -6,10 +6,12 @@ import {
   loginRequestSchema,
 } from "@closeout/contracts/schemas";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { readProblem } from "@/shared/api";
 import { Button } from "@/shared/ui/button";
 import { Field, inputClass } from "@/shared/ui/field";
+import { notify } from "@/shared/ui/sonner";
 
 const NETWORK_MESSAGE = "Sem conexão. Verifique a internet e tente de novo.";
 
@@ -17,14 +19,15 @@ export function LoginForm() {
   const {
     register,
     handleSubmit,
-    setError,
-    formState: { errors, isSubmitting, isSubmitSuccessful },
+    formState: { errors, isSubmitting },
   } = useForm<LoginRequest>({
     resolver: zodResolver(loginRequestSchema),
     defaultValues: { email: "", password: "" },
   });
 
-  const pending = isSubmitting || isSubmitSuccessful;
+  // Stays set while the browser leaves for the admin, so no second submit.
+  const [navigating, setNavigating] = useState(false);
+  const pending = isSubmitting || navigating;
 
   async function submit(values: LoginRequest) {
     let response: Response;
@@ -38,16 +41,17 @@ export function LoginForm() {
         body: JSON.stringify(values),
       });
     } catch {
-      setError("root", { message: NETWORK_MESSAGE });
+      notify.error(NETWORK_MESSAGE);
       return;
     }
     if (response.ok) {
       // A full navigation drops any cache left by a previous session.
+      setNavigating(true);
       window.location.assign("/admin");
       return;
     }
     const { detail } = await readProblem(response, LOGIN_FAILED);
-    setError("root", { message: detail });
+    notify.error(detail);
   }
 
   function guarded(event: React.FormEvent<HTMLFormElement>) {
@@ -82,14 +86,6 @@ export function LoginForm() {
           {...register("password")}
         />
       </Field>
-      {errors.root && (
-        <p
-          role="alert"
-          className="rounded-md bg-stamp/10 px-3 py-2 text-sm text-stamp"
-        >
-          {errors.root.message}
-        </p>
-      )}
       <Button type="submit" disabled={pending} className="mt-2">
         {pending ? "Entrando..." : "Entrar"}
       </Button>

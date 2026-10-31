@@ -2,11 +2,13 @@
 
 import { acceptInviteRequestSchema } from "@closeout/contracts/schemas";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { readProblem } from "@/shared/api";
 import { Button } from "@/shared/ui/button";
 import { Field, inputClass } from "@/shared/ui/field";
+import { notify } from "@/shared/ui/sonner";
 
 const FALLBACK_MESSAGE = "Não foi possível aceitar o convite agora.";
 
@@ -29,13 +31,15 @@ export function InviteForm({ token, email }: { token: string; email: string }) {
     register,
     handleSubmit,
     setError,
-    formState: { errors, isSubmitting, isSubmitSuccessful },
+    formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: { name: "", password: "", whatsappNumber: "" },
   });
 
-  const pending = isSubmitting || isSubmitSuccessful;
+  // Stays set while the browser leaves for the admin, so no second submit.
+  const [navigating, setNavigating] = useState(false);
+  const pending = isSubmitting || navigating;
 
   async function submit(values: FormValues) {
     let response: Response;
@@ -49,13 +53,12 @@ export function InviteForm({ token, email }: { token: string; email: string }) {
         body: JSON.stringify({ token, ...values }),
       });
     } catch {
-      setError("root", {
-        message: "Sem conexão. Verifique a internet e tente de novo.",
-      });
+      notify.error("Sem conexão. Verifique a internet e tente de novo.");
       return;
     }
     if (response.ok) {
       // A full navigation drops any cache left by a previous session.
+      setNavigating(true);
       window.location.assign("/admin");
       return;
     }
@@ -70,9 +73,8 @@ export function InviteForm({ token, email }: { token: string; email: string }) {
       if (field) setError(field, { message });
       else unplaced.push(message);
     }
-    if (entries.length === 0) setError("root", { message: detail });
-    else if (unplaced.length > 0)
-      setError("root", { message: unplaced.join(" ") });
+    if (entries.length === 0) notify.error(detail);
+    else if (unplaced.length > 0) notify.error(unplaced.join(" "));
   }
 
   function guarded(event: React.FormEvent<HTMLFormElement>) {
@@ -154,14 +156,6 @@ export function InviteForm({ token, email }: { token: string; email: string }) {
           {...register("whatsappNumber")}
         />
       </Field>
-      {errors.root && (
-        <p
-          role="alert"
-          className="rounded-md bg-stamp/10 px-3 py-2 text-sm text-stamp"
-        >
-          {errors.root.message}
-        </p>
-      )}
       <Button type="submit" size="lg" disabled={pending} className="mt-1">
         {pending ? "Criando sua conta..." : "Criar conta e entrar"}
       </Button>

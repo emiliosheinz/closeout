@@ -7,12 +7,15 @@ import { render, waitFor } from "@testing-library/react";
 import { useEffect } from "react";
 import { toast } from "sonner";
 import { AdminProviders } from "@/_app/admin-panel/admin-providers";
+import { Toaster } from "@/shared/ui/sonner";
 
-// Sonner keeps its toasts in a module-level store that outlives each test.
-afterEach(async () => {
+/** Sonner keeps its toasts in a module-level store that outlives each test. */
+export async function dismissToasts() {
   toast.dismiss();
   await waitFor(() => expect(toast.getToasts()).toHaveLength(0));
-});
+}
+
+afterEach(dismissToasts);
 
 /**
  * Renders UI inside the real admin providers: the admin query client with its
@@ -39,4 +42,14 @@ export function renderWithFeedback(
   );
   if (!client) throw new Error("The admin providers did not mount");
   return { ...view, client };
+}
+
+/** Renders UI next to a Toaster, as the public and login pages mount one. */
+export function renderWithToaster(ui: React.ReactNode) {
+  return render(
+    <>
+      {ui}
+      <Toaster />
+    </>,
+  );
 }

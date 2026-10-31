@@ -1,11 +1,6 @@
-import {
-  act,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from "@testing-library/react";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { create } from "canvas-confetti";
+import { renderWithToaster } from "@/test/feedback-harness";
 import { problem } from "@/test/fixtures";
 import { WaitlistForm } from "../waitlist-form";
 
@@ -49,7 +44,7 @@ function submitWhatsapp() {
 
 describe("WaitlistForm", () => {
   it("opens on WhatsApp with the country code prefilled", () => {
-    render(<WaitlistForm attribution={{}} />);
+    renderWithToaster(<WaitlistForm attribution={{}} />);
     expect(
       screen.getByRole("group", { name: "Como prefere receber o contato?" }),
     ).toBeTruthy();
@@ -62,7 +57,7 @@ describe("WaitlistForm", () => {
   });
 
   it("switches the contact input and clears its error when the choice changes", async () => {
-    render(<WaitlistForm attribution={{}} />);
+    renderWithToaster(<WaitlistForm attribution={{}} />);
     type("Seu nome", "Ana");
     type("Seu WhatsApp", "11 9999");
     fireEvent.click(submitButton());
@@ -88,7 +83,7 @@ describe("WaitlistForm", () => {
   });
 
   it("shows the name message and sends nothing for an empty name", async () => {
-    render(<WaitlistForm attribution={{}} />);
+    renderWithToaster(<WaitlistForm attribution={{}} />);
     type("Seu WhatsApp", "+55 11 99999-8888");
     fireEvent.click(submitButton());
     expect(await screen.findByText("Informe seu nome.")).toBeTruthy();
@@ -97,7 +92,7 @@ describe("WaitlistForm", () => {
   });
 
   it("rejects a malformed WhatsApp number in the browser", async () => {
-    render(<WaitlistForm attribution={{}} />);
+    renderWithToaster(<WaitlistForm attribution={{}} />);
     type("Seu nome", "Ana");
     type("Seu WhatsApp", "11 9999");
     fireEvent.click(submitButton());
@@ -113,7 +108,7 @@ describe("WaitlistForm", () => {
   });
 
   it("rejects a malformed e-mail in the browser", async () => {
-    render(<WaitlistForm attribution={{}} />);
+    renderWithToaster(<WaitlistForm attribution={{}} />);
     fireEvent.click(screen.getByLabelText("E-mail"));
     type("Seu nome", "Ana");
     type("Seu e-mail", "ana@");
@@ -126,7 +121,7 @@ describe("WaitlistForm", () => {
   });
 
   it("posts the values as typed with the attribution and an empty honeypot", async () => {
-    render(
+    renderWithToaster(
       <WaitlistForm attribution={{ ref: "loja-x", src: "catalog-footer" }} />,
     );
     submitWhatsapp();
@@ -144,7 +139,7 @@ describe("WaitlistForm", () => {
   });
 
   it("sends a typed e-mail untouched and leaves out absent attribution", async () => {
-    render(<WaitlistForm attribution={{}} />);
+    renderWithToaster(<WaitlistForm attribution={{}} />);
     fireEvent.click(screen.getByLabelText("E-mail"));
     type("Seu nome", "Ana");
     type("Seu e-mail", "Ana@Example.com");
@@ -159,7 +154,7 @@ describe("WaitlistForm", () => {
   });
 
   it("carries the honeypot out of sight and sends what a bot fills in", async () => {
-    const { container } = render(<WaitlistForm attribution={{}} />);
+    const { container } = renderWithToaster(<WaitlistForm attribution={{}} />);
     const honeypot = container.querySelector(
       "input[name=website]",
     ) as HTMLInputElement;
@@ -174,14 +169,14 @@ describe("WaitlistForm", () => {
   });
 
   it("puts the consent notice directly after the submit button", () => {
-    render(<WaitlistForm attribution={{}} />);
+    renderWithToaster(<WaitlistForm attribution={{}} />);
     expect(submitButton().nextElementSibling?.textContent).toBe(
       "Usamos seu nome e contato só para falar com você sobre o lançamento do closeout. Ao enviar, você concorda com isso.",
     );
   });
 
   it("replaces the form with a focused thank-you and one confetti burst on 204", async () => {
-    render(
+    renderWithToaster(
       <WaitlistForm
         attribution={{ ref: "loja-x" }}
         storeHref="/store/loja-x"
@@ -208,7 +203,7 @@ describe("WaitlistForm", () => {
   });
 
   it("shows no back link without a store href", async () => {
-    render(<WaitlistForm attribution={{}} />);
+    renderWithToaster(<WaitlistForm attribution={{}} />);
     submitWhatsapp();
     await screen.findByRole("heading", { name: "Pronto, você está na lista!" });
     expect(
@@ -218,7 +213,7 @@ describe("WaitlistForm", () => {
 
   it("starts no confetti when the visitor prefers reduced motion", async () => {
     stubMotion(true);
-    render(<WaitlistForm attribution={{}} />);
+    renderWithToaster(<WaitlistForm attribution={{}} />);
     submitWhatsapp();
     await screen.findByRole("heading", { name: "Pronto, você está na lista!" });
     await new Promise((resolve) => setTimeout(resolve, 20));
@@ -234,7 +229,7 @@ describe("WaitlistForm", () => {
         ]),
       ),
     );
-    render(<WaitlistForm attribution={{}} />);
+    renderWithToaster(<WaitlistForm attribution={{}} />);
     submitWhatsapp();
     expect(await screen.findByText("Informe um WhatsApp válido.")).toBeTruthy();
     expect(
@@ -259,7 +254,7 @@ describe("WaitlistForm", () => {
         ]),
       ),
     );
-    render(<WaitlistForm attribution={{}} />);
+    renderWithToaster(<WaitlistForm attribution={{}} />);
     submitWhatsapp();
     expect(await screen.findByText("Informe seu nome.")).toBeTruthy();
     expect(nameInput().getAttribute("aria-invalid")).toBe("true");
@@ -267,7 +262,7 @@ describe("WaitlistForm", () => {
 
   it("alerts with the detail of any other problem and starts no confetti", async () => {
     fetchMock.mockResolvedValue(reply(429, problem(429, "TOO_MANY_ATTEMPTS")));
-    render(<WaitlistForm attribution={{}} />);
+    renderWithToaster(<WaitlistForm attribution={{}} />);
     submitWhatsapp();
     expect((await screen.findByRole("alert")).textContent).toBe(
       "TOO_MANY_ATTEMPTS",
@@ -282,7 +277,7 @@ describe("WaitlistForm", () => {
 
   it("alerts that the connection failed and keeps the values", async () => {
     fetchMock.mockRejectedValue(new TypeError("fetch failed"));
-    render(<WaitlistForm attribution={{}} />);
+    renderWithToaster(<WaitlistForm attribution={{}} />);
     submitWhatsapp();
     expect((await screen.findByRole("alert")).textContent).toBe(
       "Sem conexão. Verifique a internet e tente de novo.",
@@ -298,7 +293,7 @@ describe("WaitlistForm", () => {
   it("disables the button while sending and ignores a second submit", async () => {
     let finish!: (value: unknown) => void;
     fetchMock.mockReturnValue(new Promise((resolve) => (finish = resolve)));
-    render(<WaitlistForm attribution={{}} />);
+    renderWithToaster(<WaitlistForm attribution={{}} />);
     submitWhatsapp();
     await waitFor(() =>
       expect(
