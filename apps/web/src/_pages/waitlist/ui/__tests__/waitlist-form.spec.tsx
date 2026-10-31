@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import confetti from "canvas-confetti";
 import { problem } from "@/test/fixtures";
 import { WaitlistForm } from "../waitlist-form";
@@ -298,6 +304,8 @@ describe("WaitlistForm", () => {
       ).toBe(true),
     );
     fireEvent.submit(nameInput().closest("form") as HTMLFormElement);
+    // Let the second submit's async validation settle before counting.
+    await act(() => new Promise((resolve) => setTimeout(resolve, 50)));
     expect(fetchMock).toHaveBeenCalledTimes(1);
     finish(reply(204));
     await screen.findByRole("heading", { name: "Pronto, você está na lista!" });
