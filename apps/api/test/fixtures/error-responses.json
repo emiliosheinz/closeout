@@ -176,7 +176,10 @@
     "recorded": [
       "availability must be one of the following values: available, reserved, sold"
     ],
-    "expectedDetail": "Valor inválido."
+    "expectedDetail": [
+      "Informe o comprador. Os dados da venda só valem para um anúncio reservado ou vendido.",
+      "Valor inválido."
+    ]
   },
   "PATCH /stores/:storeId/listings/:id/status 404": {
     "recorded": ["Anúncio não encontrado.", "Not Found"],

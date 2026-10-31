@@ -7,6 +7,7 @@ import type {
   AdminListingDetail,
   AdminListingSummary,
   DashboardCounts,
+  ListingStatusRequest,
   PublicListingDetail,
 } from "@closeout/contracts/schemas";
 import { HttpStatus, Injectable } from "@nestjs/common";
@@ -18,6 +19,8 @@ import {
   QueryFailedError,
   Repository,
 } from "typeorm";
+import type { QueryDeepPartialEntity } from "typeorm/query-builder/QueryPartialEntity";
+import { resolveBuyer } from "@/buyers/resolve-buyer";
 import { MediaService } from "@/media/media.service";
 import { mediaUrls } from "@/media/media-urls";
 import { AppException } from "@/problem/app-exception";
@@ -33,6 +36,8 @@ import {
   canPublish,
   canSetSellers,
   PUBLISH_REQUIRES_PHOTO,
+  SALE_CHANGED,
+  saleTransition,
   sellersForNewListing,
 } from "../listing-rules";
 import type { ListingAttribute } from "../listing-types";
@@ -66,6 +71,10 @@ export function listingNotFound(): AppException {
 const INVALID_SELLER = "Vendedor inválido.";
 const INVALID_CATEGORY = "Categoria inválida.";
 const NO_SELLER_CHOSEN = "Escolha ao menos um vendedor.";
+const SALE_NEEDS_BUYER =
+  "Informe o comprador. Os dados da venda só valem para um anúncio reservado ou vendido.";
+const INVALID_BUYER = "Comprador inválido.";
+const TRY_AGAIN = "Não foi possível salvar agora. Tente de novo.";
 const COPY_SUFFIX = " (cópia)";
 
 @Injectable()
@@ -244,6 +253,70 @@ export class ListingsService {
     });
   }
 
+  /**
+   * Change availability and publication, recording or clearing the sale in
+   * the same transaction. The listing is locked before the buyer is resolved.
+   */
+  async changeStatus(
+    actor: ListingActor,
+    id: string,
+    request: ListingStatusRequest,
+  ): Promise<AdminListingDetail> {
+    const { storeId } = actor;
+    return withSaleConflicts(() =>
+      this.dataSource.transaction(async (manager) => {
+        await lockListing(manager, storeId, id);
+        const listing = await this.findWithRelations(manager, storeId, id);
+        const transition = saleTransition(listing.availability, {
+          availability: request.availability,
+          agreedPriceCents: request.agreedPriceCents,
+          paid: request.paid,
+          notes: request.notes,
+          hasBuyer: request.buyer !== undefined,
+        });
+        if (transition.outcome === "refuse") {
+          throw new AppException(HttpStatus.BAD_REQUEST, SALE_NEEDS_BUYER);
+        }
+        if (transition.outcome === "stale") {
+          throw new AppException(HttpStatus.CONFLICT, SALE_CHANGED);
+        }
+
+        const patch: QueryDeepPartialEntity<Listing> = {};
+        if (request.publication === "published") {
+          if (!canPublish(listing.images.length)) {
+            throw new AppException(
+              HttpStatus.UNPROCESSABLE_ENTITY,
+              PUBLISH_REQUIRES_PHOTO,
+            );
+          }
+          patch.publishedAt = listing.publishedAt ?? new Date();
+        }
+        if (request.publication) patch.publication = request.publication;
+        if (request.availability) patch.availability = request.availability;
+        if (transition.outcome === "release") {
+          Object.assign(patch, CLEARED_SALE);
+        }
+        if (
+          transition.outcome === "enter" &&
+          transition.sale &&
+          request.buyer
+        ) {
+          const buyer = await resolveBuyer(manager, storeId, request.buyer);
+          Object.assign(patch, {
+            buyerId: buyer.id,
+            agreedPriceCents: transition.sale.agreedPriceCents,
+            paid: transition.sale.paid,
+            saleNotes: transition.sale.notes,
+          });
+        }
+        if (Object.keys(patch).length > 0) {
+          await manager.getRepository(Listing).update({ id, storeId }, patch);
+        }
+        return toDetail(await this.findWithRelations(manager, storeId, id));
+      }),
+    );
+  }
+
   /** Copy a listing into a new draft without photos. */
   async duplicate(storeId: string, id: string): Promise<AdminListingDetail> {
     return this.dataSource.transaction(async (manager) => {
@@ -297,6 +370,32 @@ export class ListingsService {
     });
     if (!listing) throw listingNotFound();
     return listing;
+  }
+}
+
+const CLEARED_SALE = {
+  buyerId: null,
+  agreedPriceCents: null,
+  paid: false,
+  saleNotes: null,
+};
+
+/** A buyer removed mid-write breaks the foreign key; a deadlock aborts the transaction. */
+async function withSaleConflicts<T>(run: () => Promise<T>): Promise<T> {
+  try {
+    return await run();
+  } catch (err) {
+    const code =
+      err instanceof QueryFailedError
+        ? (err.driverError as { code?: string }).code
+        : undefined;
+    if (code === "23503") {
+      throw new AppException(HttpStatus.CONFLICT, INVALID_BUYER);
+    }
+    if (code === "40P01") {
+      throw new AppException(HttpStatus.CONFLICT, TRY_AGAIN);
+    }
+    throw err;
   }
 }
 

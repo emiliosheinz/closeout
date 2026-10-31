@@ -309,6 +309,24 @@ describe("response contracts", () => {
       );
     });
 
+    it("parses a status change that records a sale", async () => {
+      const res = await client()
+        .patch(`${base()}/listings/${draft.id}/status`)
+        .send({
+          availability: "reserved",
+          buyer: { name: "Ana" },
+          agreedPriceCents: 900,
+        })
+        .expect(200);
+
+      expectParses(
+        "PATCH /stores/:storeId/listings/:id/status",
+        adminListingDetailSchema,
+        res.body,
+      );
+      expect(res.body.sale.buyer.name).toBe("Ana");
+    });
+
     it("parses the image list after upload, reorder and delete", async () => {
       const url = `${base()}/listings/${withPhoto.id}/images`;
       const uploaded = await client()

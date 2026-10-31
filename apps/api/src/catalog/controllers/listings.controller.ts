@@ -119,7 +119,7 @@ export class ListingsController {
     @Param("id", { schema: uuidSchema }) id: string,
     @Body({ schema: listingStatusRequestSchema }) body: ListingStatusRequest,
   ): Promise<AdminListingDetail> {
-    return this.listings.update(member, id, body);
+    return this.listings.changeStatus(member, id, body);
   }
 
   @Post(":id/duplicate")
