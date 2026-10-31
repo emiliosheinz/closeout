@@ -178,6 +178,7 @@
     ],
     "expectedDetail": [
       "Informe o comprador. Os dados da venda só valem para um anúncio reservado ou vendido.",
+      "Use até 1000 caracteres nas observações.",
       "Valor inválido."
     ]
   },
