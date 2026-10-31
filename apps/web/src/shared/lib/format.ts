@@ -66,6 +66,13 @@ export const PUBLICATION_LABELS: Record<Publication, string> = {
   archived: "Arquivado",
 };
 
+export const BUYER_MATCH_LABELS = {
+  existing: "Comprador existente",
+  new: "Novo comprador",
+} as const;
+
+export const PAYMENT_LABELS = { paid: "Pago", unpaid: "Não pago" } as const;
+
 export const AVAILABILITY_FILTER_LABELS = {
   listed: "À venda",
   available: "Disponíveis",

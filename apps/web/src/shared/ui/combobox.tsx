@@ -54,8 +54,11 @@ export function Combobox({
   }
 
   function onKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+    // A key already prevented upstream (a dialog letting Escape reach us) is
+    // still ours to handle; only the caller's own veto stops us.
+    const prevented = event.defaultPrevented;
     callerOnKeyDown?.(event);
-    if (event.defaultPrevented) return;
+    if (!prevented && event.defaultPrevented) return;
     if (event.key === "ArrowDown" || event.key === "ArrowUp") {
       if (options.length === 0) return;
       event.preventDefault();
