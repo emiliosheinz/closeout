@@ -7,6 +7,14 @@ import { configure } from "@testing-library/react";
 configure({ asyncUtilTimeout: 5000 });
 
 if (typeof window !== "undefined") {
+  // Sonner shows a toast at opacity 0 until an effect marks it mounted, so a
+  // findBy under load can catch it mid-enter and fail toBeVisible. Skip the
+  // enter state only; toasts past the visible limit or removed stay hidden.
+  const style = document.createElement("style");
+  style.textContent =
+    "[data-sonner-toast][data-mounted=false]:not([data-visible=false]):not([data-removed=true]){opacity:1}";
+  document.head.appendChild(style);
+
   if (!Element.prototype.hasPointerCapture) {
     Element.prototype.hasPointerCapture = () => false;
   }
