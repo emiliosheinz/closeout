@@ -1,7 +1,9 @@
 import {
   type Buyer,
+  type BuyerMergeRequest,
   type BuyerSummary,
   type BuyerUpdateRequest,
+  buyerMergeRequestSchema,
   buyerUpdateRequestSchema,
   uuidSchema,
 } from "@closeout/contracts/schemas";
@@ -13,6 +15,7 @@ import {
   HttpCode,
   Param,
   Patch,
+  Post,
   UseGuards,
 } from "@nestjs/common";
 import { SessionGuard } from "@/auth/guards/session.guard";
@@ -56,5 +59,15 @@ export class BuyersController {
     @Param("id", { schema: uuidSchema }) id: string,
   ): Promise<void> {
     return this.buyers.remove(member.storeId, id);
+  }
+
+  @Post(":id/merge")
+  @Roles(ANY_MEMBER)
+  merge(
+    @CurrentMember() member: MembershipContext,
+    @Param("id", { schema: uuidSchema }) id: string,
+    @Body({ schema: buyerMergeRequestSchema }) body: BuyerMergeRequest,
+  ): Promise<Buyer> {
+    return this.buyers.merge(member.storeId, id, body.targetId);
   }
 }

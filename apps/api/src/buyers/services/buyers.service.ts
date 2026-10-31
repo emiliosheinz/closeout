@@ -18,6 +18,9 @@ const NAME_TAKEN = "Já existe um comprador com esse nome. Use Juntar com...";
 
 const HAS_ITEMS =
   "Este comprador tem itens vinculados em anúncios da loja. Junte-o a outro comprador.";
+const TARGET_GONE =
+  "Esse comprador foi juntado ou removido. Escolha o comprador de novo.";
+const SAME_BUYER = "Escolha outro comprador para juntar.";
 const TRY_AGAIN = "Não foi possível salvar agora. Tente de novo.";
 
 /** Turns the listed driver error codes, and a deadlock, into a 409. */
@@ -166,6 +169,63 @@ export class BuyersService {
           }
         }),
       { "23503": HAS_ITEMS },
+    );
+  }
+
+  /**
+   * Move every listing of `sourceId` to `targetId`, give the target the
+   * source's phone when it has none, and delete the source.
+   */
+  async merge(
+    storeId: string,
+    sourceId: string,
+    targetId: string,
+  ): Promise<BuyerResponse> {
+    if (sourceId === targetId) {
+      throw new AppException(HttpStatus.UNPROCESSABLE_ENTITY, SAME_BUYER);
+    }
+    return withConflicts(
+      () =>
+        this.dataSource.transaction(async (manager) => {
+          await manager.query(
+            `SELECT id FROM listings WHERE buyer_id = $1 AND store_id = $2 ORDER BY id FOR UPDATE`,
+            [sourceId, storeId],
+          );
+          const buyers = await manager
+            .getRepository(Buyer)
+            .createQueryBuilder("b")
+            .setLock("pessimistic_write")
+            .where("b.store_id = :storeId AND b.id IN (:...ids)", {
+              storeId,
+              ids: [sourceId, targetId],
+            })
+            .orderBy("b.id")
+            .getMany();
+          const source = buyers.find((b) => b.id === sourceId);
+          const target = buyers.find((b) => b.id === targetId);
+          if (!source) {
+            throw new AppException(HttpStatus.NOT_FOUND, BUYER_NOT_FOUND);
+          }
+          if (!target) throw new AppException(HttpStatus.CONFLICT, TARGET_GONE);
+
+          await manager
+            .getRepository(Listing)
+            .update({ buyerId: sourceId, storeId }, { buyerId: targetId });
+          target.whatsappNumber ??= source.whatsappNumber;
+          await manager
+            .getRepository(Buyer)
+            .update(
+              { id: targetId },
+              { whatsappNumber: target.whatsappNumber },
+            );
+          await manager.getRepository(Buyer).delete({ id: sourceId });
+          return {
+            id: target.id,
+            name: target.name,
+            whatsappNumber: target.whatsappNumber,
+          };
+        }),
+      {},
     );
   }
 }

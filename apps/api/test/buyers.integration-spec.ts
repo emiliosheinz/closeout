@@ -322,4 +322,121 @@ describe("buyers", () => {
         .expect(404);
     });
   });
+
+  describe("merging", () => {
+    const TARGET_GONE =
+      "Esse comprador foi juntado ou removido. Escolha o comprador de novo.";
+    const withPhone = (id: string, phone: string) =>
+      ctx.dataSource.query(
+        `UPDATE buyers SET whatsapp_number = $2 WHERE id = $1`,
+        [id, phone],
+      );
+    const merge = (who: ReturnType<typeof client>, from: string, to: string) =>
+      who.post(`${base()}/${from}/merge`).send({ targetId: to });
+    const count = async () =>
+      (await ctx.dataSource.query(`SELECT count(*)::int AS n FROM buyers`))[0]
+        .n;
+
+    it("moves the listings with their sale info, fills the empty phone and removes the source", async () => {
+      const first = await sell("A", {
+        availability: "sold",
+        agreedPriceCents: 7000,
+        paid: true,
+      });
+      await client()
+        .patch(`/stores/${admin.storeId}/listings/${first.id}/sale`)
+        .send({ notes: "retira sábado" })
+        .expect(200);
+      await sell("A", { availability: "reserved", agreedPriceCents: 500 });
+      await sell("B", { availability: "reserved" });
+      const [a, b] = [(await find("A")).id, (await find("B")).id];
+      await withPhone(a, "5511911112222");
+
+      const res = await merge(as(ctx.app, seller.cookie), a, b).expect(201);
+
+      expect(res.body).toEqual({
+        id: b,
+        name: "B",
+        whatsappNumber: "5511911112222",
+      });
+      const merged = await find("B");
+      expect(merged.items).toHaveLength(3);
+      expect(merged.linkedCount).toBe(3);
+      expect(await find("A")).toBeUndefined();
+      const [row] = await ctx.dataSource.query(
+        `SELECT agreed_price_cents, paid, sale_notes FROM listings WHERE id = $1`,
+        [first.id],
+      );
+      expect(row).toEqual({
+        agreed_price_cents: 7000,
+        paid: true,
+        sale_notes: "retira sábado",
+      });
+    });
+
+    it("keeps the phone the target already has", async () => {
+      await sell("A", { availability: "reserved" });
+      await sell("B", { availability: "reserved" });
+      const [a, b] = [(await find("A")).id, (await find("B")).id];
+      await withPhone(a, "5511911112222");
+      await withPhone(b, "5521933334444");
+
+      const res = await merge(client(), a, b).expect(201);
+
+      expect(res.body.whatsappNumber).toBe("5521933334444");
+    });
+
+    it("refuses to merge a buyer into itself and changes nothing", async () => {
+      await sell("A", { availability: "reserved" });
+      const a = (await find("A")).id;
+
+      await merge(client(), a, a).expect(422);
+
+      expect((await find("A")).linkedCount).toBe(1);
+    });
+
+    it("answers 409 for a target that is unknown or in another store and changes nothing", async () => {
+      await sell("A", { availability: "reserved" });
+      const a = (await find("A")).id;
+      const other = await createStoreWithAdmin(ctx, "loja-b");
+      const [foreign] = await ctx.dataSource.query(
+        `INSERT INTO buyers (store_id, name, name_key) VALUES ($1, 'Carla', 'carla') RETURNING id`,
+        [other.storeId],
+      );
+
+      const unknown = await merge(
+        client(),
+        a,
+        "00000000-0000-4000-8000-000000000000",
+      ).expect(409);
+      await merge(client(), a, foreign.id).expect(409);
+
+      expect(unknown.body.detail).toBe(TARGET_GONE);
+      expect((await find("A")).linkedCount).toBe(1);
+      expect(await count()).toBe(2);
+    });
+
+    it("answers 404 for an unknown source", async () => {
+      await sell("B", { availability: "reserved" });
+
+      await merge(
+        client(),
+        "00000000-0000-4000-8000-000000000000",
+        (await find("B")).id,
+      ).expect(404);
+    });
+
+    it("refuses a status change that names the merged buyer", async () => {
+      await sell("A", { availability: "reserved" });
+      await sell("B", { availability: "reserved" });
+      const [a, b] = [(await find("A")).id, (await find("B")).id];
+      await merge(client(), a, b).expect(201);
+      const listing = await insertListing(ctx.dataSource, admin);
+
+      await client()
+        .patch(`/stores/${admin.storeId}/listings/${listing.id}/status`)
+        .send({ availability: "reserved", buyer: { id: a } })
+        .expect(409);
+    });
+  });
 });

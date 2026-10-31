@@ -340,6 +340,15 @@ const CAPABILITIES: Capability[] = [
     expected: [204, 204, 204, 404],
   },
   {
+    name: "merge buyers",
+    call: async (fx) => ({
+      method: "post",
+      url: `${store(fx)}/buyers/${await buyer(fx)}/merge`,
+      body: { targetId: await buyer(fx) },
+    }),
+    expected: [201, 201, 201, 404],
+  },
+  {
     name: "list contact profiles",
     call: async (fx) => ({ method: "get", url: `${store(fx)}/sellers` }),
     expected: [200, 200, 200, 404],
