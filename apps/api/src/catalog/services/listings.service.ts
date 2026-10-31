@@ -17,22 +17,18 @@ import {
   In,
   QueryFailedError,
   Repository,
-  type SelectQueryBuilder,
 } from "typeorm";
 import { MediaService } from "@/media/media.service";
 import { mediaUrls } from "@/media/media-urls";
 import { AppException } from "@/problem/app-exception";
 import { Seller } from "@/sellers/entities/seller.entity";
 import { Category } from "@/stores/entities/category.entity";
-import {
-  forbidden,
-  isManager,
-  type MembershipContext,
-} from "@/stores/membership";
+import { forbidden, type MembershipContext } from "@/stores/membership";
 import { toAdminImage } from "../admin-mappers";
 import { Listing } from "../entities/listing.entity";
 import { ListingImage } from "../entities/listing-image.entity";
 import { ListingSeller } from "../entities/listing-seller.entity";
+import { visibleListings } from "../listing-queries";
 import {
   canPublish,
   canSetSellers,
@@ -86,11 +82,13 @@ export class ListingsService {
    * managers reach every listing, sellers only those assigned to them.
    */
   async isVisibleTo(actor: ListingActor, id: string): Promise<boolean> {
-    return this.visibleTo(actor).andWhere("l.id = :id", { id }).getExists();
+    return visibleListings(this.listings, actor)
+      .andWhere("l.id = :id", { id })
+      .getExists();
   }
 
   async list(actor: ListingActor, q?: string): Promise<AdminListingSummary[]> {
-    const query = this.visibleTo(actor)
+    const query = visibleListings(this.listings, actor)
       .innerJoinAndSelect("l.category", "category")
       .leftJoinAndSelect("l.sellers", "listingSeller")
       .leftJoinAndSelect("listingSeller.seller", "seller")
@@ -124,7 +122,7 @@ export class ListingsService {
 
   /** Counts for the admin dashboard; availability covers published listings only. */
   async dashboard(actor: ListingActor): Promise<DashboardCounts> {
-    const row = await this.visibleTo(actor)
+    const row = await visibleListings(this.listings, actor)
       .select(
         `COUNT(*) FILTER (WHERE l.publication = 'published')::int`,
         "published",
@@ -278,20 +276,6 @@ export class ListingsService {
       return listing.images.map((image) => image.storageKey);
     });
     for (const key of keys) await this.media.remove(key);
-  }
-
-  /** The actor's store, narrowed to their assigned listings for sellers. */
-  private visibleTo(actor: ListingActor): SelectQueryBuilder<Listing> {
-    const query = this.listings
-      .createQueryBuilder("l")
-      .where("l.store_id = :storeId", { storeId: actor.storeId });
-    if (isManager(actor.role)) return query;
-    return query.andWhere(
-      `EXISTS (SELECT 1 FROM listing_sellers assigned
-                WHERE assigned.listing_id = l.id
-                  AND assigned.seller_id = :actorSellerId)`,
-      { actorSellerId: actor.sellerId },
-    );
   }
 
   private async findWithRelations(
