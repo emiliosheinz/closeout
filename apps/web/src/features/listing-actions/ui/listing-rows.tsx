@@ -10,7 +10,7 @@ import { useMutation } from "@tanstack/react-query";
 import { Copy, Eye, Pencil, Trash2, UserPlus, UserRound } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { buyerKeys } from "@/entities/buyer";
 import {
   type AdminListingSummary,
@@ -65,6 +65,7 @@ export function ListingStatusControls({
 }) {
   const change = useListingChange(storeId);
   const changing = useIsListingChanging(storeId, listing.id);
+  const availabilityRef = useRef<HTMLButtonElement>(null);
   const [selling, setSelling] = useState<"reserved" | "sold" | null>(null);
   const sale = listing.sale;
 
@@ -79,14 +80,15 @@ export function ListingStatusControls({
     });
   }
 
-  function release() {
-    return setStatus(
+  async function release() {
+    await setStatus(
       { availability: "available", sale: null },
       { availability: "available" },
     );
   }
 
   function chooseAvailability(next: Availability, confirmRelease: () => void) {
+    if (changing) return;
     if (next !== "available") {
       onStatusChange?.(listing.id);
       setSelling(next);
@@ -140,7 +142,11 @@ export function ListingStatusControls({
         </div>
         <ConfirmDialog
           title={`Voltar "${listing.title}" para disponível?`}
-          description={`${sale?.buyer.name ?? "O comprador"} deixa de ser o comprador e o valor combinado, o pagamento e as observações são apagados.`}
+          description={
+            sale
+              ? `${sale.buyer.name} deixa de ser o comprador e o valor combinado, o pagamento e as observações são apagados.`
+              : ""
+          }
           confirmLabel="Voltar para disponível"
           pendingLabel="Salvando..."
           onConfirm={release}
@@ -154,6 +160,7 @@ export function ListingStatusControls({
                 }
               >
                 <SelectTrigger
+                  ref={availabilityRef}
                   aria-label={`Disponibilidade de ${listing.title}`}
                   className={selectTriggerClass}
                 >
@@ -188,6 +195,7 @@ export function ListingStatusControls({
           storeId={storeId}
           listing={listing}
           availability={selling}
+          returnFocusTo={availabilityRef}
           onClose={() => setSelling(null)}
         />
       )}
@@ -208,11 +216,15 @@ export function ListingBuyerLine({
   if (!listing.sale) {
     return <p className="mt-1 text-sm text-muted">Sem comprador</p>;
   }
+  const { name } = listing.sale.buyer;
   return (
-    <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
-      <span className="font-semibold">{listing.sale.buyer.name}</span>
+    <p className="mt-1 flex min-w-0 items-center gap-1.5 text-sm text-ink-soft">
+      <UserRound className="size-3.5 shrink-0 text-muted" aria-hidden="true" />
+      <span className="min-w-0 truncate" title={name}>
+        {name}
+      </span>
       {!listing.sale.paid && (
-        <span className="rounded-full bg-stamp/10 px-2 py-0.5 text-xs font-semibold text-stamp">
+        <span className="shrink-0 rounded-full bg-stamp/10 px-2 py-0.5 text-xs font-semibold text-stamp">
           {PAYMENT_LABELS.unpaid}
         </span>
       )}
@@ -242,6 +254,8 @@ export function ListingRowActions({
 }) {
   const router = useRouter();
   const [editingBuyer, setEditingBuyer] = useState(false);
+  const buyerButtonRef = useRef<HTMLButtonElement>(null);
+  const changing = useIsListingChanging(storeId, listing.id);
   const base = listingsPath(storeId);
   const duplicate = useMutation({
     mutationFn: () =>
@@ -271,8 +285,9 @@ export function ListingRowActions({
         <>
           <Tooltip label={listing.sale ? "Comprador" : "Adicionar comprador"}>
             <button
+              ref={buyerButtonRef}
               type="button"
-              onClick={() => setEditingBuyer(true)}
+              onClick={() => !changing && setEditingBuyer(true)}
               className="inline-flex size-11 items-center justify-center rounded-full hover:bg-ink/5"
               aria-label={
                 listing.sale
@@ -291,6 +306,7 @@ export function ListingRowActions({
             <BuyerDialog
               storeId={storeId}
               listing={listing}
+              returnFocusTo={buyerButtonRef}
               onClose={() => setEditingBuyer(false)}
             />
           )}

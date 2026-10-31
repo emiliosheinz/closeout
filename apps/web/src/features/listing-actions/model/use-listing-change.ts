@@ -1,3 +1,4 @@
+import { adminListingSummarySchema } from "@closeout/contracts/schemas";
 import {
   useMutation,
   useMutationState,
@@ -5,7 +6,13 @@ import {
 } from "@tanstack/react-query";
 import { buyerKeys } from "@/entities/buyer";
 import { type AdminListingSummary, listingKeys } from "@/entities/listing";
-import { ApiError, api, successFor } from "@/shared/api";
+import {
+  ApiError,
+  apiParsed,
+  type Schema,
+  successFor,
+  type WriteResult,
+} from "@/shared/api";
 import {
   applyChange,
   type StatusChange,
@@ -18,10 +25,23 @@ export class StaleSaleError extends Error {}
 
 const isStaleSale = (error: unknown) => error instanceof StaleSaleError;
 
-async function send(storeId: string, change: StatusChange): Promise<void> {
+const saleOnly = adminListingSummarySchema.pick({ sale: true });
+
+/** The sale the server saved, when the answer carries one; the write itself succeeded either way. */
+const savedSale: Schema<{ sale?: AdminListingSummary["sale"] }> = {
+  safeParse(data) {
+    const result = saleOnly.safeParse(data);
+    return { success: true, data: result.success ? result.data : {} };
+  },
+};
+
+async function send(
+  storeId: string,
+  change: StatusChange,
+): Promise<WriteResult<{ sale?: AdminListingSummary["sale"] }>> {
   const path = `/stores/${storeId}/listings/${change.id}/${change.route ?? "status"}`;
   try {
-    await api("PATCH", path, change.body);
+    return await apiParsed("PATCH", path, change.body, savedSale);
   } catch (error) {
     if (change.inDialog && error instanceof ApiError && error.status === 409)
       throw new StaleSaleError(error.message);
@@ -40,7 +60,12 @@ export function useListingChange(storeId: string) {
     mutationFn: (change: StatusChange) => send(storeId, change),
     onMutate: () =>
       client.cancelQueries({ queryKey: listingKeys.list(storeId) }),
-    onSuccess: async (_data, applied) => {
+    onSuccess: async (result, change) => {
+      // The server's sale carries the real buyer id of a buyer just created.
+      const applied =
+        result.parsed && change.patch.sale && result.data.sale
+          ? { ...change, patch: { ...change.patch, sale: result.data.sale } }
+          : change;
       await client.cancelQueries({ queryKey: listingKeys.list(storeId) });
       client.setQueryData(
         listingKeys.list(storeId),

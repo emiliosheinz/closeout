@@ -117,7 +117,10 @@ test.describe
       await expect(row).toContainText(BUYER);
       await expect(row).toContainText("Não pago");
 
-      await row.getByRole("checkbox", { name: `Pago — ${TITLE}` }).check();
+      await row.getByRole("checkbox", { name: `Pago — ${TITLE}` }).click();
+      await expect(
+        row.getByRole("checkbox", { name: `Pago — ${TITLE}` }),
+      ).toBeChecked();
       await expect(row).not.toContainText("Não pago");
       await page.reload();
       await hydrated(page);

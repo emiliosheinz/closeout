@@ -25,7 +25,11 @@ import {
   DialogTitle,
 } from "@/shared/ui/dialog";
 import { Field, inputClass } from "@/shared/ui/field";
-import { StaleSaleError, useListingChange } from "../model/use-listing-change";
+import {
+  StaleSaleError,
+  useIsListingChanging,
+  useListingChange,
+} from "../model/use-listing-change";
 
 const MAX_SUGGESTIONS = 8;
 const NAME_REQUIRED = "Informe o nome do comprador.";
@@ -42,17 +46,22 @@ export function BuyerDialog({
   storeId,
   listing,
   availability,
+  returnFocusTo,
   onClose,
 }: {
   storeId: string;
   listing: AdminListingSummary;
   availability?: SoldAvailability;
+  /** Where focus goes when the dialog closes; it has no trigger of its own. */
+  returnFocusTo?: React.RefObject<HTMLElement | null>;
   onClose: () => void;
 }) {
   const sale = listing.sale;
   const { data } = useQuery(readQuery(buyerReads.list(storeId)));
   const buyers = data?.items ?? [];
   const change = useListingChange(storeId);
+  const changing = useIsListingChanging(storeId, listing.id);
+  const saving = change.isPending;
   const id = useId();
   const [name, setName] = useState(sale?.buyer.name ?? "");
   const [phone, setPhone] = useState("");
@@ -64,7 +73,6 @@ export function BuyerDialog({
   const [errors, setErrors] = useState<
     Partial<Record<"name" | "phone" | "price", string>>
   >({});
-  const [saving, setSaving] = useState(false);
 
   const key = buyerNameKey(name);
   const existing = key
@@ -94,7 +102,7 @@ export function BuyerDialog({
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
-    if (saving) return;
+    if (changing) return;
     const next: typeof errors = {};
     if (!key) next.name = NAME_REQUIRED;
     const agreed = price.trim() === "" ? null : parsePriceToCents(price);
@@ -124,7 +132,6 @@ export function BuyerDialog({
       paid,
       notes: body.notes,
     };
-    setSaving(true);
     try {
       await change.mutateAsync({
         id: listing.id,
@@ -141,17 +148,26 @@ export function BuyerDialog({
       if (error instanceof StaleSaleError) {
         setErrors({ name: error.message });
       }
-    } finally {
-      setSaving(false);
     }
   }
 
   const nameId = `${id}-name`;
+  const matchId = `${id}-match`;
   return (
-    <Dialog open onOpenChange={(next) => !next && onClose()}>
+    <Dialog open onOpenChange={(next) => !next && !saving && onClose()}>
       <DialogContent
         className="flex max-h-[calc(100dvh-2rem)] max-w-lg flex-col overflow-hidden p-0"
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          returnFocusTo?.current?.focus();
+        }}
+        onInteractOutside={(event) => saving && event.preventDefault()}
         onEscapeKeyDown={(event) => {
+          // A save in flight cannot be dismissed: a refusal must not be lost.
+          if (saving) {
+            event.preventDefault();
+            return;
+          }
           // Escape on an open suggestion list closes the list, not the dialog.
           const target = event.target;
           if (
@@ -177,11 +193,6 @@ export function BuyerDialog({
             <Field
               label="Nome do comprador"
               htmlFor={nameId}
-              hint={
-                key
-                  ? BUYER_MATCH_LABELS[knownId ? "existing" : "new"]
-                  : undefined
-              }
               error={errors.name}
             >
               <Combobox
@@ -193,8 +204,17 @@ export function BuyerDialog({
                 listboxLabel="Compradores sugeridos"
                 maxLength={120}
                 aria-invalid={Boolean(errors.name)}
-                aria-describedby={errors.name ? `${nameId}-error` : undefined}
+                aria-describedby={
+                  errors.name ? `${matchId} ${nameId}-error` : matchId
+                }
               />
+              <p
+                id={matchId}
+                aria-live="polite"
+                className="text-xs text-muted empty:hidden"
+              >
+                {key && BUYER_MATCH_LABELS[knownId ? "existing" : "new"]}
+              </p>
             </Field>
             {existing?.whatsappNumber && (
               <div className="flex flex-col gap-1.5">
@@ -267,11 +287,11 @@ export function BuyerDialog({
           </div>
           <div className="flex justify-end gap-2 border-t border-line bg-paper/70 px-6 py-3.5">
             <DialogClose asChild>
-              <Button type="button" variant="outline">
+              <Button type="button" variant="outline" disabled={saving}>
                 Cancelar
               </Button>
             </DialogClose>
-            <Button type="submit" disabled={saving}>
+            <Button type="submit" disabled={changing}>
               {saving ? "Salvando..." : submitLabel}
             </Button>
           </div>

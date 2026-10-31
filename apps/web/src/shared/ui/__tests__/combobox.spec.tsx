@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { createEvent, fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
 import { Combobox, type ComboboxOption } from "../combobox";
 
@@ -78,6 +78,17 @@ describe("Combobox", () => {
 
     expect(input()).toHaveAttribute("aria-expanded", "false");
     expect(input()).toHaveValue("mar");
+  });
+
+  it("still closes on an Escape that was already prevented upstream", () => {
+    render(<Harness />);
+    fireEvent.change(input(), { target: { value: "mar" } });
+
+    const event = createEvent.keyDown(input(), { key: "Escape" });
+    event.preventDefault();
+    fireEvent(input(), event);
+
+    expect(input()).toHaveAttribute("aria-expanded", "false");
   });
 
   it("keeps typed text and reports no selection when nothing is picked", () => {

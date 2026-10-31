@@ -7,7 +7,7 @@ type Listing = ReturnType<typeof listingSummary>;
 
 let buyers: ReturnType<typeof buyerSummary>[];
 let buyersStatus: number;
-let patchResponse: () => Response;
+let patchResponse: () => Response | Promise<Response>;
 let fetchMock: ReturnType<typeof vi.fn>;
 const onClose = vi.fn();
 
@@ -118,6 +118,7 @@ describe("buyer dialog match state", () => {
     await buyersLoaded();
     typeName("Zeca");
     expect(screen.getByText("Novo comprador")).toBeInTheDocument();
+    expect(nameInput()).toHaveAccessibleDescription("Novo comprador");
     expect(screen.getByLabelText("WhatsApp (opcional)")).toBeInTheDocument();
   });
 
@@ -162,6 +163,34 @@ describe("buyer dialog saving", () => {
         notes: null,
       },
     });
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+  });
+
+  it("sends the id of a picked suggestion, not its name", async () => {
+    buyers = [buyerSummary({ id: "b-1", name: "Maria Sílva" })];
+    open(available(), "reserved");
+    await buyersLoaded();
+    typeName("silv");
+    fireEvent.click(await screen.findByRole("option", { name: "Maria Sílva" }));
+    save("Marcar como reservado");
+    await waitFor(() => expect(patches()).toHaveLength(1));
+    expect(patches()[0]?.body.buyer).toEqual({ id: "b-1" });
+  });
+
+  it("cannot be cancelled while the save is running", async () => {
+    let finish!: (response: Response) => void;
+    const saved = new Promise<Response>((r) => (finish = r));
+    patchResponse = () => saved;
+    open(available(), "reserved");
+    await buyersLoaded();
+    typeName("Zeca");
+    save("Marcar como reservado");
+    expect(
+      await screen.findByRole("button", { name: "Cancelar" }),
+    ).toBeDisabled();
+    fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
+    expect(onClose).not.toHaveBeenCalled();
+    finish(new Response(null, { status: 204 }));
     await waitFor(() => expect(onClose).toHaveBeenCalled());
   });
 

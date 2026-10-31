@@ -131,7 +131,11 @@ function deferred() {
 }
 
 const status = (kind: "Publicação" | "Disponibilidade", title: string) =>
-  screen.getByRole("combobox", { name: `${kind} de ${title}` });
+  screen.getByRole("combobox", {
+    name: `${kind} de ${title}`,
+    // An open buyer dialog hides the table from the accessibility tree.
+    hidden: true,
+  });
 
 async function pick(trigger: HTMLElement, option: string) {
   trigger.focus();
@@ -144,22 +148,20 @@ async function pick(trigger: HTMLElement, option: string) {
 }
 
 /**
- * Picks Reservado or Vendido and fills the buyer dialog. The dialog stays open
- * until the answer arrives; it is dismissed here so the next change can be made
- * while the request is still running.
+ * Picks Reservado or Vendido and submits the buyer dialog. The dialog stays
+ * open until the answer arrives, so callers resolve the request to close it.
  */
 async function sell(trigger: HTMLElement, option: "Reservado" | "Vendido") {
+  const sent = writes("PATCH").length;
   await pick(trigger, option);
-  const dialog = await screen.findByRole("dialog");
+  // A change still running keeps its dialog open, so the new one is the last.
+  const dialog = (await screen.findAllByRole("dialog")).at(-1) as HTMLElement;
   fireEvent.change(
     within(dialog).getByRole("combobox", { name: "Nome do comprador" }),
     { target: { value: "Zeca" } },
   );
   fireEvent.click(within(dialog).getByRole("button", { name: /^Marcar como/ }));
-  fireEvent.keyDown(dialog, { key: "Escape" });
-  await waitFor(() =>
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
-  );
+  await waitFor(() => expect(writes("PATCH").length).toBeGreaterThan(sent));
 }
 
 describe("listing row cells", () => {
@@ -633,6 +635,24 @@ describe("buyer on the board", () => {
     );
     expect(writes("PATCH")).toEqual([]);
     expect(status("Disponibilidade", "Item a")).toHaveTextContent("Disponível");
+  });
+
+  it("returns focus to the availability select when the buyer dialog is cancelled", async () => {
+    renderRows([row("a")]);
+    await pick(status("Disponibilidade", "Item a"), "Reservado");
+    fireEvent.click(await screen.findByRole("button", { name: "Cancelar" }));
+    await waitFor(() =>
+      expect(status("Disponibilidade", "Item a")).toHaveFocus(),
+    );
+  });
+
+  it("returns focus to the buyer button when the buyer details are closed", async () => {
+    renderRows([row("a", { availability: "reserved", sale: ana() })]);
+    const button = screen.getByRole("button", { name: "Comprador de Item a" });
+    button.focus();
+    fireEvent.click(button);
+    fireEvent.click(await screen.findByRole("button", { name: "Cancelar" }));
+    await waitFor(() => expect(button).toHaveFocus());
   });
 
   it("saves the buyer with the new availability in one request", async () => {
