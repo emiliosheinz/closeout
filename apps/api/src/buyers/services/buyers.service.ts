@@ -6,50 +6,66 @@ import {
 } from "@closeout/contracts/schemas";
 import { HttpStatus, Injectable } from "@nestjs/common";
 import { InjectDataSource, InjectRepository } from "@nestjs/typeorm";
-import { type DataSource, QueryFailedError, type Repository } from "typeorm";
+import type { DataSource, Repository } from "typeorm";
 import { Listing } from "@/catalog/entities/listing.entity";
 import { visibleToActor } from "@/catalog/listing-queries";
 import { AppException } from "@/problem/app-exception";
+import { withConflicts } from "@/problem/db-conflicts";
 import type { MembershipContext } from "@/stores/membership";
 import { Buyer } from "../entities/buyer.entity";
+import { BUYER_NOT_IN_STORE, lockBuyerListings } from "../resolve-buyer";
 
 const BUYER_NOT_FOUND = "Comprador não encontrado.";
 const NAME_TAKEN = "Já existe um comprador com esse nome. Use Juntar com...";
 
 const HAS_ITEMS =
   "Este comprador tem itens vinculados em anúncios da loja. Junte-o a outro comprador.";
-const TARGET_GONE =
-  "Esse comprador foi juntado ou removido. Escolha o comprador de novo.";
 const SAME_BUYER = "Escolha outro comprador para juntar.";
-const TRY_AGAIN = "Não foi possível salvar agora. Tente de novo.";
-
-/** Turns the listed driver error codes, and a deadlock, into a 409. */
-async function withConflicts<T>(
-  run: () => Promise<T>,
-  messages: Record<string, string>,
-): Promise<T> {
-  try {
-    return await run();
-  } catch (err) {
-    const code =
-      err instanceof QueryFailedError
-        ? (err.driverError as { code?: string }).code
-        : undefined;
-    const message = code === "40P01" ? TRY_AGAIN : code && messages[code];
-    if (message) throw new AppException(HttpStatus.CONFLICT, message);
-    throw err;
-  }
-}
 
 interface AggregateRow {
   id: string;
   name: string;
   whatsappNumber: string | null;
   listingId: string | null;
-  title: string;
+  title: string | null;
   availability: BuyerSummary["items"][number]["availability"];
   agreedPriceCents: number | null;
   paid: boolean;
+}
+
+/** Groups the aggregate rows per buyer; owed and unpriced cover unpaid items only. */
+function summarize(
+  rows: AggregateRow[],
+  linked: Map<string, number>,
+): BuyerSummary[] {
+  const summaries = new Map<string, BuyerSummary>();
+  for (const row of rows) {
+    let summary = summaries.get(row.id);
+    if (!summary) {
+      summary = {
+        id: row.id,
+        name: row.name,
+        whatsappNumber: row.whatsappNumber,
+        linkedCount: linked.get(row.id) ?? 0,
+        items: [],
+        owedCents: 0,
+        unpricedCount: 0,
+      };
+      summaries.set(row.id, summary);
+    }
+    if (row.listingId === null || row.title === null) continue;
+    summary.items.push({
+      listingId: row.listingId,
+      title: row.title,
+      availability: row.availability,
+      agreedPriceCents: row.agreedPriceCents,
+      paid: row.paid,
+    });
+    if (row.paid) continue;
+    if (row.agreedPriceCents === null) summary.unpricedCount += 1;
+    else summary.owedCents += row.agreedPriceCents;
+  }
+  return [...summaries.values()];
 }
 
 @Injectable()
@@ -94,36 +110,7 @@ export class BuyersService {
         .groupBy("l.buyer_id")
         .getRawMany<{ buyerId: string; count: number }>(),
     ]);
-    const linked = new Map(counts.map((c) => [c.buyerId, c.count]));
-
-    const summaries = new Map<string, BuyerSummary>();
-    for (const row of rows) {
-      let summary = summaries.get(row.id);
-      if (!summary) {
-        summary = {
-          id: row.id,
-          name: row.name,
-          whatsappNumber: row.whatsappNumber,
-          linkedCount: linked.get(row.id) ?? 0,
-          items: [],
-          owedCents: 0,
-          unpricedCount: 0,
-        };
-        summaries.set(row.id, summary);
-      }
-      if (row.listingId === null) continue;
-      summary.items.push({
-        listingId: row.listingId,
-        title: row.title,
-        availability: row.availability,
-        agreedPriceCents: row.agreedPriceCents,
-        paid: row.paid,
-      });
-      if (row.paid) continue;
-      if (row.agreedPriceCents === null) summary.unpricedCount += 1;
-      else summary.owedCents += row.agreedPriceCents;
-    }
-    return [...summaries.values()];
+    return summarize(rows, new Map(counts.map((c) => [c.buyerId, c.count])));
   }
 
   async update(
@@ -131,18 +118,26 @@ export class BuyersService {
     id: string,
     patch: BuyerUpdateRequest,
   ): Promise<BuyerResponse> {
-    const buyer = await this.buyers.findOneBy({ id, storeId });
-    if (!buyer) throw new AppException(HttpStatus.NOT_FOUND, BUYER_NOT_FOUND);
+    const changes: Partial<Buyer> = {};
     if (patch.name !== undefined) {
-      buyer.name = patch.name;
-      buyer.nameKey = buyerNameKey(patch.name);
+      changes.name = patch.name;
+      changes.nameKey = buyerNameKey(patch.name);
     }
     if (patch.whatsappNumber !== undefined) {
-      buyer.whatsappNumber = patch.whatsappNumber;
+      changes.whatsappNumber = patch.whatsappNumber;
     }
-    await withConflicts(() => this.buyers.save(buyer), {
-      "23505": NAME_TAKEN,
-    });
+    // An update never recreates a buyer deleted or merged in the meantime.
+    const { affected } =
+      Object.keys(changes).length === 0
+        ? { affected: 1 }
+        : await withConflicts(
+            () => this.buyers.update({ id, storeId }, changes),
+            { "23505": NAME_TAKEN },
+          );
+    const buyer = affected
+      ? await this.buyers.findOneBy({ id, storeId })
+      : null;
+    if (!buyer) throw new AppException(HttpStatus.NOT_FOUND, BUYER_NOT_FOUND);
     return {
       id: buyer.id,
       name: buyer.name,
@@ -157,10 +152,7 @@ export class BuyersService {
         this.dataSource.transaction(async (manager) => {
           // Listings are always locked before buyers, so this cannot deadlock
           // with a sale write or a merge.
-          await manager.query(
-            `SELECT id FROM listings WHERE buyer_id = $1 AND store_id = $2 ORDER BY id FOR UPDATE`,
-            [id, storeId],
-          );
+          await lockBuyerListings(manager, storeId, id);
           const { affected } = await manager
             .getRepository(Buyer)
             .delete({ id, storeId });
@@ -187,10 +179,7 @@ export class BuyersService {
     return withConflicts(
       () =>
         this.dataSource.transaction(async (manager) => {
-          await manager.query(
-            `SELECT id FROM listings WHERE buyer_id = $1 AND store_id = $2 ORDER BY id FOR UPDATE`,
-            [sourceId, storeId],
-          );
+          await lockBuyerListings(manager, storeId, sourceId);
           const buyers = await manager
             .getRepository(Buyer)
             .createQueryBuilder("b")
@@ -206,7 +195,8 @@ export class BuyersService {
           if (!source) {
             throw new AppException(HttpStatus.NOT_FOUND, BUYER_NOT_FOUND);
           }
-          if (!target) throw new AppException(HttpStatus.CONFLICT, TARGET_GONE);
+          if (!target)
+            throw new AppException(HttpStatus.CONFLICT, BUYER_NOT_IN_STORE);
 
           await manager
             .getRepository(Listing)

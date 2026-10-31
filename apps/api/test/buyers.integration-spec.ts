@@ -63,20 +63,51 @@ describe("buyers", () => {
 
   describe("listing", () => {
     it("sums unpaid agreed prices, counts unpriced unpaid items and lists every item", async () => {
-      await sell("Ana", { availability: "reserved", agreedPriceCents: 10000 });
-      await sell("Ana", { availability: "sold" });
-      await sell("Ana", {
-        availability: "sold",
-        agreedPriceCents: 5000,
-        paid: true,
-      });
+      await sell(
+        "Ana",
+        { availability: "reserved", agreedPriceCents: 10000 },
+        "Sofá",
+      );
+      await sell("Ana", { availability: "sold" }, "Mesa");
+      await sell(
+        "Ana",
+        { availability: "sold", agreedPriceCents: 5000, paid: true },
+        "Cadeira",
+      );
+      await ctx.dataSource.query(
+        `UPDATE buyers SET whatsapp_number = '5511988887777' WHERE name = 'Ana'`,
+      );
 
       const ana = await find("Ana");
 
+      expect(ana.whatsappNumber).toBe("5511988887777");
       expect(ana.owedCents).toBe(10000);
       expect(ana.unpricedCount).toBe(1);
-      expect(ana.items).toHaveLength(3);
       expect(ana.linkedCount).toBe(3);
+      expect(
+        ana.items.map(
+          ({ listingId: _, ...item }: { listingId: string }) => item,
+        ),
+      ).toEqual([
+        {
+          title: "Cadeira",
+          availability: "sold",
+          agreedPriceCents: 5000,
+          paid: true,
+        },
+        {
+          title: "Mesa",
+          availability: "sold",
+          agreedPriceCents: null,
+          paid: false,
+        },
+        {
+          title: "Sofá",
+          availability: "reserved",
+          agreedPriceCents: 10000,
+          paid: false,
+        },
+      ]);
     });
 
     it("counts an unpaid sale on a draft listing as owed", async () => {
@@ -251,6 +282,15 @@ describe("buyers", () => {
       expect((await stored(id)).whatsapp_number).toBeNull();
     });
 
+    it("answers 404 for a buyer deleted meanwhile and does not bring it back", async () => {
+      const id = await insert("Ana", "ana");
+      await client().delete(`${base()}/${id}`).expect(204);
+
+      await client().patch(`${base()}/${id}`).send({ name: "Ana" }).expect(404);
+
+      expect(await find("Ana")).toBeUndefined();
+    });
+
     it("answers 404 for an unknown buyer and for another store's buyer", async () => {
       const other = await createStoreWithAdmin(ctx, "loja-b");
       const foreign = await insert("Carla", "carla", other.storeId);
@@ -307,13 +347,18 @@ describe("buyers", () => {
     });
 
     it("refuses to delete a buyer linked only to a listing the seller cannot see", async () => {
-      await sell("Ana", { availability: "sold" });
+      const hidden = await sell("Ana", { availability: "sold" });
 
       await as(ctx.app, seller.cookie)
         .delete(`${base()}/${await buyerId("Ana")}`)
         .expect(409);
 
       expect(await remaining()).toEqual(["Ana"]);
+      const [row] = await ctx.dataSource.query(
+        `SELECT buyer_id FROM listings WHERE id = $1`,
+        [hidden.id],
+      );
+      expect(row.buyer_id).toBe(await buyerId("Ana"));
     });
 
     it("answers 404 for an unknown buyer", async () => {
@@ -343,11 +388,14 @@ describe("buyers", () => {
         agreedPriceCents: 7000,
         paid: true,
       });
+      const second = await sell("A", {
+        availability: "reserved",
+        agreedPriceCents: 500,
+      });
       await client()
         .patch(`/stores/${admin.storeId}/listings/${first.id}/sale`)
         .send({ notes: "retira sábado" })
         .expect(200);
-      await sell("A", { availability: "reserved", agreedPriceCents: 500 });
       await sell("B", { availability: "reserved" });
       const [a, b] = [(await find("A")).id, (await find("B")).id];
       await withPhone(a, "5511911112222");
@@ -363,14 +411,22 @@ describe("buyers", () => {
       expect(merged.items).toHaveLength(3);
       expect(merged.linkedCount).toBe(3);
       expect(await find("A")).toBeUndefined();
-      const [row] = await ctx.dataSource.query(
-        `SELECT agreed_price_cents, paid, sale_notes FROM listings WHERE id = $1`,
-        [first.id],
-      );
-      expect(row).toEqual({
+      const sale = async (id: string) =>
+        (
+          await ctx.dataSource.query(
+            `SELECT agreed_price_cents, paid, sale_notes FROM listings WHERE id = $1`,
+            [id],
+          )
+        )[0];
+      expect(await sale(first.id)).toEqual({
         agreed_price_cents: 7000,
         paid: true,
         sale_notes: "retira sábado",
+      });
+      expect(await sale(second.id)).toEqual({
+        agreed_price_cents: 500,
+        paid: false,
+        sale_notes: null,
       });
     });
 
@@ -409,9 +465,10 @@ describe("buyers", () => {
         a,
         "00000000-0000-4000-8000-000000000000",
       ).expect(409);
-      await merge(client(), a, foreign.id).expect(409);
+      const foreignRes = await merge(client(), a, foreign.id).expect(409);
 
       expect(unknown.body.detail).toBe(TARGET_GONE);
+      expect(foreignRes.body.detail).toBe(TARGET_GONE);
       expect((await find("A")).linkedCount).toBe(1);
       expect(await count()).toBe(2);
     });

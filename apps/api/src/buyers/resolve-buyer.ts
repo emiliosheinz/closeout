@@ -7,6 +7,18 @@ import { Buyer } from "./entities/buyer.entity";
 export const BUYER_NOT_IN_STORE =
   "Esse comprador foi juntado ou removido. Escolha o comprador de novo.";
 
+/** Locks a buyer's listings in id order, before any buyer row (lock order). */
+export async function lockBuyerListings(
+  manager: EntityManager,
+  storeId: string,
+  buyerId: string,
+): Promise<void> {
+  await manager.query(
+    `SELECT id FROM listings WHERE buyer_id = $1 AND store_id = $2 ORDER BY id FOR UPDATE`,
+    [buyerId, storeId],
+  );
+}
+
 type ResolvedBuyer = Pick<Buyer, "id" | "name" | "whatsappNumber">;
 
 /**

@@ -25,6 +25,7 @@ import { BUYER_NOT_IN_STORE, resolveBuyer } from "@/buyers/resolve-buyer";
 import { MediaService } from "@/media/media.service";
 import { mediaUrls } from "@/media/media-urls";
 import { AppException } from "@/problem/app-exception";
+import { withConflicts } from "@/problem/db-conflicts";
 import { Seller } from "@/sellers/entities/seller.entity";
 import { Category } from "@/stores/entities/category.entity";
 import { forbidden, type MembershipContext } from "@/stores/membership";
@@ -79,7 +80,6 @@ const SALE_FIELDS_NEED_BUYER =
   "Informe o comprador para registrar os dados da venda.";
 const AVAILABLE_HAS_NO_BUYER = "Um anúncio disponível não tem comprador.";
 const EDIT_NEEDS_BUYER = "Informe o comprador da venda.";
-const TRY_AGAIN = "Não foi possível salvar agora. Tente de novo.";
 const COPY_SUFFIX = " (cópia)";
 
 @Injectable()
@@ -442,23 +442,9 @@ const CLEARED_SALE = {
   saleNotes: null,
 };
 
-/** A buyer removed mid-write breaks the foreign key; a deadlock aborts the transaction. */
-async function withSaleConflicts<T>(run: () => Promise<T>): Promise<T> {
-  try {
-    return await run();
-  } catch (err) {
-    const code =
-      err instanceof QueryFailedError
-        ? (err.driverError as { code?: string }).code
-        : undefined;
-    if (code === "23503") {
-      throw new AppException(HttpStatus.CONFLICT, BUYER_NOT_IN_STORE);
-    }
-    if (code === "40P01") {
-      throw new AppException(HttpStatus.CONFLICT, TRY_AGAIN);
-    }
-    throw err;
-  }
+/** A buyer removed mid-write breaks the foreign key. */
+function withSaleConflicts<T>(run: () => Promise<T>): Promise<T> {
+  return withConflicts(run, { "23503": BUYER_NOT_IN_STORE });
 }
 
 export async function lockListing(

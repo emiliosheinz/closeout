@@ -263,20 +263,20 @@ describe("sale info on listings", () => {
         availability: "sold",
       });
       const ana = await insertBuyer("Ana");
-      await sellTo(listing.id, ana, { price: 7000, paid: true, notes: "x" });
+      await sellTo(listing.id, ana, { price: 7000, paid: true, notes: "a" });
 
       await setStatus(listing.id, {
         availability: "reserved",
         buyer: { id: ana },
-        agreedPriceCents: 7000,
-        paid: true,
+        agreedPriceCents: 6500,
+        paid: false,
         notes: "x",
       }).expect(200);
 
       expect(await saleOf(listing.id)).toMatchObject({
         buyer_id: ana,
-        agreed_price_cents: 7000,
-        paid: true,
+        agreed_price_cents: 6500,
+        paid: false,
         sale_notes: "x",
         availability: "reserved",
       });
