@@ -979,6 +979,11 @@ describe("listing administration", () => {
         "Você não tem permissão para esta ação.",
       );
 
+      await asSeller()
+        .patch(url)
+        .send({ availability: "available", sellerIds: [seller.sellerId] })
+        .expect(403);
+
       const after = await asSeller().get(url).expect(200);
       expect(after.body).toMatchObject({
         title: "Mesa nova",

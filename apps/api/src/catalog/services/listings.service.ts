@@ -231,11 +231,11 @@ export class ListingsService {
       // photo cannot slip in between the photo check and the publish.
       await lockListing(manager, storeId, id);
       const listing = await this.findWithRelations(manager, storeId, id);
+      const current = listing.sellers.map((row) => row.sellerId);
+      if (!canSetSellers(actor, current, patch.sellerIds)) throw forbidden();
       if (changesAvailability(listing.availability, patch.availability)) {
         throw new AppException(HttpStatus.BAD_REQUEST, AVAILABILITY_VIA_BOARD);
       }
-      const current = listing.sellers.map((row) => row.sellerId);
-      if (!canSetSellers(actor, current, patch.sellerIds)) throw forbidden();
       await assertReferencesBelongToStore(manager, storeId, patch);
 
       const published = publishPatch(listing, patch.publication);
