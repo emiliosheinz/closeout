@@ -282,6 +282,45 @@ describe("sale info on listings", () => {
       });
     });
 
+    it("clears the sale and keeps the buyer when releasing to available", async () => {
+      const listing = await insertListing(ctx.dataSource, admin, {
+        availability: "reserved",
+      });
+      const ana = await insertBuyer("Ana");
+      await sellTo(listing.id, ana, { price: 7000, paid: true, notes: "x" });
+
+      const res = await setStatus(listing.id, {
+        availability: "available",
+      }).expect(200);
+
+      expect(res.body.sale).toBeNull();
+      expect(await saleOf(listing.id)).toMatchObject({
+        buyer_id: null,
+        agreed_price_cents: null,
+        paid: false,
+        sale_notes: null,
+      });
+      expect(await buyerRows()).toHaveLength(1);
+    });
+
+    it("answers 400 for sale fields without a buyer or on a return to available", async () => {
+      const listing = await insertListing(ctx.dataSource, admin);
+
+      await setStatus(listing.id, {
+        availability: "reserved",
+        paid: true,
+      }).expect(400);
+      const withBuyer = await setStatus(listing.id, {
+        availability: "available",
+        buyer: { name: "Ana" },
+      }).expect(400);
+      expect(withBuyer.body.detail).toBe(
+        "Um anúncio disponível não tem comprador.",
+      );
+
+      expect(await buyerRows()).toEqual([]);
+    });
+
     it("answers 404 and changes nothing for a seller on an unassigned listing", async () => {
       const listing = await insertListing(ctx.dataSource, admin);
       const seller = await addMember(ctx, admin, {
