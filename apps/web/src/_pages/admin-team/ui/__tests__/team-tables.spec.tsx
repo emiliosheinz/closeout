@@ -143,9 +143,7 @@ describe("members table", () => {
       "José",
       "Zeca",
     ]);
-    await waitFor(() =>
-      expect(lastUrl().get("membros-ordem")).toBe("nome-asc"),
-    );
+    await waitFor(() => expect(lastUrl().get("members-sort")).toBe("name-asc"));
     sortBy(membersRegion(), "Nome");
     expect(order(membersRegion(), teamNames)).toEqual([
       "Zeca",
@@ -155,7 +153,7 @@ describe("members table", () => {
       "Ágata",
     ]);
     await waitFor(() =>
-      expect(lastUrl().get("membros-ordem")).toBe("nome-desc"),
+      expect(lastUrl().get("members-sort")).toBe("name-desc"),
     );
   });
 
@@ -177,17 +175,17 @@ describe("members table", () => {
   });
 
   it("restores the sort from the URL", async () => {
-    renderTeam({ search: "?membros-ordem=nome-desc" });
+    renderTeam({ search: "?members-sort=name-desc" });
     expect(order(membersRegion(), teamNames)[0]).toBe("Zeca");
   });
 
   it("searches names ignoring case and accents", async () => {
-    renderTeam({ search: "?membros-q=JOSE" });
+    renderTeam({ search: "?members-q=JOSE" });
     expect(order(membersRegion(), teamNames)).toEqual(["José"]);
   });
 
   it("searches emails", async () => {
-    renderTeam({ search: "?membros-q=ana@" });
+    renderTeam({ search: "?members-q=ana@" });
     expect(order(membersRegion(), teamNames)).toEqual(["Ana"]);
   });
 
@@ -199,12 +197,12 @@ describe("members table", () => {
         target: { value: "bia" },
       },
     );
-    await waitFor(() => expect(lastUrl().get("membros-q")).toBe("bia"));
+    await waitFor(() => expect(lastUrl().get("members-q")).toBe("bia"));
     expect(order(membersRegion(), teamNames)).toEqual(["Bia"]);
   });
 
   it("says so when nobody matches", async () => {
-    renderTeam({ search: "?membros-q=zzz" });
+    renderTeam({ search: "?members-q=zzz" });
     expect(
       within(membersRegion()).getByText('Ninguém encontrado com "zzz".'),
     ).toBeVisible();
@@ -213,7 +211,7 @@ describe("members table", () => {
   it("keeps a seller's own row whatever the URL searches for", async () => {
     renderTeam({
       ownRows: [member("Zeca", "seller")],
-      search: "?membros-q=zzz",
+      search: "?members-q=zzz",
     });
     expect(order(screen.getByRole("table"), teamNames)).toEqual(["Zeca"]);
   });
@@ -233,7 +231,7 @@ describe("members table", () => {
     fireEvent.click(
       within(membersRegion()).getByRole("button", { name: "Próxima página" }),
     );
-    await waitFor(() => expect(lastUrl().get("membros-pagina")).toBe("2"));
+    await waitFor(() => expect(lastUrl().get("members-page")).toBe("2"));
     expect(within(membersRegion()).getAllByRole("row")).toHaveLength(2);
   });
 });
@@ -253,17 +251,17 @@ describe("invites table", () => {
       "Duda@loja.test",
     ]);
     await waitFor(() =>
-      expect(lastUrl().get("convites-ordem")).toBe("validade-desc"),
+      expect(lastUrl().get("invites-sort")).toBe("expires-desc"),
     );
   });
 
   it("searches email ignoring case", async () => {
-    renderTeam({ search: "?convites-q=DUDA" });
+    renderTeam({ search: "?invites-q=DUDA" });
     expect(order(invitesRegion(), inviteEmails)).toEqual(["Duda@loja.test"]);
   });
 
   it("says so when no invite matches", async () => {
-    renderTeam({ search: "?convites-q=zzz" });
+    renderTeam({ search: "?invites-q=zzz" });
     expect(
       within(invitesRegion()).getByText('Nenhum convite com "zzz".'),
     ).toBeVisible();
@@ -271,10 +269,10 @@ describe("invites table", () => {
 });
 
 describe("independent table state", () => {
-  const convites = "?convites-q=carla&convites-ordem=validade-desc";
+  const invites = "?invites-q=carla&invites-sort=expires-desc";
 
   it("leaves the invites untouched when the members table changes", async () => {
-    const { lastUrl } = renderTeam({ search: convites });
+    const { lastUrl } = renderTeam({ search: invites });
     sortBy(membersRegion(), "Nome");
     fireEvent.change(
       screen.getByRole("searchbox", { name: "Buscar membros" }),
@@ -283,18 +281,16 @@ describe("independent table state", () => {
       },
     );
     const url = { get: (key: string) => lastUrl().get(key) };
-    await waitFor(() => expect(url.get("membros-q")).toBe("ana"));
-    await waitFor(() => expect(url.get("convites-q")).toBe("carla"));
-    await waitFor(() =>
-      expect(url.get("convites-ordem")).toBe("validade-desc"),
-    );
-    await waitFor(() => expect(url.get("convites-pagina")).toBeNull());
+    await waitFor(() => expect(url.get("members-q")).toBe("ana"));
+    await waitFor(() => expect(url.get("invites-q")).toBe("carla"));
+    await waitFor(() => expect(url.get("invites-sort")).toBe("expires-desc"));
+    await waitFor(() => expect(url.get("invites-page")).toBeNull());
     expect(order(invitesRegion(), inviteEmails)).toEqual(["carla@loja.test"]);
   });
 
   it("leaves the members untouched when the invites table changes", async () => {
     const { lastUrl } = renderTeam({
-      search: "?membros-q=a&membros-ordem=nome-desc",
+      search: "?members-q=a&members-sort=name-desc",
     });
     const before = order(membersRegion(), teamNames);
     fireEvent.change(
@@ -303,9 +299,9 @@ describe("independent table state", () => {
     );
     sortBy(invitesRegion(), "Validade");
     const url = { get: (key: string) => lastUrl().get(key) };
-    await waitFor(() => expect(url.get("convites-q")).toBe("bruno"));
-    await waitFor(() => expect(url.get("membros-q")).toBe("a"));
-    await waitFor(() => expect(url.get("membros-ordem")).toBe("nome-desc"));
+    await waitFor(() => expect(url.get("invites-q")).toBe("bruno"));
+    await waitFor(() => expect(url.get("members-q")).toBe("a"));
+    await waitFor(() => expect(url.get("members-sort")).toBe("name-desc"));
     expect(order(membersRegion(), teamNames)).toEqual(before);
   });
 });
@@ -326,7 +322,7 @@ describe("page state", () => {
   it("clamps the members page to the filtered rows", () => {
     renderTeam({
       members: manyMembers,
-      search: "?membros-q=pessoa%2005&membros-pagina=2",
+      search: "?members-q=pessoa%2005&members-page=2",
     });
     expect(rowCount(membersRegion())).toBe(1);
     expect(within(membersRegion()).getByText("Pessoa 05")).toBeVisible();
@@ -335,7 +331,7 @@ describe("page state", () => {
   it("clamps the invites page to the filtered rows", () => {
     renderTeam({
       invites: manyInvites,
-      search: "?convites-q=convite05&convites-pagina=2",
+      search: "?invites-q=convite05&invites-page=2",
     });
     expect(rowCount(invitesRegion())).toBe(1);
     expect(
@@ -346,21 +342,19 @@ describe("page state", () => {
   it("returns members to page 1 when the sort changes", async () => {
     const { lastUrl } = renderTeam({
       members: manyMembers,
-      search: "?membros-pagina=2",
+      search: "?members-page=2",
     });
     expect(rowCount(membersRegion())).toBe(1);
     sortBy(membersRegion(), "Nome");
     expect(rowCount(membersRegion())).toBe(20);
-    await waitFor(() =>
-      expect(lastUrl().get("membros-ordem")).toBe("nome-asc"),
-    );
-    expect(lastUrl().has("membros-pagina")).toBe(false);
+    await waitFor(() => expect(lastUrl().get("members-sort")).toBe("name-asc"));
+    expect(lastUrl().has("members-page")).toBe(false);
   });
 
   it("returns members to page 1 when the search changes", async () => {
     const { lastUrl } = renderTeam({
       members: manyMembers,
-      search: "?membros-pagina=2",
+      search: "?members-page=2",
     });
     fireEvent.change(
       screen.getByRole("searchbox", { name: "Buscar membros" }),
@@ -369,36 +363,36 @@ describe("page state", () => {
       },
     );
     expect(rowCount(membersRegion())).toBe(20);
-    await waitFor(() => expect(lastUrl().get("membros-q")).toBe("pessoa"));
-    expect(lastUrl().has("membros-pagina")).toBe(false);
+    await waitFor(() => expect(lastUrl().get("members-q")).toBe("pessoa"));
+    expect(lastUrl().has("members-page")).toBe(false);
   });
 
   it("returns invites to page 1 when the sort changes", async () => {
     const { lastUrl } = renderTeam({
       invites: manyInvites,
-      search: "?convites-pagina=2",
+      search: "?invites-page=2",
     });
     expect(rowCount(invitesRegion())).toBe(1);
     sortBy(invitesRegion(), "Validade");
     expect(rowCount(invitesRegion())).toBe(20);
     await waitFor(() =>
-      expect(lastUrl().get("convites-ordem")).toBe("validade-desc"),
+      expect(lastUrl().get("invites-sort")).toBe("expires-desc"),
     );
-    expect(lastUrl().has("convites-pagina")).toBe(false);
+    expect(lastUrl().has("invites-page")).toBe(false);
   });
 
   it("returns invites to page 1 when the search changes", async () => {
     const { lastUrl } = renderTeam({
       invites: manyInvites,
-      search: "?convites-pagina=2",
+      search: "?invites-page=2",
     });
     fireEvent.change(
       screen.getByRole("searchbox", { name: "Buscar convites" }),
       { target: { value: "convite" } },
     );
     expect(rowCount(invitesRegion())).toBe(20);
-    await waitFor(() => expect(lastUrl().get("convites-q")).toBe("convite"));
-    expect(lastUrl().has("convites-pagina")).toBe(false);
+    await waitFor(() => expect(lastUrl().get("invites-q")).toBe("convite"));
+    expect(lastUrl().has("invites-page")).toBe(false);
   });
 });
 

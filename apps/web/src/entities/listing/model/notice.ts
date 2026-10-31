@@ -21,33 +21,21 @@ export const LISTING_NOTICES: Record<
   },
 };
 
-const QUERY: Record<ListingNotice, string> = {
-  saved: "salvo=1",
-  published: "salvo=publicado",
-  copied: "copiado=1",
-  "upload-failed": "erro=envio",
-};
-
-/** Every query parameter a notice can arrive in, derived so none escapes clearing. */
-export const LISTING_NOTICE_PARAMS = [
-  ...new Set(
-    Object.values(QUERY).map((query) => query.split("=")[0] as string),
-  ),
-];
+/** Every query parameter a notice can arrive in, so the toast can clear it. */
+export const LISTING_NOTICE_PARAMS = ["notice"];
 
 /** The edit page's URL carrying a one-time notice for the destination to toast. */
 export function listingEditHref(id: string, notice: ListingNotice) {
-  return `/admin/listings/${id}?${QUERY[notice]}`;
+  return `/admin/listings/${id}?notice=${notice}`;
 }
 
 /** Reads the notice a URL carries; unknown values are no notice. */
 export function parseListingNotice(params: {
   get(name: string): string | null;
 }): ListingNotice | undefined {
-  if (params.get("copiado")) return "copied";
-  if (params.get("erro") === "envio") return "upload-failed";
-  const salvo = params.get("salvo");
-  if (salvo === "publicado") return "published";
-  if (salvo === "1") return "saved";
+  const notice = params.get("notice");
+  if (notice && Object.hasOwn(LISTING_NOTICES, notice)) {
+    return notice as ListingNotice;
+  }
   return undefined;
 }

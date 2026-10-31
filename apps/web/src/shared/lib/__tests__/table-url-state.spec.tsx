@@ -8,14 +8,14 @@ import {
 } from "../table-url-state";
 
 const members = createTableUrlState({
-  prefix: "membros-",
-  sorts: ["nome", "papel"],
+  prefix: "members-",
+  sorts: ["name", "role"],
   defaultSort: null,
 });
 const listings = createTableUrlState({
   prefix: "",
-  sorts: ["titulo", "preco", "atualizado"],
-  defaultSort: { column: "atualizado", direction: "desc" },
+  sorts: ["title", "price", "updated"],
+  defaultSort: { column: "updated", direction: "desc" },
 });
 
 function setup(search: string) {
@@ -39,50 +39,48 @@ describe("reading the URL", () => {
 
   it("reads the prefixed keys", () => {
     const { result } = setup(
-      "?membros-q=ana&membros-ordem=papel-desc&membros-pagina=2",
+      "?members-q=ana&members-sort=role-desc&members-page=2",
     );
     expect(result.current[0]).toEqual({
       query: "ana",
-      sort: { column: "papel", direction: "desc" },
+      sort: { column: "role", direction: "desc" },
       page: 2,
     });
   });
 
   it("falls back to the default sort for unknown or malformed sorts", () => {
     for (const ordem of [
-      "preco-asc",
+      "price-asc",
       "nome-up",
-      "nome",
+      "name",
       "-asc",
-      "nome-asc-x",
+      "name-asc-x",
     ]) {
-      expect(
-        setup(`?membros-ordem=${ordem}`).result.current[0].sort,
-      ).toBeNull();
+      expect(setup(`?members-sort=${ordem}`).result.current[0].sort).toBeNull();
     }
     const { result } = renderHook(() => useTableUrlState(listings), {
-      wrapper: withNuqsTestingAdapter({ searchParams: "?ordem=nome-asc" }),
+      wrapper: withNuqsTestingAdapter({ searchParams: "?sort=name-asc" }),
     });
     expect(result.current[0].sort).toEqual({
-      column: "atualizado",
+      column: "updated",
       direction: "desc",
     });
   });
 
   it("turns non-numeric and sub-1 pages into page 1", () => {
     for (const pagina of ["abc", "0", "-3", "1.5"]) {
-      expect(setup(`?membros-pagina=${pagina}`).result.current[0].page).toBe(1);
+      expect(setup(`?members-page=${pagina}`).result.current[0].page).toBe(1);
     }
   });
 
   it("reads pages past the last page as written, without rewriting the URL", () => {
-    const { result, lastUrl } = setup("?membros-pagina=9");
+    const { result, lastUrl } = setup("?members-page=9");
     expect(result.current[0].page).toBe(9);
     expect(lastUrl()).toBeUndefined();
   });
 
   it("ignores the keys of other tables", () => {
-    const { result } = setup("?convites-q=x&convites-pagina=2&q=y");
+    const { result } = setup("?invites-q=x&invites-page=2&q=y");
     expect(result.current[0]).toEqual({ query: "", sort: null, page: 1 });
   });
 });
@@ -97,38 +95,38 @@ describe("lastPage", () => {
 
 describe("writing the URL", () => {
   it("writes non-default values under the table's own keys and clears defaults", async () => {
-    const { result, lastUrl } = setup("?convites-q=x&q=listings");
+    const { result, lastUrl } = setup("?invites-q=x&q=listings");
 
     await act(() =>
       result.current[1]({
-        sort: { column: "papel", direction: "desc" },
+        sort: { column: "role", direction: "desc" },
         query: "ana",
       }),
     );
     expect(lastUrl()).toBe(
-      "?convites-q=x&q=listings&membros-ordem=papel-desc&membros-q=ana",
+      "?invites-q=x&q=listings&members-sort=role-desc&members-q=ana",
     );
 
     await act(() => result.current[1]({ sort: null, query: "" }));
-    expect(lastUrl()).toBe("?convites-q=x&q=listings");
+    expect(lastUrl()).toBe("?invites-q=x&q=listings");
   });
 
   it("resets the page when sort or query change", async () => {
-    const { result, lastUrl } = setup("?membros-pagina=2");
+    const { result, lastUrl } = setup("?members-page=2");
     await act(() =>
-      result.current[1]({ sort: { column: "nome", direction: "asc" } }),
+      result.current[1]({ sort: { column: "name", direction: "asc" } }),
     );
-    expect(lastUrl()).toBe("?membros-ordem=nome-asc");
+    expect(lastUrl()).toBe("?members-sort=name-asc");
 
     await act(() => result.current[1]({ page: 2 }));
     await act(() => result.current[1]({ query: "ana" }));
-    expect(lastUrl()).toBe("?membros-ordem=nome-asc&membros-q=ana");
+    expect(lastUrl()).toBe("?members-sort=name-asc&members-q=ana");
   });
 
   it("keeps an explicitly set page", async () => {
     const { result, lastUrl } = setup("");
     await act(() => result.current[1]({ page: 2 }));
-    expect(lastUrl()).toBe("?membros-pagina=2");
+    expect(lastUrl()).toBe("?members-page=2");
   });
 });
 
@@ -142,18 +140,16 @@ describe("extra filters", () => {
         }),
       {
         wrapper: withNuqsTestingAdapter({
-          searchParams: "?status=publicados&pagina=3",
+          searchParams: "?status=published&page=3",
           onUrlUpdate,
           hasMemory: true,
         }),
       },
     );
-    expect(result.current[0].status).toBe("publicados");
+    expect(result.current[0].status).toBe("published");
     expect(result.current[0].page).toBe(3);
 
-    await act(() => result.current[1]({ status: "rascunhos" }));
-    expect(onUrlUpdate.mock.lastCall?.[0].queryString).toBe(
-      "?status=rascunhos",
-    );
+    await act(() => result.current[1]({ status: "draft" }));
+    expect(onUrlUpdate.mock.lastCall?.[0].queryString).toBe("?status=draft");
   });
 });

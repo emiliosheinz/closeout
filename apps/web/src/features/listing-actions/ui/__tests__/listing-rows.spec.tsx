@@ -499,7 +499,9 @@ describe("listing row cells", () => {
       );
 
       await waitFor(() =>
-        expect(push).toHaveBeenCalledWith("/admin/listings/copy-1?copiado=1"),
+        expect(push).toHaveBeenCalledWith(
+          "/admin/listings/copy-1?notice=copied",
+        ),
       );
       expect(writes("POST")).toEqual([
         { url: "/stores/store/listings/b/duplicate", body: undefined },

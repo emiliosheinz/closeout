@@ -417,7 +417,7 @@ describe("ListingForm", () => {
 
       await waitFor(() =>
         expect(push).toHaveBeenCalledWith(
-          "/admin/listings/listing-1?salvo=publicado",
+          "/admin/listings/listing-1?notice=published",
         ),
       );
       expect(apiCalls()[0]?.body).toMatchObject({ publication: "published" });
@@ -431,7 +431,9 @@ describe("ListingForm", () => {
       );
 
       await waitFor(() =>
-        expect(push).toHaveBeenCalledWith("/admin/listings/listing-1?salvo=1"),
+        expect(push).toHaveBeenCalledWith(
+          "/admin/listings/listing-1?notice=saved",
+        ),
       );
       expect(apiCalls()[0]?.body).toMatchObject({ publication: "archived" });
     });
@@ -443,7 +445,9 @@ describe("ListingForm", () => {
       );
 
       await waitFor(() =>
-        expect(push).toHaveBeenCalledWith("/admin/listings/listing-1?salvo=1"),
+        expect(push).toHaveBeenCalledWith(
+          "/admin/listings/listing-1?notice=saved",
+        ),
       );
       expect(apiCalls()[0]?.body).toMatchObject({ publication: "draft" });
     });
@@ -455,7 +459,7 @@ describe("ListingForm", () => {
 
       await waitFor(() =>
         expect(push).toHaveBeenCalledWith(
-          "/admin/listings/new-listing?salvo=1",
+          "/admin/listings/new-listing?notice=saved",
         ),
       );
       expect(apiCalls().map((c) => `${c.method} ${c.path}`)).toEqual([
@@ -474,7 +478,7 @@ describe("ListingForm", () => {
 
       await waitFor(() =>
         expect(push).toHaveBeenCalledWith(
-          "/admin/listings/new-listing?salvo=publicado",
+          "/admin/listings/new-listing?notice=published",
         ),
       );
       expect(apiCalls().map((c) => `${c.method} ${c.path}`)).toEqual([
@@ -521,7 +525,7 @@ describe("ListingForm", () => {
 
       await waitFor(() =>
         expect(push).toHaveBeenCalledWith(
-          "/admin/listings/new-listing?erro=envio",
+          "/admin/listings/new-listing?notice=upload-failed",
         ),
       );
       expect(toast.getToasts()).toHaveLength(0);
@@ -530,14 +534,16 @@ describe("ListingForm", () => {
       ).toHaveLength(1);
     });
 
-    it("lands on ?salvo=1 when a published listing is saved plainly", async () => {
+    it("lands on ?notice=saved when a published listing is saved plainly", async () => {
       renderForm({ listing: { ...listing, publication: "published" } });
       fireEvent.click(
         screen.getByRole("button", { name: "Salvar alterações" }),
       );
 
       await waitFor(() =>
-        expect(push).toHaveBeenCalledWith("/admin/listings/listing-1?salvo=1"),
+        expect(push).toHaveBeenCalledWith(
+          "/admin/listings/listing-1?notice=saved",
+        ),
       );
     });
 

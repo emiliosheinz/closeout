@@ -26,14 +26,14 @@ const mount = (query: string) => {
 
 describe("listing notice toast", () => {
   it.each([
-    ["salvo=1", "Alterações salvas."],
-    ["salvo=publicado", "Anúncio publicado. Já aparece na loja."],
+    ["notice=saved", "Alterações salvas."],
+    ["notice=published", "Anúncio publicado. Já aparece na loja."],
     [
-      "copiado=1",
+      "notice=copied",
       "Cópia criada como rascunho. Ajuste o que mudou e adicione as fotos.",
     ],
     [
-      "erro=envio",
+      "notice=upload-failed",
       "O anúncio foi salvo, mas o envio das fotos ou a publicação falhou. Confira as fotos abaixo e tente de novo.",
     ],
   ])("shows %s once and clears it", async (query, message) => {
@@ -46,7 +46,7 @@ describe("listing notice toast", () => {
   });
 
   it("keeps one toast when the page rerenders while the notice is still in the URL", async () => {
-    const { rerender } = mount("salvo=1");
+    const { rerender } = mount("notice=saved");
     await screen.findByText("Alterações salvas.");
 
     // Each render reads a new search params object, which reruns the effect.
@@ -65,9 +65,9 @@ describe("listing notice toast", () => {
   });
 
   it("keeps unrelated params when clearing", async () => {
-    mount("salvo=1&aba=fotos");
+    mount("notice=saved&tab=photos");
     await screen.findByText("Alterações salvas.");
-    expect(nav.replace).toHaveBeenCalledWith("/admin/listings/abc?aba=fotos", {
+    expect(nav.replace).toHaveBeenCalledWith("/admin/listings/abc?tab=photos", {
       scroll: false,
     });
   });

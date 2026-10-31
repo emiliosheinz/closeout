@@ -8,10 +8,10 @@ const parse = (query: string) => parseListingNotice(new URLSearchParams(query));
 
 describe("listing notice", () => {
   it.each([
-    ["saved", "salvo=1"],
-    ["published", "salvo=publicado"],
-    ["copied", "copiado=1"],
-    ["upload-failed", "erro=envio"],
+    ["saved", "notice=saved"],
+    ["published", "notice=published"],
+    ["copied", "notice=copied"],
+    ["upload-failed", "notice=upload-failed"],
   ] as const)("builds a href for %s that parses back", (notice, query) => {
     const href = listingEditHref("abc", notice);
     expect(href).toBe(`/admin/listings/abc?${query}`);
@@ -22,15 +22,14 @@ describe("listing notice", () => {
     expect(parseListingNotice(search)).toBeUndefined();
   });
 
-  it("lets copied win when several notice params are present", () => {
-    expect(parse("copiado=1&salvo=1")).toBe("copied");
-  });
-
   it.each([
     "",
-    "salvo=0",
-    "salvo=x",
-    "erro=outro",
+    "notice=x",
+    "notice=toString",
+    "salvo=1",
+    "salvo=publicado",
+    "copiado=1",
+    "erro=envio",
     "q=1",
   ])("reads %j as no notice", (query) => {
     expect(parse(query)).toBeUndefined();
