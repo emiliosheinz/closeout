@@ -14,6 +14,7 @@ import { ProblemFilter } from "./problem/problem.filter";
 import { SellersModule } from "./sellers/sellers.module";
 import { StoresModule } from "./stores/stores.module";
 import { ContractPipe } from "./validation/contract.pipe";
+import { WaitlistModule } from "./waitlist/waitlist.module";
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { ContractPipe } from "./validation/contract.pipe";
     MediaModule,
     CatalogModule,
     InvitesModule,
+    WaitlistModule,
   ],
   controllers: [HealthController],
   providers: [

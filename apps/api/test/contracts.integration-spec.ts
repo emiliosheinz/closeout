@@ -45,6 +45,7 @@ const NOT_PARSED = new Set([
   "DELETE /stores/:storeId/listings/:id", // 204
   "DELETE /stores/:storeId/members/:userId", // 204
   "DELETE /stores/:storeId/invites/:id", // 204
+  "POST /waitlist/signups", // 204
 ]);
 
 /** Fails with the schema's issues in the message instead of a bare boolean. */

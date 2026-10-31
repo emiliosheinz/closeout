@@ -56,7 +56,7 @@ export async function createTestApp(
 
 export async function resetDatabase(dataSource: DataSource): Promise<void> {
   await dataSource.query(
-    `TRUNCATE "listing_images", "listings", "categories", "sellers", "store_invites", "store_members", "sessions", "users", "stores" CASCADE`,
+    `TRUNCATE "listing_images", "listings", "categories", "sellers", "store_invites", "store_members", "sessions", "users", "stores", "waitlist_signups" CASCADE`,
   );
 }
 

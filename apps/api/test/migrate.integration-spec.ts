@@ -41,6 +41,7 @@ const SCHEMA_MIGRATIONS = [
   "ImagePositionAndPublishedDate1792251747372",
   "MultipleSellersPerListing1792262257411",
   "MembersOwnContactProfiles1792802868935",
+  "WaitlistSignups1793408283963",
 ];
 
 /** The schema before contact profiles were tied to members. */
@@ -225,6 +226,7 @@ describe("production migrator", () => {
 
       expect(await migrate(dataSource(database))).toEqual([
         "MembersOwnContactProfiles1792802868935",
+        "WaitlistSignups1793408283963",
       ]);
 
       const profiles = await query(
