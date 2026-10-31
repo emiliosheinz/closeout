@@ -9,6 +9,7 @@ import { ListingsService } from "@/catalog/services/listings.service";
 import { cliScope } from "@/config/config";
 import { parseOrExit } from "@/config/report";
 import { StoresService } from "@/stores/services/stores.service";
+import { WaitlistService } from "@/waitlist/services/waitlist.service";
 import {
   CommandError,
   createAdmin,
@@ -18,14 +19,18 @@ import {
 } from "./admin-commands";
 import { readPassword } from "./password";
 import { DEMO_PASSWORD, seedDemo } from "./seed-demo";
+import { listWaitlist, removeWaitlistSignup } from "./waitlist-commands";
 
 const USAGE = `Usage:
   admin:create --store <slug> [--store-name <name>] --email <email> --name <name> [--whatsapp "+55 11 99999-8888"]
   admin:password --email <email>
   seed:demo --store <slug> [--store-name <name>] [--whatsapp "+55 11 99999-8888"]
+  waitlist:list
+  waitlist:remove --contact <email or phone>
 
 The password is read from CLOSEOUT_PASSWORD or prompted for.
-A missing store is created; --store-name is required then and ignored otherwise.`;
+A missing store is created; --store-name is required then and ignored otherwise.
+waitlist:list prints the waitlist as CSV, newest first.`;
 
 async function main(): Promise<void> {
   const config = parseOrExit(cliScope);
@@ -38,12 +43,19 @@ async function main(): Promise<void> {
       email: { type: "string" },
       name: { type: "string" },
       whatsapp: { type: "string" },
+      contact: { type: "string" },
     },
   });
 
   if (
     !command ||
-    !["admin:create", "admin:password", "seed:demo"].includes(command)
+    ![
+      "admin:create",
+      "admin:password",
+      "seed:demo",
+      "waitlist:list",
+      "waitlist:remove",
+    ].includes(command)
   ) {
     console.error(USAGE);
     process.exitCode = 1;
@@ -51,7 +63,7 @@ async function main(): Promise<void> {
   }
 
   // Checked before booting the app, so a usage mistake fails fast.
-  if (command !== "admin:password" && !values.store) {
+  if (["admin:create", "seed:demo"].includes(command) && !values.store) {
     console.error(`--store is required.\n\n${USAGE}`);
     process.exitCode = 1;
     return;
@@ -85,6 +97,15 @@ async function main(): Promise<void> {
         password: await readPassword(config.cli.password),
       });
       console.log("Password updated; existing sessions were signed out.");
+    } else if (command === "waitlist:list") {
+      console.log(await listWaitlist(app.get(WaitlistService)));
+    } else if (command === "waitlist:remove") {
+      console.log(
+        await removeWaitlistSignup(
+          app.get(WaitlistService),
+          required(values.contact, "--contact"),
+        ),
+      );
     } else {
       const result = await seedDemo(
         dataSource,
