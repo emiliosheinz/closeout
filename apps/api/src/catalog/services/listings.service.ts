@@ -39,6 +39,7 @@ import {
   canSetSellers,
   PUBLISH_REQUIRES_PHOTO,
   SALE_CHANGED,
+  saleAfterFullUpdate,
   saleTransition,
   sellersForNewListing,
 } from "../listing-rules";
@@ -250,6 +251,10 @@ export class ListingsService {
       await manager.getRepository(Listing).save({
         ...row,
         ...definedOnly(fields),
+        ...(saleAfterFullUpdate(listing.availability, patch.availability) ===
+        "release"
+          ? CLEARED_SALE
+          : {}),
       });
       if (sellerIds) await setSellers(manager, id, sellerIds);
       return toDetail(await this.findWithRelations(manager, storeId, id));

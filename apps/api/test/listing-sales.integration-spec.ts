@@ -453,4 +453,76 @@ describe("sale info on listings", () => {
       expect((await saleOf(listing.id)).paid).toBe(false);
     });
   });
+
+  describe("full update and duplicate", () => {
+    const sold = async () => {
+      const listing = await insertListing(ctx.dataSource, admin, {
+        availability: "reserved",
+      });
+      const buyerId = await insertBuyer("Ana");
+      await sellTo(listing.id, buyerId, {
+        price: 7000,
+        paid: true,
+        notes: "x",
+      });
+      return listing;
+    };
+
+    it("clears the sale and keeps the buyer when a full update releases the listing", async () => {
+      const listing = await sold();
+
+      const res = await client()
+        .patch(`${base()}/${listing.id}`)
+        .send({ availability: "available" })
+        .expect(200);
+
+      expect(res.body).toMatchObject({ availability: "available", sale: null });
+      const buyers = await ctx.dataSource.query(`SELECT name FROM buyers`);
+      expect(buyers).toEqual([{ name: "Ana" }]);
+    });
+
+    it("keeps the sale when a full update changes something else", async () => {
+      const listing = await sold();
+
+      const res = await client()
+        .patch(`${base()}/${listing.id}`)
+        .send({ title: "Novo título" })
+        .expect(200);
+
+      expect(res.body.sale).toMatchObject({
+        agreedPriceCents: 7000,
+        paid: true,
+      });
+    });
+
+    it("accepts availability in a full update", async () => {
+      const listing = await insertListing(ctx.dataSource, admin);
+
+      const res = await client()
+        .patch(`${base()}/${listing.id}`)
+        .send({ availability: "reserved" })
+        .expect(200);
+
+      expect(res.body.availability).toBe("reserved");
+    });
+
+    it("answers 400 for a sale key in a full update", async () => {
+      const listing = await sold();
+
+      await client()
+        .patch(`${base()}/${listing.id}`)
+        .send({ paid: false })
+        .expect(400);
+    });
+
+    it("duplicates a sold listing with a buyer as an available copy without sale", async () => {
+      const listing = await sold();
+
+      const res = await client()
+        .post(`${base()}/${listing.id}/duplicate`)
+        .expect(201);
+
+      expect(res.body).toMatchObject({ availability: "available", sale: null });
+    });
+  });
 });
