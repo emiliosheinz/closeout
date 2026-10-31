@@ -441,6 +441,7 @@ async function createDemoListing(
     availability: demo.availability,
     ...(demo.availability !== "available" && {
       buyer: { name: DEMO_BUYER },
+      agreedPriceCents: demo.priceCents,
     }),
   });
 }
