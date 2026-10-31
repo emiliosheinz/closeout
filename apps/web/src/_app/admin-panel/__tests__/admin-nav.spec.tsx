@@ -45,14 +45,27 @@ const linkNames = () =>
     .map((link) => link.textContent);
 
 describe("AdminNav", () => {
-  it("shows a seller listings and team, without the store settings", () => {
+  it("shows a seller listings, buyers and team, without the store settings", () => {
     renderNav(meAs("seller"));
-    expect(linkNames()).toEqual(["Anúncios", "Equipe"]);
+    expect(linkNames()).toEqual(["Anúncios", "Compradores", "Equipe"]);
+  });
+
+  it.each([
+    "owner",
+    "admin",
+    "seller",
+  ] as const)("links %s to the buyers page right after the listings", (role) => {
+    renderNav(meAs(role));
+    expect(linkNames().slice(0, 2)).toEqual(["Anúncios", "Compradores"]);
+    expect(screen.getByRole("link", { name: "Compradores" })).toHaveAttribute(
+      "href",
+      "/admin/buyers",
+    );
   });
 
   it("shows owners and admins the store settings too", () => {
     renderNav(meAs("admin"));
-    expect(linkNames()).toEqual(["Anúncios", "Equipe", "Loja"]);
+    expect(linkNames()).toEqual(["Anúncios", "Compradores", "Equipe", "Loja"]);
     expect(screen.getByRole("link", { name: "Equipe" })).toHaveAttribute(
       "href",
       "/admin/team",
