@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { AVAILABILITIES, CONDITIONS, PUBLICATIONS } from "../enums";
+import { buyerRefSchema } from "./buyer";
 import { adminImageSchema } from "./image";
 
 export const MAX_PRICE_CENTS = 100_000_000;
@@ -26,6 +27,15 @@ export const adminListingSummarySchema = z.object({
   sellers: z.array(z.object({ id: z.string(), displayName: z.string() })),
   coverUrl: z.string().nullable(),
   imageCount: z.number(),
+  sale: z
+    .object({
+      buyer: z.object({ id: z.string(), name: z.string() }),
+      agreedPriceCents: z.number().nullable(),
+      paid: z.boolean(),
+      notes: z.string().nullable(),
+    })
+    .nullable()
+    .optional(),
   updatedAt: z.iso.datetime(),
 });
 export type AdminListingSummary = z.infer<typeof adminListingSummarySchema>;
@@ -123,11 +133,43 @@ export const listingUpdateRequestSchema = listingRequestSchema
   });
 export type ListingUpdateRequest = z.infer<typeof listingUpdateRequestSchema>;
 
+const AGREED_PRICE_MESSAGE = "Use um valor entre R$ 0,00 e R$ 1.000.000,00.";
+const SALE_NOTES_MESSAGE = "Use até 1000 caracteres nas observações.";
+
+const saleFields = {
+  agreedPriceCents: z
+    .number(AGREED_PRICE_MESSAGE)
+    .int(AGREED_PRICE_MESSAGE)
+    .min(0, AGREED_PRICE_MESSAGE)
+    .max(MAX_PRICE_CENTS, AGREED_PRICE_MESSAGE)
+    .nullable()
+    .optional(),
+  paid: z.boolean("Informe se foi pago.").optional(),
+  notes: z
+    .string(SALE_NOTES_MESSAGE)
+    .trim()
+    .max(1000, SALE_NOTES_MESSAGE)
+    .transform((notes) => notes || null)
+    .nullable()
+    .optional(),
+};
+
 export const listingStatusRequestSchema = z.strictObject({
   availability: availabilitySchema.optional(),
   publication: publicationSchema.optional(),
+  buyer: buyerRefSchema.optional(),
+  ...saleFields,
 });
 export type ListingStatusRequest = z.infer<typeof listingStatusRequestSchema>;
+
+/** Changes to the sale of a reserved or sold listing, without changing its availability. */
+export const listingSaleRequestSchema = z
+  .strictObject({ buyer: buyerRefSchema.optional(), ...saleFields })
+  .refine(
+    (request) => Object.values(request).some((value) => value !== undefined),
+    "Informe ao menos um dado da venda.",
+  );
+export type ListingSaleRequest = z.infer<typeof listingSaleRequestSchema>;
 
 /** Every photo id of a listing, in its new order. */
 export const reorderImagesRequestSchema = z.strictObject({

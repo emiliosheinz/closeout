@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { z } from "zod";
 import {
+  adminListingSummarySchema,
   adminListingsQuerySchema,
   catalogQuerySchema,
   listingRequestSchema,
+  listingSaleRequestSchema,
   listingStatusRequestSchema,
   listingUpdateRequestSchema,
   parseRequest,
@@ -262,6 +264,126 @@ describe("listing status", () => {
       path,
       message: INVALID_VALUE,
     });
+  });
+});
+
+describe("sale fields", () => {
+  const BUYER = { id: SELLER_ID };
+
+  it.each([
+    [-1, false],
+    [0, true],
+    [100_000_000, true],
+    [100_000_001, false],
+  ])("agreed price %d is accepted: %s", (agreedPriceCents, accepted) => {
+    expect(
+      parseRequest(listingSaleRequestSchema, { agreedPriceCents }).success,
+    ).toBe(accepted);
+  });
+
+  it("accepts 1000 characters of notes and refuses 1001", () => {
+    const notes = (length: number) => ({ notes: "a".repeat(length) });
+    expect(parseRequest(listingSaleRequestSchema, notes(1000)).success).toBe(
+      true,
+    );
+    expect(parseRequest(listingSaleRequestSchema, notes(1001)).success).toBe(
+      false,
+    );
+  });
+
+  it("turns empty notes into null", () => {
+    expect(parseRequest(listingSaleRequestSchema, { notes: "" }).data).toEqual({
+      notes: null,
+    });
+  });
+
+  it("lets the status request carry availability, buyer and sale fields", () => {
+    const body = {
+      availability: "reserved",
+      buyer: { name: "Maria Silva" },
+      agreedPriceCents: 12500,
+      paid: true,
+      notes: "Retira sábado",
+    };
+    expect(parseRequest(listingStatusRequestSchema, body).data).toEqual(body);
+  });
+
+  it("requires at least one field in a sale request", () => {
+    expect(parseRequest(listingSaleRequestSchema, {}).success).toBe(false);
+    expect(
+      parseRequest(listingSaleRequestSchema, { paid: false }).success,
+    ).toBe(true);
+  });
+
+  it("refuses to clear the buyer", () => {
+    expect(
+      parseRequest(listingSaleRequestSchema, { buyer: null }).success,
+    ).toBe(false);
+    expect(
+      parseRequest(listingSaleRequestSchema, { buyer: BUYER }).success,
+    ).toBe(true);
+  });
+
+  it("clears the agreed price with null", () => {
+    expect(
+      parseRequest(listingSaleRequestSchema, { agreedPriceCents: null }).data,
+    ).toEqual({ agreedPriceCents: null });
+  });
+
+  it.each([
+    "buyerId",
+    "agreedPriceCents",
+    "paid",
+    "saleNotes",
+    "notes",
+  ])("refuses %s in a full listing update", (key) => {
+    expect(
+      firstIssue(parseRequest(listingUpdateRequestSchema, { [key]: 1 })),
+    ).toEqual({ path: [], message: "Campo não permitido." });
+  });
+});
+
+describe("admin listing summary sale", () => {
+  const summary = {
+    id: "a",
+    slug: "bike",
+    title: "Bike",
+    priceCents: null,
+    condition: "good",
+    availability: "reserved",
+    publication: "published",
+    category: { id: "c", name: "Esporte" },
+    sellers: [],
+    coverUrl: null,
+    imageCount: 0,
+    updatedAt: "2026-01-01T00:00:00.000Z",
+  };
+
+  it.each([
+    ["absent", undefined],
+    ["null", null],
+    [
+      "an object",
+      {
+        buyer: { id: "b", name: "Maria Silva" },
+        agreedPriceCents: 12500,
+        paid: false,
+        notes: null,
+      },
+    ],
+  ])("parses with sale %s", (_case, sale) => {
+    expect(
+      adminListingSummarySchema.safeParse({ ...summary, sale }).success,
+    ).toBe(true);
+  });
+
+  it("refuses a sale without a buyer", () => {
+    expect(
+      adminListingSummarySchema.safeParse({
+        ...summary,
+        sale: { agreedPriceCents: null, paid: false, notes: null },
+      }).success,
+    ).toBe(false);
   });
 });
 
