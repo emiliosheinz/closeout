@@ -199,6 +199,15 @@ describe("sale transition", () => {
       { outcome: "fields-need-buyer" },
     );
   });
+
+  it("ignores properties that are not sale fields", () => {
+    expect(
+      saleTransition("reserved", {
+        hasBuyer: false,
+        publication: "published",
+      } as Parameters<typeof saleTransition>[1]),
+    ).toEqual({ outcome: "keep" });
+  });
 });
 
 describe("sale edit", () => {
@@ -227,16 +236,5 @@ describe("availability in a full update", () => {
     expect(changesAvailability("reserved", undefined)).toBe(false);
     expect(changesAvailability("available", "available")).toBe(false);
     expect(changesAvailability("sold", "sold")).toBe(false);
-  });
-});
-
-describe("sale transition ignoring extra properties", () => {
-  it("ignores properties that are not sale fields", () => {
-    expect(
-      saleTransition("reserved", {
-        hasBuyer: false,
-        publication: "published",
-      } as Parameters<typeof saleTransition>[1]),
-    ).toEqual({ outcome: "keep" });
   });
 });

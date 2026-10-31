@@ -306,10 +306,13 @@ describe("sale info on listings", () => {
     it("answers 400 for sale fields without a buyer or on a return to available", async () => {
       const listing = await insertListing(ctx.dataSource, admin);
 
-      await setStatus(listing.id, {
+      const noBuyer = await setStatus(listing.id, {
         availability: "reserved",
         paid: true,
       }).expect(400);
+      expect(noBuyer.body.detail).toBe(
+        "Informe o comprador para registrar os dados da venda.",
+      );
       const withBuyer = await setStatus(listing.id, {
         availability: "available",
         buyer: { name: "Ana" },

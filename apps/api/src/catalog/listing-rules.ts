@@ -104,7 +104,8 @@ export type SaleTransition =
  * records the sale (paid defaults to false); returning to available clears
  * it; repeating the current state is a no-op, unless it carries a buyer,
  * which means the listing changed under the requester. Entering a held
- * state and sale fields both need a buyer, and none may accompany a return to available.
+ * state and sale fields both need a buyer, and none may accompany a return
+ * to available.
  */
 export function saleTransition(
   current: Availability,
