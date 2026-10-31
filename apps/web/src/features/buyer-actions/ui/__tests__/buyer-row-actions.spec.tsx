@@ -134,6 +134,20 @@ describe("BuyerActions", () => {
     expect(writes()).toEqual([]);
   });
 
+  it("explains a buyer with a single item cannot be deleted, offers a merge and sends nothing", async () => {
+    await openAction(
+      buyerSummary({ id: "b-ana", name: "Ana", linkedCount: 1, items: [] }),
+      "Excluir",
+    );
+
+    expect(
+      await screen.findByText(/Ana tem 1 item e não pode ser excluído/),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Excluir" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Juntar com..." })).toBeVisible();
+    expect(writes()).toEqual([]);
+  });
+
   it("deletes a buyer with no items", async () => {
     await openAction(ana, "Excluir");
     fireEvent.click(await screen.findByRole("button", { name: "Excluir" }));
