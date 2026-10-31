@@ -1,1 +1,1 @@
-export { MergeBuyerDialog } from "./ui/merge-buyer-dialog";
+export { BuyerActions } from "./ui/buyer-row-actions";

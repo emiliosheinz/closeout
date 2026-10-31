@@ -20,7 +20,7 @@ const bia = buyerSummary({
 
 let fetchMock: ReturnType<typeof vi.fn>;
 beforeEach(() => {
-  fetchMock = vi.fn(async (url: string, init: RequestInit = {}) =>
+  fetchMock = vi.fn(async (_url: string, init: RequestInit = {}) =>
     init.method === "GET"
       ? Response.json({ items: [ana, bruno, bia] })
       : new Response(null, { status: 204 }),
