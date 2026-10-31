@@ -332,6 +332,14 @@ const CAPABILITIES: Capability[] = [
     expected: [200, 200, 200, 404],
   },
   {
+    name: "delete a buyer",
+    call: async (fx) => ({
+      method: "delete",
+      url: `${store(fx)}/buyers/${await buyer(fx)}`,
+    }),
+    expected: [204, 204, 204, 404],
+  },
+  {
     name: "list contact profiles",
     call: async (fx) => ({ method: "get", url: `${store(fx)}/sellers` }),
     expected: [200, 200, 200, 404],

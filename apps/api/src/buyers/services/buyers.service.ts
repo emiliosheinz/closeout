@@ -5,8 +5,8 @@ import {
   buyerNameKey,
 } from "@closeout/contracts/schemas";
 import { HttpStatus, Injectable } from "@nestjs/common";
-import { InjectRepository } from "@nestjs/typeorm";
-import { QueryFailedError, type Repository } from "typeorm";
+import { InjectDataSource, InjectRepository } from "@nestjs/typeorm";
+import { type DataSource, QueryFailedError, type Repository } from "typeorm";
 import { Listing } from "@/catalog/entities/listing.entity";
 import { visibleToActor } from "@/catalog/listing-queries";
 import { AppException } from "@/problem/app-exception";
@@ -15,6 +15,28 @@ import { Buyer } from "../entities/buyer.entity";
 
 const BUYER_NOT_FOUND = "Comprador não encontrado.";
 const NAME_TAKEN = "Já existe um comprador com esse nome. Use Juntar com...";
+
+const HAS_ITEMS =
+  "Este comprador tem itens vinculados em anúncios da loja. Junte-o a outro comprador.";
+const TRY_AGAIN = "Não foi possível salvar agora. Tente de novo.";
+
+/** Turns the listed driver error codes, and a deadlock, into a 409. */
+async function withConflicts<T>(
+  run: () => Promise<T>,
+  messages: Record<string, string>,
+): Promise<T> {
+  try {
+    return await run();
+  } catch (err) {
+    const code =
+      err instanceof QueryFailedError
+        ? (err.driverError as { code?: string }).code
+        : undefined;
+    const message = code === "40P01" ? TRY_AGAIN : code && messages[code];
+    if (message) throw new AppException(HttpStatus.CONFLICT, message);
+    throw err;
+  }
+}
 
 interface AggregateRow {
   id: string;
@@ -30,6 +52,7 @@ interface AggregateRow {
 @Injectable()
 export class BuyersService {
   constructor(
+    @InjectDataSource() private readonly dataSource: DataSource,
     @InjectRepository(Buyer) private readonly buyers: Repository<Buyer>,
     @InjectRepository(Listing) private readonly listings: Repository<Listing>,
   ) {}
@@ -114,21 +137,35 @@ export class BuyersService {
     if (patch.whatsappNumber !== undefined) {
       buyer.whatsappNumber = patch.whatsappNumber;
     }
-    try {
-      await this.buyers.save(buyer);
-    } catch (err) {
-      if (
-        err instanceof QueryFailedError &&
-        (err.driverError as { code?: string }).code === "23505"
-      ) {
-        throw new AppException(HttpStatus.CONFLICT, NAME_TAKEN);
-      }
-      throw err;
-    }
+    await withConflicts(() => this.buyers.save(buyer), {
+      "23505": NAME_TAKEN,
+    });
     return {
       id: buyer.id,
       name: buyer.name,
       whatsappNumber: buyer.whatsappNumber,
     };
+  }
+
+  /** Delete a buyer no listing links; a link makes the foreign key refuse. */
+  async remove(storeId: string, id: string): Promise<void> {
+    await withConflicts(
+      () =>
+        this.dataSource.transaction(async (manager) => {
+          // Listings are always locked before buyers, so this cannot deadlock
+          // with a sale write or a merge.
+          await manager.query(
+            `SELECT id FROM listings WHERE buyer_id = $1 AND store_id = $2 ORDER BY id FOR UPDATE`,
+            [id, storeId],
+          );
+          const { affected } = await manager
+            .getRepository(Buyer)
+            .delete({ id, storeId });
+          if (!affected) {
+            throw new AppException(HttpStatus.NOT_FOUND, BUYER_NOT_FOUND);
+          }
+        }),
+      { "23503": HAS_ITEMS },
+    );
   }
 }

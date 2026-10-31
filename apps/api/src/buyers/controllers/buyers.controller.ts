@@ -5,7 +5,16 @@ import {
   buyerUpdateRequestSchema,
   uuidSchema,
 } from "@closeout/contracts/schemas";
-import { Body, Controller, Get, Param, Patch, UseGuards } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Param,
+  Patch,
+  UseGuards,
+} from "@nestjs/common";
 import { SessionGuard } from "@/auth/guards/session.guard";
 import { StoreMemberGuard } from "@/stores/guards/store-member.guard";
 import {
@@ -37,5 +46,15 @@ export class BuyersController {
     @Body({ schema: buyerUpdateRequestSchema }) body: BuyerUpdateRequest,
   ): Promise<Buyer> {
     return this.buyers.update(member.storeId, id, body);
+  }
+
+  @Delete(":id")
+  @Roles(ANY_MEMBER)
+  @HttpCode(204)
+  remove(
+    @CurrentMember() member: MembershipContext,
+    @Param("id", { schema: uuidSchema }) id: string,
+  ): Promise<void> {
+    return this.buyers.remove(member.storeId, id);
   }
 }

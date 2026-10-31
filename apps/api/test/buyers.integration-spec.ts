@@ -266,4 +266,60 @@ describe("buyers", () => {
       expect((await stored(foreign)).name).toBe("Carla");
     });
   });
+
+  describe("deleting", () => {
+    const HAS_ITEMS =
+      "Este comprador tem itens vinculados em anúncios da loja. Junte-o a outro comprador.";
+    const buyerId = async (name: string) => (await find(name)).id as string;
+    const remaining = async () =>
+      (await client().get(base()).expect(200)).body.items.map(
+        (b: { name: string }) => b.name,
+      );
+
+    it("lets a seller delete a buyer with no listings", async () => {
+      const release = await sell("Ana", { availability: "reserved" });
+      await client()
+        .patch(`/stores/${admin.storeId}/listings/${release.id}/status`)
+        .send({ availability: "available" })
+        .expect(200);
+
+      await as(ctx.app, seller.cookie)
+        .delete(`${base()}/${await buyerId("Ana")}`)
+        .expect(204);
+
+      expect(await remaining()).toEqual([]);
+    });
+
+    it("refuses to delete a buyer linked to a listing the actor sees", async () => {
+      const listing = await sell("Ana", { availability: "sold" });
+
+      const res = await client()
+        .delete(`${base()}/${await buyerId("Ana")}`)
+        .expect(409);
+
+      expect(res.body.detail).toBe(HAS_ITEMS);
+      expect(await remaining()).toEqual(["Ana"]);
+      const [row] = await ctx.dataSource.query(
+        `SELECT buyer_id FROM listings WHERE id = $1`,
+        [listing.id],
+      );
+      expect(row.buyer_id).not.toBeNull();
+    });
+
+    it("refuses to delete a buyer linked only to a listing the seller cannot see", async () => {
+      await sell("Ana", { availability: "sold" });
+
+      await as(ctx.app, seller.cookie)
+        .delete(`${base()}/${await buyerId("Ana")}`)
+        .expect(409);
+
+      expect(await remaining()).toEqual(["Ana"]);
+    });
+
+    it("answers 404 for an unknown buyer", async () => {
+      await client()
+        .delete(`${base()}/00000000-0000-4000-8000-000000000000`)
+        .expect(404);
+    });
+  });
 });
