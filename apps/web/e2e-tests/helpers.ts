@@ -45,11 +45,37 @@ export async function signIn(
  */
 export function listingRows(page: Page) {
   return page.getByRole("row", { includeHidden: true }).filter({
-    has: page.getByRole("combobox", {
-      name: /^Publicação de /,
+    has: page.getByRole("button", {
+      name: /^Ações para /,
       includeHidden: true,
     }),
   });
+}
+
+/**
+ * Opens the actions menu of the admin listing titled `title`, where its
+ * status, sale, copy and deletion change, and returns the menu.
+ */
+export async function listingMenu(page: Page, title: string) {
+  await page
+    .getByRole("button", { name: `Ações para ${title}`, exact: true })
+    .click();
+  return page.getByRole("menu");
+}
+
+/**
+ * Changes the availability of the admin listing titled `title`. Desktop runs
+ * with a fine pointer, where the choices wait in the "Disponibilidade" submenu.
+ */
+export async function chooseAvailability(
+  page: Page,
+  title: string,
+  availability: "Disponível" | "Reservado" | "Vendido",
+) {
+  await (await listingMenu(page, title))
+    .getByRole("menuitem", { name: /^Disponibilidade/ })
+    .click();
+  await page.getByRole("menuitemradio", { name: availability }).click();
 }
 
 /** Search the admin listing table and wait for the filtered, interactive page. */

@@ -1,6 +1,8 @@
 import type {
   AdminListingDetail,
   AdminListingSummary,
+  Buyer,
+  BuyerSummary,
   Category,
   FieldError,
   Seller,
@@ -33,6 +35,7 @@ export const listingSummary = (
   sellers: [{ id: "s-ana", displayName: "Ana" }],
   coverUrl: null,
   imageCount: 0,
+  sale: null,
   updatedAt: "2026-10-17T12:00:00.000Z",
   ...overrides,
 });
@@ -110,3 +113,21 @@ export async function expectProblem(
     requestId: expect.any(String),
   });
 }
+
+export const buyer = (overrides: Partial<Buyer> = {}): Buyer => ({
+  id: "b-maria",
+  name: "Maria Silva",
+  whatsappNumber: null,
+  ...overrides,
+});
+
+export const buyerSummary = (
+  overrides: Partial<BuyerSummary> = {},
+): BuyerSummary => ({
+  ...buyer(),
+  linkedCount: 0,
+  items: [],
+  owedCents: 0,
+  unpricedCount: 0,
+  ...overrides,
+});

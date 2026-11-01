@@ -1,12 +1,13 @@
 import { expect, test } from "@playwright/test";
-import { findInAdmin, STORE, signIn } from "./helpers";
+import { findInAdmin, listingMenu, STORE, signIn } from "./helpers";
 
 test("drafts stay private: no page, no sitemap entry", async ({ page }) => {
   await signIn(page);
   await findInAdmin(page, "Cadeira de escritório");
-  const preview = page.getByRole("link", {
-    name: "Pré-visualizar Cadeira de escritório",
-  });
+  const preview = (await listingMenu(page, "Cadeira de escritório")).getByRole(
+    "menuitem",
+    { name: "Pré-visualizar" },
+  );
   const previewHref = await preview.getAttribute("href");
   await page.goto(previewHref ?? "");
   await expect(page.getByText("Pré-visualização: é assim")).toBeVisible();

@@ -11,4 +11,5 @@ export { ListingTitle } from "./ui/listing-title";
 export { PhotoDropzone } from "./ui/photo-dropzone";
 export { PhotoPlaceholder } from "./ui/photo-placeholder";
 export { PriceSticker } from "./ui/price-sticker";
+export { StatusDot } from "./ui/status-dot";
 export { StatusStamp } from "./ui/status-stamp";

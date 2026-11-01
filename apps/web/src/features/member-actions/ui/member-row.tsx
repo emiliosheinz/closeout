@@ -12,7 +12,6 @@ import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
 import { listingKeys } from "@/entities/listing";
 import {
-  displayNumber,
   MemberAvatar,
   memberKeys,
   RoleToggle,
@@ -20,6 +19,7 @@ import {
 } from "@/entities/member";
 import { ApiError, api } from "@/shared/api";
 import { ROLE_DESCRIPTIONS } from "@/shared/lib/format";
+import { displayNumber } from "@/shared/lib/whatsapp";
 import { ActionsMenu, ActionsMenuItem } from "@/shared/ui/actions-menu";
 import { Button } from "@/shared/ui/button";
 import { ConfirmDialog } from "@/shared/ui/confirm-dialog";

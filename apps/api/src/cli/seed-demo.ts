@@ -57,6 +57,8 @@ interface DemoListing {
   images: number;
 }
 
+const DEMO_BUYER = "Comprador de demonstração";
+
 const DEMO_LISTINGS: DemoListing[] = [
   {
     title: "Sofá retrátil 3 lugares",
@@ -388,6 +390,11 @@ export async function seedDemo(
     // Leave no half-seeded store behind: the "store has listings" guard
     // would otherwise skip every later run.
     for (const id of created) await deps.listings.remove(store.id, id);
+    await dataSource.query(
+      `DELETE FROM buyers b WHERE b.store_id = $1 AND b.name = $2
+         AND NOT EXISTS (SELECT 1 FROM listings l WHERE l.buyer_id = b.id)`,
+      [store.id, DEMO_BUYER],
+    );
     if (createdUsers.length > 0) {
       await dataSource
         .getRepository(User)
@@ -429,8 +436,12 @@ async function createDemoListing(
     );
     await deps.images.add(owner.storeId, listing.id, files);
   }
-  await deps.listings.update(owner, listing.id, {
+  await deps.listings.changeStatus(owner, listing.id, {
     publication: demo.publication,
     availability: demo.availability,
+    ...(demo.availability !== "available" && {
+      buyer: { name: DEMO_BUYER },
+      agreedPriceCents: demo.priceCents,
+    }),
   });
 }

@@ -78,3 +78,81 @@ export function canSetSellers(
     wanted.size === current.length && current.every((id) => wanted.has(id))
   );
 }
+
+export const SALE_CHANGED = "O anúncio mudou. Recarregue a página.";
+
+export interface SaleFields {
+  agreedPriceCents?: number | null;
+  paid?: boolean;
+  notes?: string | null;
+}
+
+export type SaleTransition =
+  | { outcome: "enter"; sale: Required<SaleFields> }
+  | {
+      outcome:
+        | "release"
+        | "keep"
+        | "stale"
+        | "fields-need-buyer"
+        | "needs-buyer"
+        | "available-has-no-buyer";
+    };
+
+/**
+ * How a status request changes a listing's sale info. Entering a held state
+ * records the sale (paid defaults to false); returning to available clears
+ * it; repeating the current state is a no-op, unless it carries a buyer,
+ * which means the listing changed under the requester. Entering a held
+ * state and sale fields both need a buyer, and none may accompany a return
+ * to available.
+ */
+export function saleTransition(
+  current: Availability,
+  request: SaleFields & { availability?: Availability; hasBuyer: boolean },
+): SaleTransition {
+  const { hasBuyer, availability = current } = request;
+  const hasSaleFields = [
+    request.agreedPriceCents,
+    request.paid,
+    request.notes,
+  ].some((value) => value !== undefined);
+  if (hasSaleFields && !hasBuyer) return { outcome: "fields-need-buyer" };
+  if (availability === "available") {
+    if (hasBuyer) return { outcome: "available-has-no-buyer" };
+    return { outcome: current === "available" ? "keep" : "release" };
+  }
+  if (availability === current) {
+    return { outcome: hasBuyer ? "stale" : "keep" };
+  }
+  if (!hasBuyer) return { outcome: "needs-buyer" };
+  return {
+    outcome: "enter",
+    sale: {
+      agreedPriceCents: request.agreedPriceCents ?? null,
+      paid: request.paid ?? false,
+      notes: request.notes ?? null,
+    },
+  };
+}
+
+/**
+ * Whether the sale of a listing may be edited: not once it is available
+ * again, and a listing with no buyer needs one in the edit.
+ */
+export function canEditSale(
+  current: Availability,
+  hasCurrentBuyer: boolean,
+  hasBuyerInRequest: boolean,
+): "ok" | "stale" | "refuse" {
+  if (current === "available") return "stale";
+  return hasCurrentBuyer || hasBuyerInRequest ? "ok" : "refuse";
+}
+
+/** Availability changes only through the status change, never a full update. */
+export function changesAvailability(
+  current: Availability,
+  requested: Availability | undefined,
+): boolean {
+  return requested !== undefined && requested !== current;
+}

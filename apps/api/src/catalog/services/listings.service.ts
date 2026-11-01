@@ -7,6 +7,8 @@ import type {
   AdminListingDetail,
   AdminListingSummary,
   DashboardCounts,
+  ListingSaleRequest,
+  ListingStatusRequest,
   PublicListingDetail,
 } from "@closeout/contracts/schemas";
 import { HttpStatus, Injectable } from "@nestjs/common";
@@ -17,26 +19,30 @@ import {
   In,
   QueryFailedError,
   Repository,
-  type SelectQueryBuilder,
 } from "typeorm";
+import type { QueryDeepPartialEntity } from "typeorm/query-builder/QueryPartialEntity";
+import { BUYER_NOT_IN_STORE, resolveBuyer } from "@/buyers/resolve-buyer";
 import { MediaService } from "@/media/media.service";
 import { mediaUrls } from "@/media/media-urls";
 import { AppException } from "@/problem/app-exception";
+import { withConflicts } from "@/problem/db-conflicts";
 import { Seller } from "@/sellers/entities/seller.entity";
 import { Category } from "@/stores/entities/category.entity";
-import {
-  forbidden,
-  isManager,
-  type MembershipContext,
-} from "@/stores/membership";
-import { toAdminImage } from "../admin-mappers";
+import { forbidden, type MembershipContext } from "@/stores/membership";
+import { toAdminImage, toAdminSale } from "../admin-mappers";
 import { Listing } from "../entities/listing.entity";
 import { ListingImage } from "../entities/listing-image.entity";
 import { ListingSeller } from "../entities/listing-seller.entity";
+import { visibleListings } from "../listing-queries";
 import {
+  canEditSale,
   canPublish,
   canSetSellers,
+  changesAvailability,
   PUBLISH_REQUIRES_PHOTO,
+  SALE_CHANGED,
+  type SaleTransition,
+  saleTransition,
   sellersForNewListing,
 } from "../listing-rules";
 import type { ListingAttribute } from "../listing-types";
@@ -70,6 +76,14 @@ export function listingNotFound(): AppException {
 const INVALID_SELLER = "Vendedor inválido.";
 const INVALID_CATEGORY = "Categoria inválida.";
 const NO_SELLER_CHOSEN = "Escolha ao menos um vendedor.";
+const SALE_FIELDS_NEED_BUYER =
+  "Informe o comprador para registrar os dados da venda.";
+const AVAILABLE_HAS_NO_BUYER = "Um anúncio disponível não tem comprador.";
+const BUYER_REQUIRED =
+  "Informe o comprador. Se o campo não aparecer, recarregue a página.";
+const AVAILABILITY_VIA_BOARD =
+  "Altere a disponibilidade pelo quadro de anúncios.";
+const EDIT_NEEDS_BUYER = "Informe o comprador da venda.";
 const COPY_SUFFIX = " (cópia)";
 
 @Injectable()
@@ -86,14 +100,17 @@ export class ListingsService {
    * managers reach every listing, sellers only those assigned to them.
    */
   async isVisibleTo(actor: ListingActor, id: string): Promise<boolean> {
-    return this.visibleTo(actor).andWhere("l.id = :id", { id }).getExists();
+    return visibleListings(this.listings, actor)
+      .andWhere("l.id = :id", { id })
+      .getExists();
   }
 
   async list(actor: ListingActor, q?: string): Promise<AdminListingSummary[]> {
-    const query = this.visibleTo(actor)
+    const query = visibleListings(this.listings, actor)
       .innerJoinAndSelect("l.category", "category")
       .leftJoinAndSelect("l.sellers", "listingSeller")
       .leftJoinAndSelect("listingSeller.seller", "seller")
+      .leftJoinAndSelect("l.buyer", "buyer")
       .orderBy("l.updated_at", "DESC");
     if (q) {
       query.andWhere(
@@ -124,7 +141,7 @@ export class ListingsService {
 
   /** Counts for the admin dashboard; availability covers published listings only. */
   async dashboard(actor: ListingActor): Promise<DashboardCounts> {
-    const row = await this.visibleTo(actor)
+    const row = await visibleListings(this.listings, actor)
       .select(
         `COUNT(*) FILTER (WHERE l.publication = 'published')::int`,
         "published",
@@ -216,32 +233,120 @@ export class ListingsService {
       const listing = await this.findWithRelations(manager, storeId, id);
       const current = listing.sellers.map((row) => row.sellerId);
       if (!canSetSellers(actor, current, patch.sellerIds)) throw forbidden();
+      if (changesAvailability(listing.availability, patch.availability)) {
+        throw new AppException(HttpStatus.BAD_REQUEST, AVAILABILITY_VIA_BOARD);
+      }
       await assertReferencesBelongToStore(manager, storeId, patch);
 
-      if (patch.publication === "published") {
-        if (!canPublish(listing.images.length)) {
-          throw new AppException(
-            HttpStatus.UNPROCESSABLE_ENTITY,
-            PUBLISH_REQUIRES_PHOTO,
-          );
-        }
-        listing.publishedAt ??= new Date();
-      }
+      const published = publishPatch(listing, patch.publication);
 
       const {
         images: _images,
         category: _category,
         sellers: _sellers,
+        buyer: _buyer,
         ...row
       } = listing;
       const { sellerIds, ...fields } = patch;
       await manager.getRepository(Listing).save({
         ...row,
         ...definedOnly(fields),
+        ...published,
       });
       if (sellerIds) await setSellers(manager, id, sellerIds);
       return toDetail(await this.findWithRelations(manager, storeId, id));
     });
+  }
+
+  /**
+   * Change availability and publication, recording or clearing the sale in
+   * the same transaction. The listing is locked before the buyer is resolved.
+   */
+  async changeStatus(
+    actor: ListingActor,
+    id: string,
+    request: ListingStatusRequest,
+  ): Promise<AdminListingDetail> {
+    const { storeId } = actor;
+    return withSaleConflicts(() =>
+      this.dataSource.transaction(async (manager) => {
+        await lockListing(manager, storeId, id);
+        const listing = await this.findWithRelations(manager, storeId, id);
+        const transition = saleTransition(listing.availability, {
+          availability: request.availability,
+          agreedPriceCents: request.agreedPriceCents,
+          paid: request.paid,
+          notes: request.notes,
+          hasBuyer: request.buyer !== undefined,
+        });
+        if (transition.outcome === "fields-need-buyer") {
+          throw new AppException(
+            HttpStatus.BAD_REQUEST,
+            SALE_FIELDS_NEED_BUYER,
+          );
+        }
+        if (transition.outcome === "available-has-no-buyer") {
+          throw new AppException(
+            HttpStatus.BAD_REQUEST,
+            AVAILABLE_HAS_NO_BUYER,
+          );
+        }
+        if (transition.outcome === "needs-buyer") {
+          throw new AppException(HttpStatus.BAD_REQUEST, BUYER_REQUIRED);
+        }
+        if (transition.outcome === "stale") {
+          throw new AppException(HttpStatus.CONFLICT, SALE_CHANGED);
+        }
+
+        const patch: QueryDeepPartialEntity<Listing> = {
+          ...publishPatch(listing, request.publication),
+          ...(request.availability && { availability: request.availability }),
+          ...(await statusSalePatch(manager, storeId, transition, request)),
+        };
+        if (Object.keys(patch).length > 0) {
+          await manager.getRepository(Listing).update({ id, storeId }, patch);
+        }
+        return toDetail(await this.findWithRelations(manager, storeId, id));
+      }),
+    );
+  }
+
+  /** Edit the sale of a reserved or sold listing without changing its availability. */
+  async editSale(
+    actor: ListingActor,
+    id: string,
+    request: ListingSaleRequest,
+  ): Promise<AdminListingDetail> {
+    const { storeId } = actor;
+    return withSaleConflicts(() =>
+      this.dataSource.transaction(async (manager) => {
+        const listing = await lockListing(manager, storeId, id);
+        const outcome = canEditSale(
+          listing.availability,
+          listing.buyerId !== null,
+          request.buyer !== undefined,
+        );
+        if (outcome === "stale") {
+          throw new AppException(HttpStatus.CONFLICT, SALE_CHANGED);
+        }
+        if (outcome === "refuse") {
+          throw new AppException(HttpStatus.BAD_REQUEST, EDIT_NEEDS_BUYER);
+        }
+
+        const patch: QueryDeepPartialEntity<Listing> = definedOnly({
+          agreedPriceCents: request.agreedPriceCents,
+          paid: request.paid,
+          saleNotes: request.notes,
+        });
+        if (request.buyer) {
+          patch.buyerId = (
+            await resolveBuyer(manager, storeId, request.buyer)
+          ).id;
+        }
+        await manager.getRepository(Listing).update({ id, storeId }, patch);
+        return toDetail(await this.findWithRelations(manager, storeId, id));
+      }),
+    );
   }
 
   /** Copy a listing into a new draft without photos. */
@@ -280,20 +385,6 @@ export class ListingsService {
     for (const key of keys) await this.media.remove(key);
   }
 
-  /** The actor's store, narrowed to their assigned listings for sellers. */
-  private visibleTo(actor: ListingActor): SelectQueryBuilder<Listing> {
-    const query = this.listings
-      .createQueryBuilder("l")
-      .where("l.store_id = :storeId", { storeId: actor.storeId });
-    if (isManager(actor.role)) return query;
-    return query.andWhere(
-      `EXISTS (SELECT 1 FROM listing_sellers assigned
-                WHERE assigned.listing_id = l.id
-                  AND assigned.seller_id = :actorSellerId)`,
-      { actorSellerId: actor.sellerId },
-    );
-  }
-
   private async findWithRelations(
     manager: EntityManager,
     storeId: string,
@@ -301,12 +392,65 @@ export class ListingsService {
   ): Promise<Listing> {
     const listing = await manager.getRepository(Listing).findOne({
       where: { id, storeId },
-      relations: { category: true, sellers: { seller: true }, images: true },
+      relations: {
+        category: true,
+        sellers: { seller: true },
+        images: true,
+        buyer: true,
+      },
       order: { images: { position: "ASC" } },
     });
     if (!listing) throw listingNotFound();
     return listing;
   }
+}
+
+/** The columns a publication change touches; a published listing needs a photo. */
+function publishPatch(
+  listing: Pick<Listing, "images" | "publishedAt">,
+  publication: Publication | undefined,
+): Partial<Pick<Listing, "publication" | "publishedAt">> {
+  if (publication === undefined) return {};
+  if (publication !== "published") return { publication };
+  if (!canPublish(listing.images.length)) {
+    throw new AppException(
+      HttpStatus.UNPROCESSABLE_ENTITY,
+      PUBLISH_REQUIRES_PHOTO,
+    );
+  }
+  return { publication, publishedAt: listing.publishedAt ?? new Date() };
+}
+
+/** The sale columns a status request writes: cleared on release, set on entering with a buyer. */
+async function statusSalePatch(
+  manager: EntityManager,
+  storeId: string,
+  transition: SaleTransition,
+  request: ListingStatusRequest,
+): Promise<QueryDeepPartialEntity<Listing>> {
+  if (transition.outcome === "release") return CLEARED_SALE;
+  if (transition.outcome !== "enter" || !request.buyer) {
+    return {};
+  }
+  const buyer = await resolveBuyer(manager, storeId, request.buyer);
+  return {
+    buyerId: buyer.id,
+    agreedPriceCents: transition.sale.agreedPriceCents,
+    paid: transition.sale.paid,
+    saleNotes: transition.sale.notes,
+  };
+}
+
+const CLEARED_SALE = {
+  buyerId: null,
+  agreedPriceCents: null,
+  paid: false,
+  saleNotes: null,
+};
+
+/** A buyer removed mid-write breaks the foreign key. */
+function withSaleConflicts<T>(run: () => Promise<T>): Promise<T> {
+  return withConflicts(run, { "23503": BUYER_NOT_IN_STORE });
 }
 
 export async function lockListing(
@@ -374,10 +518,10 @@ async function assertReferencesBelongToStore(
   }
 }
 
-function definedOnly(patch: Omit<ListingInput, "sellerIds">): Partial<Listing> {
+function definedOnly<T extends object>(patch: T): Partial<T> {
   return Object.fromEntries(
     Object.entries(patch).filter(([, value]) => value !== undefined),
-  ) as Partial<Listing>;
+  ) as Partial<T>;
 }
 
 function toSummary(
@@ -400,6 +544,7 @@ function toSummary(
     })),
     coverUrl: coverKey ? mediaUrls(coverKey).sm : null,
     imageCount,
+    sale: toAdminSale(listing),
     updatedAt: listing.updatedAt.toISOString(),
   };
 }

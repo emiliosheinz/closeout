@@ -389,6 +389,43 @@ describe("public catalog", () => {
     expect(bodies[0].cover.lg).toBe(`/media/${image.storage_key}-lg.webp`);
   });
 
+  it("never exposes the buyer or sale info of a sold listing", async () => {
+    const listing = await publish({ title: "Vendida", availability: "sold" });
+    await ctx.dataSource.query(
+      `WITH buyer AS (
+         INSERT INTO buyers (store_id, name, name_key, whatsapp_number)
+         VALUES ($1, 'Maria Compradora', 'maria compradora', '5511911112222')
+         RETURNING id
+       )
+       UPDATE listings SET buyer_id = (SELECT id FROM buyer),
+         agreed_price_cents = 987654, paid = true, sale_notes = 'segredo da venda'
+       WHERE id = $2`,
+      [admin.storeId, listing.id],
+    );
+    const bodies = [
+      (await get(`/listings/${listing.slug}`).expect(200)).body,
+      (await get("/listings?availability=all").expect(200)).body,
+      (
+        await as(ctx.app, admin.cookie)
+          .get(`/stores/${admin.storeId}/listings/${listing.id}/preview`)
+          .expect(200)
+      ).body,
+    ];
+    for (const body of bodies) {
+      const json = JSON.stringify(body);
+      for (const secret of [
+        "Maria Compradora",
+        "5511911112222",
+        "segredo da venda",
+        "agreedPriceCents",
+        "paid",
+        "buyer",
+      ]) {
+        expect(json).not.toContain(secret);
+      }
+    }
+  });
+
   it("summarizes the store with derived counts, category counts and reachable sellers", async () => {
     await publish({
       title: "A",

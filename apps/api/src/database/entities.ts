@@ -1,5 +1,6 @@
 import { Session } from "@/auth/entities/session.entity";
 import { User } from "@/auth/entities/user.entity";
+import { Buyer } from "@/buyers/entities/buyer.entity";
 import { Listing } from "@/catalog/entities/listing.entity";
 import { ListingImage } from "@/catalog/entities/listing-image.entity";
 import { ListingSeller } from "@/catalog/entities/listing-seller.entity";
@@ -17,6 +18,7 @@ export const ENTITIES = [
   StoreMember,
   Category,
   Seller,
+  Buyer,
   Listing,
   ListingImage,
   ListingSeller,

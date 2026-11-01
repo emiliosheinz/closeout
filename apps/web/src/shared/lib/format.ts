@@ -16,6 +16,17 @@ export const DEFAULT_CURRENCY = "BRL";
 /** Fixed so server and browser render the same calendar day. */
 export const DEFAULT_TIME_ZONE = "America/Sao_Paulo";
 
+/** An amount of money, zero included ("R$ 0,00"); a price treats zero as "Grátis". */
+export function formatMoney(
+  cents: number,
+  locale = DEFAULT_LOCALE,
+  currency = DEFAULT_CURRENCY,
+): string {
+  return new Intl.NumberFormat(locale, { style: "currency", currency })
+    .format(cents / 100)
+    .replace(/ /g, " ");
+}
+
 /** `null` means "a combinar"; zero is a real price ("grátis"). */
 export function formatPrice(
   priceCents: number | null,
@@ -24,9 +35,7 @@ export function formatPrice(
 ): string {
   if (priceCents === null) return "Preço a combinar";
   if (priceCents === 0) return "Grátis";
-  return new Intl.NumberFormat(locale, { style: "currency", currency })
-    .format(priceCents / 100)
-    .replace(/ /g, " ");
+  return formatMoney(priceCents, locale, currency);
 }
 
 /** Short form for price stickers: whole reais drop the cents. */
@@ -65,6 +74,13 @@ export const PUBLICATION_LABELS: Record<Publication, string> = {
   published: "Publicado",
   archived: "Arquivado",
 };
+
+export const BUYER_MATCH_LABELS = {
+  existing: "Comprador existente",
+  new: "Novo comprador",
+} as const;
+
+export const PAYMENT_LABELS = { paid: "Pago", unpaid: "Não pago" } as const;
 
 export const AVAILABILITY_FILTER_LABELS = {
   listed: "À venda",

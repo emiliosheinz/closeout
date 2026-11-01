@@ -42,6 +42,7 @@ const SCHEMA_MIGRATIONS = [
   "MultipleSellersPerListing1792262257411",
   "MembersOwnContactProfiles1792802868935",
   "WaitlistSignups1793408283963",
+  "BuyersAndSaleInfo1793461192669",
 ];
 
 /** The schema before contact profiles were tied to members. */
@@ -216,6 +217,10 @@ describe("production migrator", () => {
         ${listing(STORE_A, "dividido")}
         ${listing(STORE_A, "duplicado")}
         ${listing(STORE_A, "de-fora")}
+        ${listing(STORE_A, "reservado")}
+        ${listing(STORE_A, "vendido")}
+        UPDATE listings SET availability = 'reserved' WHERE slug = 'reservado';
+        UPDATE listings SET availability = 'sold' WHERE slug = 'vendido';
         INSERT INTO listing_sellers (listing_id, seller_id)
         SELECT l.id, s.id FROM listings l JOIN sellers s ON (l.slug, s.id) IN (
           ('orfao', '${LOGINLESS}'::uuid),
@@ -227,6 +232,23 @@ describe("production migrator", () => {
       expect(await migrate(dataSource(database))).toEqual([
         "MembersOwnContactProfiles1792802868935",
         "WaitlistSignups1793408283963",
+        "BuyersAndSaleInfo1793461192669",
+      ]);
+
+      expect(
+        await query(
+          database,
+          `SELECT slug, availability, buyer_id, paid FROM listings
+            WHERE slug IN ('reservado', 'vendido') ORDER BY slug`,
+        ),
+      ).toEqual([
+        {
+          slug: "reservado",
+          availability: "reserved",
+          buyer_id: null,
+          paid: false,
+        },
+        { slug: "vendido", availability: "sold", buyer_id: null, paid: false },
       ]);
 
       const profiles = await query(
@@ -259,6 +281,8 @@ describe("production migrator", () => {
         { slug: "dividido", seller_id: OWNER_PROFILE },
         { slug: "duplicado", seller_id: OWNER_PROFILE },
         { slug: "orfao", seller_id: OWNER_PROFILE },
+        { slug: "reservado", seller_id: OWNER_PROFILE },
+        { slug: "vendido", seller_id: OWNER_PROFILE },
       ]);
     });
 
@@ -362,6 +386,122 @@ describe("production migrator", () => {
           `SELECT COUNT(*)::int AS remaining FROM sellers WHERE user_id = '${OWNER}'`,
         ),
       ).toEqual([{ remaining: 0 }]);
+    });
+  });
+
+  describe("recording sales", () => {
+    const BUYER = id("201");
+
+    async function withStores(): Promise<string> {
+      const database = await scratchDatabase();
+      await migrate(dataSource(database));
+      await query(
+        database,
+        `INSERT INTO stores (id, slug, name) VALUES
+           ('${STORE_A}', 'loja-a', 'Loja A'), ('${STORE_B}', 'loja-b', 'Loja B');
+         INSERT INTO categories (store_id, slug, name, position) VALUES
+           ('${STORE_A}', 'moveis', 'Móveis', 0);
+         INSERT INTO buyers (id, store_id, name, name_key) VALUES
+           ('${BUYER}', '${STORE_A}', 'Ana', 'ana');`,
+      );
+      return database;
+    }
+
+    const insertListing = (
+      database: string,
+      availability: string,
+      slug: string,
+    ) =>
+      query(
+        database,
+        `INSERT INTO listings (store_id, category_id, slug, title, condition, availability)
+         SELECT '${STORE_A}', id, '${slug}', '${slug}', 'good', '${availability}'
+           FROM categories WHERE store_id = '${STORE_A}'`,
+      );
+
+    const setSale = (database: string, slug: string, assignments: string) =>
+      query(
+        database,
+        `UPDATE listings SET ${assignments} WHERE slug = '${slug}'`,
+      );
+
+    it("keeps sale info only on held listings that have a buyer", async () => {
+      const database = await withStores();
+      await insertListing(database, "available", "livre");
+      await insertListing(database, "reserved", "legado");
+      await insertListing(database, "sold", "vendido");
+
+      await expect(
+        setSale(database, "livre", `buyer_id = '${BUYER}'`),
+      ).rejects.toThrow("listings_available_has_no_sale");
+      await expect(
+        setSale(database, "legado", "agreed_price_cents = 1000"),
+      ).rejects.toThrow("listings_sale_needs_buyer");
+      await expect(
+        setSale(database, "legado", "sale_notes = 'x'"),
+      ).rejects.toThrow("listings_sale_needs_buyer");
+      await expect(setSale(database, "legado", "paid = true")).rejects.toThrow(
+        "listings_sale_needs_buyer",
+      );
+      await expect(
+        setSale(
+          database,
+          "vendido",
+          `buyer_id = '${BUYER}', agreed_price_cents = 100000001`,
+        ),
+      ).rejects.toThrow("listings_agreed_price_valid");
+
+      expect(
+        await query(
+          database,
+          `SELECT paid, buyer_id FROM listings WHERE slug = 'legado'`,
+        ),
+      ).toEqual([{ paid: false, buyer_id: null }]);
+    });
+
+    it("refuses a buyer phone that is not international digits", async () => {
+      const database = await withStores();
+      await expect(
+        query(
+          database,
+          `INSERT INTO buyers (store_id, name, name_key, whatsapp_number)
+           VALUES ('${STORE_A}', 'Bia', 'bia', '+5511988887777')`,
+        ),
+      ).rejects.toThrow("buyers_whatsapp_number_valid");
+    });
+
+    it("allows one buyer per name key in a store, and the same key in another store", async () => {
+      const database = await withStores();
+      const insertBuyer = (store: string) =>
+        query(
+          database,
+          `INSERT INTO buyers (store_id, name, name_key)
+           VALUES ('${store}', 'ANA', 'ana')`,
+        );
+
+      await expect(insertBuyer(STORE_A)).rejects.toThrow(
+        "buyers_store_name_key_uq",
+      );
+      await insertBuyer(STORE_B);
+    });
+
+    it("refuses deleting a linked buyer, and removes buyers and listings with their store", async () => {
+      const database = await withStores();
+      await insertListing(database, "sold", "vendido");
+      await setSale(database, "vendido", `buyer_id = '${BUYER}'`);
+
+      await expect(
+        query(database, `DELETE FROM buyers WHERE id = '${BUYER}'`),
+      ).rejects.toThrow("violates foreign key constraint");
+
+      await query(database, `DELETE FROM stores WHERE id = '${STORE_A}'`);
+      expect(
+        await query(
+          database,
+          `SELECT (SELECT COUNT(*)::int FROM buyers) AS buyers,
+                  (SELECT COUNT(*)::int FROM listings) AS listings`,
+        ),
+      ).toEqual([{ buyers: 0, listings: 0 }]);
     });
   });
 

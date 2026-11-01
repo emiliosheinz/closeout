@@ -4,6 +4,7 @@ import { TypeOrmModule } from "@nestjs/typeorm";
 import { LoggerModule } from "nestjs-pino";
 import type { Logger } from "pino";
 import { AuthModule } from "./auth/auth.module";
+import { BuyersModule } from "./buyers/buyers.module";
 import { CatalogModule } from "./catalog/catalog.module";
 import { type AppModuleConfig, configModule } from "./config/config.module";
 import { dataSourceOptions } from "./database/connection";
@@ -23,6 +24,7 @@ import { WaitlistModule } from "./waitlist/waitlist.module";
     SellersModule,
     MediaModule,
     CatalogModule,
+    BuyersModule,
     InvitesModule,
     WaitlistModule,
   ],

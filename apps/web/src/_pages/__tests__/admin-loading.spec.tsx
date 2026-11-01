@@ -7,6 +7,7 @@ const PANEL = join(process.cwd(), "src/app/admin/(panel)");
 
 const LOADINGS: [string, () => Promise<{ default: ComponentType }>][] = [
   ["(listings)", () => import("@/app/admin/(panel)/(listings)/loading")],
+  ["buyers", () => import("@/app/admin/(panel)/buyers/loading")],
   ["team", () => import("@/app/admin/(panel)/team/loading")],
   ["store", () => import("@/app/admin/(panel)/store/loading")],
   ["listings/new", () => import("@/app/admin/(panel)/listings/new/loading")],

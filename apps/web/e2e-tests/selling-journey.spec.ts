@@ -1,8 +1,10 @@
 import { expect, test } from "@playwright/test";
 import {
   ADMIN_WHATSAPP,
+  chooseAvailability,
   findInAdmin,
   hydrated,
+  listingMenu,
   listingRows,
   STORE,
   samplePhoto,
@@ -10,6 +12,7 @@ import {
 } from "./helpers";
 
 const TITLE = `Luminária de teste ${Date.now()}`;
+const BUYER = "Ana Comprou";
 
 test.describe
   .serial("from listing to WhatsApp and back", () => {
@@ -74,9 +77,14 @@ test.describe
       ).toBeVisible();
       publicPath = new URL(page.url()).pathname;
       await expect(page.getByText("R$ 1.234,50").first()).toBeVisible();
-      const image = await page
-        .locator('meta[property="og:image"]')
-        .getAttribute("content");
+      // After the client navigation the catalog's preview image can linger a
+      // moment beside the item's; the item's is the one with its title as alt.
+      const ogImage = page.locator('meta[property="og:image"]');
+      await expect(
+        page.locator('meta[property="og:image:alt"]'),
+      ).toHaveAttribute("content", TITLE);
+      await expect(ogImage).toHaveCount(1);
+      const image = await ogImage.getAttribute("content");
       expect(
         (await page.request.get(image ?? "")).headers()["content-type"],
       ).toBe("image/jpeg");
@@ -98,15 +106,35 @@ test.describe
       await signIn(page);
       await findInAdmin(page, TITLE);
       const row = listingRows(page).filter({ hasText: TITLE });
-      const availability = row.getByRole("combobox", {
-        name: `Disponibilidade de ${TITLE}`,
-      });
-      await availability.click();
-      await page.getByRole("option", { name: "Reservado" }).click();
-      await expect(availability).toHaveText("Reservado");
+      await chooseAvailability(page, TITLE, "Reservado");
+      const dialog = page.getByRole("dialog");
+      await expect(dialog.getByLabel("Valor combinado (R$)")).toHaveValue(
+        "1234,50",
+      );
+      await dialog.getByLabel("Nome do comprador").fill(BUYER);
+      await dialog
+        .getByRole("button", { name: "Marcar como reservado" })
+        .click();
+      await expect(dialog).toBeHidden();
+      await expect(row).toContainText("Reservado");
+      await expect(row).toContainText(BUYER);
+      await expect(row).toContainText("Não pago");
+
+      await (await listingMenu(page, TITLE))
+        .getByRole("menuitem", { name: "Marcar como pago" })
+        .click();
+      await expect(row).toContainText("Pago");
+      await expect(row).not.toContainText("Não pago");
+      await page.reload();
+      await hydrated(page);
+      await expect(row).toContainText("Pago");
+      await expect(row).not.toContainText("Não pago");
       await expect(
-        page.getByText(`"${TITLE}" marcado como reservado.`),
+        (await listingMenu(page, TITLE)).getByRole("menuitem", {
+          name: "Marcar como não pago",
+        }),
       ).toBeVisible();
+      await page.keyboard.press("Escape");
 
       const visitor = await browser.newPage();
       await visitor.goto(`${STORE}?availability=reserved`);
@@ -114,12 +142,11 @@ test.describe
         visitor.getByRole("article").filter({ hasText: TITLE }),
       ).toContainText("Reservado");
 
-      await availability.click();
-      await page.getByRole("option", { name: "Vendido" }).click();
-      await expect(availability).toHaveText("Vendido");
-      await expect(
-        page.getByText(`"${TITLE}" marcado como vendido.`),
-      ).toBeVisible();
+      await chooseAvailability(page, TITLE, "Vendido");
+      await expect(dialog.getByLabel("Nome do comprador")).toHaveValue(BUYER);
+      await dialog.getByRole("button", { name: "Marcar como vendido" }).click();
+      await expect(dialog).toBeHidden();
+      await expect(row).toContainText("Vendido");
 
       await visitor.goto(STORE);
       await expect(
@@ -137,6 +164,13 @@ test.describe
         }),
       ).toBeVisible();
       await visitor.close();
+
+      await chooseAvailability(page, TITLE, "Disponível");
+      await page
+        .getByRole("button", { name: "Voltar para disponível" })
+        .click();
+      await expect(row).toContainText("Disponível");
+      await expect(row).not.toContainText(BUYER);
     });
 
     test("a copy is made as a draft, and deleting the listing takes it off its public URL", async ({
@@ -146,7 +180,9 @@ test.describe
 
       await test.step("duplicating opens a draft copy", async () => {
         await findInAdmin(page, TITLE);
-        await page.getByRole("button", { name: `Duplicar ${TITLE}` }).click();
+        await (await listingMenu(page, TITLE))
+          .getByRole("menuitem", { name: "Duplicar" })
+          .click();
         await page.getByRole("button", { name: "Duplicar anúncio" }).click();
         await expect(page).toHaveURL(/notice=copied/);
         await expect(page.getByRole("heading", { level: 1 })).toHaveText(
@@ -163,8 +199,8 @@ test.describe
         const rows = listingRows(page);
         await expect(rows).toHaveCount(2);
 
-        await page
-          .getByRole("button", { name: `Excluir ${TITLE}`, exact: true })
+        await (await listingMenu(page, TITLE))
+          .getByRole("menuitem", { name: "Excluir" })
           .click();
         const dialog = page.getByRole("alertdialog");
         await expect(dialog).toContainText(

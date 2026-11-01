@@ -97,6 +97,14 @@
   }
 }
 
+/* Pages with and without a scrollbar keep the same content edge (where the
+   scrollbar takes room). Unlayered: inside the base layer the build drops it. */
+@media (pointer: fine) {
+  html {
+    scrollbar-gutter: stable;
+  }
+}
+
 /* Native selects keep their behavior but drop the platform arrow, which
    sits flush against the border; ours gets the same inset as the text.
    Unlayered so it outranks the padding utilities on each control. */

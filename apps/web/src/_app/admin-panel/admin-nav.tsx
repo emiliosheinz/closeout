@@ -9,6 +9,7 @@ import { cn } from "@/shared/lib/utils";
 
 const LINKS: { href: string; label: string; managersOnly?: boolean }[] = [
   { href: "/admin", label: "Anúncios" },
+  { href: "/admin/buyers", label: "Compradores" },
   { href: "/admin/team", label: "Equipe" },
   { href: "/admin/store", label: "Loja", managersOnly: true },
 ];

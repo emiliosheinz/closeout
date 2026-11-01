@@ -34,3 +34,20 @@ export function sellerContactUrl(
     `Oi! Vi o catálogo "${storeName}" e queria tirar uma dúvida.`,
   )}`;
 }
+
+/** Plain `wa.me` chat link, or null when the number is not a stored number. */
+export function chatUrl(whatsappNumber: string | null): string | null {
+  if (!whatsappNumber || !isStoredNumber(whatsappNumber)) return null;
+  return `https://wa.me/${whatsappNumber}`;
+}
+
+/**
+ * Shows a stored digits-only number the way people write it: a Brazilian
+ * number as "+55 11 98888-7777", any other as "+" and its digits. The form
+ * fields accept it back as typed.
+ */
+export function displayNumber(number: string | null): string {
+  if (!number) return "";
+  const br = /^55(\d{2})(\d{4,5})(\d{4})$/.exec(number);
+  return br ? `+55 ${br[1]} ${br[2]}-${br[3]}` : `+${number}`;
+}

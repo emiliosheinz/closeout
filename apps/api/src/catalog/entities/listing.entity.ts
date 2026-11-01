@@ -16,6 +16,7 @@ import {
   Unique,
   UpdateDateColumn,
 } from "typeorm";
+import { Buyer } from "@/buyers/entities/buyer.entity";
 import { Category } from "@/stores/entities/category.entity";
 import { Store } from "@/stores/entities/store.entity";
 import type { ListingAttribute } from "../listing-types";
@@ -36,6 +37,7 @@ import { ListingSeller } from "./listing-seller.entity";
   "publishedAt",
 ])
 @Index("listings_category_idx", ["storeId", "categoryId"])
+@Index("listings_buyer_idx", ["buyerId"])
 @Check(
   "listings_condition_valid",
   `"condition" IN ('new', 'like_new', 'good', 'fair', 'for_parts')`,
@@ -55,6 +57,20 @@ import { ListingSeller } from "./listing-seller.entity";
 @Check(
   "listings_price_non_negative",
   `"price_cents" IS NULL OR "price_cents" >= 0`,
+)
+@Check(
+  "listings_agreed_price_valid",
+  // MAX_PRICE_CENTS from the contracts, spelled out: entities import only
+  // types from them, so the migration CLI runs without building the package.
+  `"agreed_price_cents" IS NULL OR ("agreed_price_cents" >= 0 AND "agreed_price_cents" <= 100000000)`,
+)
+@Check(
+  "listings_available_has_no_sale",
+  `"availability" <> 'available' OR ("buyer_id" IS NULL AND "agreed_price_cents" IS NULL AND "sale_notes" IS NULL AND "paid" = false)`,
+)
+@Check(
+  "listings_sale_needs_buyer",
+  `"buyer_id" IS NOT NULL OR ("agreed_price_cents" IS NULL AND "sale_notes" IS NULL AND "paid" = false)`,
 )
 export class Listing {
   @PrimaryGeneratedColumn("uuid")
@@ -94,6 +110,22 @@ export class Listing {
 
   @Column({ type: "text", default: "draft" })
   declare publication: Publication;
+
+  @Column({ name: "buyer_id", type: "uuid", nullable: true })
+  declare buyerId: string | null;
+
+  @ManyToOne(() => Buyer, { onDelete: "NO ACTION" })
+  @JoinColumn({ name: "buyer_id" })
+  declare buyer: Buyer | null;
+
+  @Column({ name: "agreed_price_cents", type: "int", nullable: true })
+  declare agreedPriceCents: number | null;
+
+  @Column({ type: "boolean", default: false })
+  declare paid: boolean;
+
+  @Column({ name: "sale_notes", type: "text", nullable: true })
+  declare saleNotes: string | null;
 
   @Column({ type: "jsonb", default: () => "'[]'" })
   declare attributes: ListingAttribute[];

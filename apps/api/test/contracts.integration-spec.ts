@@ -2,6 +2,8 @@ import {
   adminImageSchema,
   adminListingDetailSchema,
   adminListingSummarySchema,
+  buyerSchema,
+  buyerSummarySchema,
   categorySchema,
   dashboardCountsSchema,
   healthResponseSchema,
@@ -43,6 +45,7 @@ const NOT_PARSED = new Set([
   "GET /media/:file", // image bytes
   "POST /auth/logout", // 204
   "DELETE /stores/:storeId/listings/:id", // 204
+  "DELETE /stores/:storeId/buyers/:id", // 204
   "DELETE /stores/:storeId/members/:userId", // 204
   "DELETE /stores/:storeId/invites/:id", // 204
   "POST /waitlist/signups", // 204
@@ -139,6 +142,36 @@ describe("response contracts", () => {
       }
     });
 
+    it("parses the list and detail of a listing with a buyer", async () => {
+      const [buyer] = await ctx.dataSource.query(
+        `INSERT INTO buyers (store_id, name, name_key) VALUES ($1, 'Ana', 'ana') RETURNING id`,
+        [admin.storeId],
+      );
+      await ctx.dataSource.query(
+        `UPDATE listings SET buyer_id = $2, agreed_price_cents = 900, paid = true, sale_notes = 'ok' WHERE id = $1`,
+        [sold.id, buyer.id],
+      );
+
+      const list = await client().get(`${base()}/listings`).expect(200);
+      const detail = await client()
+        .get(`${base()}/listings/${sold.id}`)
+        .expect(200);
+
+      for (const item of list.body.items) {
+        expectParses(
+          "GET /stores/:storeId/listings",
+          adminListingSummarySchema,
+          item,
+        );
+      }
+      expectParses(
+        "GET /stores/:storeId/listings/:id",
+        adminListingDetailSchema,
+        detail.body,
+      );
+      expect(detail.body.sale.buyer.name).toBe("Ana");
+    });
+
     it("parses a listing with photos and one without", async () => {
       for (const id of [withPhoto.id, draft.id]) {
         const res = await client().get(`${base()}/listings/${id}`).expect(200);
@@ -198,6 +231,18 @@ describe("response contracts", () => {
       expect(res.body.items.length).toBeGreaterThan(0);
       for (const item of res.body.items)
         expectParses("GET /stores/:storeId/categories", categorySchema, item);
+    });
+
+    it("parses the buyers", async () => {
+      await client()
+        .patch(`${base()}/listings/${draft.id}/status`)
+        .send({ availability: "reserved", buyer: { name: "Ana" } })
+        .expect(200);
+      const res = await client().get(`${base()}/buyers`).expect(200);
+      expect(res.body.items).toHaveLength(1);
+      for (const item of res.body.items) {
+        expectParses("GET /stores/:storeId/buyers", buyerSummarySchema, item);
+      }
     });
 
     it("parses the sellers, with and without a contact number", async () => {
@@ -270,12 +315,43 @@ describe("response contracts", () => {
       );
       const status = await client()
         .patch(`${base()}/listings/${draft.id}/status`)
-        .send({ availability: "reserved" })
+        .send({ availability: "reserved", buyer: { name: "Ana" } })
         .expect(200);
       expectParses(
         "PATCH /stores/:storeId/listings/:id/status",
         adminListingDetailSchema,
         status.body,
+      );
+    });
+
+    it("parses a status change that records a sale", async () => {
+      const res = await client()
+        .patch(`${base()}/listings/${draft.id}/status`)
+        .send({
+          availability: "reserved",
+          buyer: { name: "Ana" },
+          agreedPriceCents: 900,
+        })
+        .expect(200);
+
+      expectParses(
+        "PATCH /stores/:storeId/listings/:id/status",
+        adminListingDetailSchema,
+        res.body,
+      );
+      expect(res.body.sale.buyer.name).toBe("Ana");
+    });
+
+    it("parses a sale edit", async () => {
+      const res = await client()
+        .patch(`${base()}/listings/${sold.id}/sale`)
+        .send({ buyer: { name: "Ana" }, paid: true })
+        .expect(200);
+
+      expectParses(
+        "PATCH /stores/:storeId/listings/:id/sale",
+        adminListingDetailSchema,
+        res.body,
       );
     });
 
@@ -330,6 +406,41 @@ describe("response contracts", () => {
       expectParses(
         "PATCH /stores/:storeId/members/:userId",
         teamMemberSchema,
+        res.body,
+      );
+    });
+
+    it("parses a buyer update", async () => {
+      await client()
+        .patch(`${base()}/listings/${draft.id}/status`)
+        .send({ availability: "reserved", buyer: { name: "Ana" } })
+        .expect(200);
+      const [buyer] = (await client().get(`${base()}/buyers`).expect(200)).body
+        .items;
+      const res = await client()
+        .patch(`${base()}/buyers/${buyer.id}`)
+        .send({ name: "Ana Lima", whatsappNumber: "+55 11 98888-7777" })
+        .expect(200);
+      expectParses("PATCH /stores/:storeId/buyers/:id", buyerSchema, res.body);
+    });
+
+    it("parses the target of a buyer merge", async () => {
+      for (const name of ["Ana", "Bia"]) {
+        const listing = await insertListing(ctx.dataSource, admin);
+        await client()
+          .patch(`${base()}/listings/${listing.id}/status`)
+          .send({ availability: "reserved", buyer: { name } })
+          .expect(200);
+      }
+      const [ana, bia] = (await client().get(`${base()}/buyers`).expect(200))
+        .body.items;
+      const res = await client()
+        .post(`${base()}/buyers/${ana.id}/merge`)
+        .send({ targetId: bia.id })
+        .expect(201);
+      expectParses(
+        "POST /stores/:storeId/buyers/:id/merge",
+        buyerSchema,
         res.body,
       );
     });

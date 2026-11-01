@@ -56,6 +56,22 @@ const assigned = async (fx: Fixture) =>
       })
     ).id
   }`;
+const soldListing = async (fx: Fixture, sellerIds?: string[]) =>
+  `${store(fx)}/listings/${
+    (
+      await insertListing(dataSource(), fx.owner, {
+        availability: "sold",
+        sellerIds,
+      })
+    ).id
+  }`;
+const buyer = async (fx: Fixture) => {
+  const [row] = await dataSource().query(
+    `INSERT INTO buyers (store_id, name, name_key) VALUES ($1, $2, $3) RETURNING id`,
+    [fx.owner.storeId, `Ana ${nextId()}`, nextId()],
+  );
+  return row.id as string;
+};
 const ownProfile = (fx: Fixture, role: Role) =>
   ({
     owner: fx.owner.sellerId,
@@ -164,7 +180,7 @@ const CAPABILITIES: Capability[] = [
     call: async (fx) => ({
       method: "patch",
       url: `${await unassigned(fx)}/status`,
-      body: { availability: "reserved" },
+      body: { availability: "reserved", buyer: { name: "Ana" } },
     }),
     expected: [200, 200, 404, 404],
   },
@@ -173,7 +189,25 @@ const CAPABILITIES: Capability[] = [
     call: async (fx) => ({
       method: "patch",
       url: `${await assigned(fx)}/status`,
-      body: { availability: "reserved" },
+      body: { availability: "reserved", buyer: { name: "Ana" } },
+    }),
+    expected: [200, 200, 200, 404],
+  },
+  {
+    name: "edit the sale of an unassigned listing",
+    call: async (fx) => ({
+      method: "patch",
+      url: `${await soldListing(fx)}/sale`,
+      body: { buyer: { name: "Ana" } },
+    }),
+    expected: [200, 200, 404, 404],
+  },
+  {
+    name: "edit the sale of an assigned listing",
+    call: async (fx) => ({
+      method: "patch",
+      url: `${await soldListing(fx, [fx.seller.sellerId])}/sale`,
+      body: { buyer: { name: "Ana" } },
     }),
     expected: [200, 200, 200, 404],
   },
@@ -282,6 +316,37 @@ const CAPABILITIES: Capability[] = [
     name: "open the dashboard",
     call: async (fx) => ({ method: "get", url: `${store(fx)}/dashboard` }),
     expected: [200, 200, 200, 404],
+  },
+  {
+    name: "list buyers",
+    call: async (fx) => ({ method: "get", url: `${store(fx)}/buyers` }),
+    expected: [200, 200, 200, 404],
+  },
+  {
+    name: "edit a buyer",
+    call: async (fx) => ({
+      method: "patch",
+      url: `${store(fx)}/buyers/${await buyer(fx)}`,
+      body: { name: `Renomeado ${nextId()}` },
+    }),
+    expected: [200, 200, 200, 404],
+  },
+  {
+    name: "delete a buyer",
+    call: async (fx) => ({
+      method: "delete",
+      url: `${store(fx)}/buyers/${await buyer(fx)}`,
+    }),
+    expected: [204, 204, 204, 404],
+  },
+  {
+    name: "merge buyers",
+    call: async (fx) => ({
+      method: "post",
+      url: `${store(fx)}/buyers/${await buyer(fx)}/merge`,
+      body: { targetId: await buyer(fx) },
+    }),
+    expected: [201, 201, 201, 404],
   },
   {
     name: "list contact profiles",
