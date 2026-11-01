@@ -3,7 +3,6 @@ import type {
   Condition,
   Publication,
 } from "@closeout/contracts/enums";
-import { MAX_PRICE_CENTS } from "@closeout/contracts/schemas";
 import {
   Check,
   Column,
@@ -61,7 +60,9 @@ import { ListingSeller } from "./listing-seller.entity";
 )
 @Check(
   "listings_agreed_price_valid",
-  `"agreed_price_cents" IS NULL OR ("agreed_price_cents" >= 0 AND "agreed_price_cents" <= ${MAX_PRICE_CENTS})`,
+  // MAX_PRICE_CENTS from the contracts, spelled out: entities import only
+  // types from them, so the migration CLI runs without building the package.
+  `"agreed_price_cents" IS NULL OR ("agreed_price_cents" >= 0 AND "agreed_price_cents" <= 100000000)`,
 )
 @Check(
   "listings_available_has_no_sale",
