@@ -13,8 +13,6 @@ vi.mock("next/headers", () => ({
   cookies: async () => ({ get: () => ({ value: "token" }) }),
 }));
 
-const Nuqs = withNuqsTestingAdapter();
-
 const item = (
   overrides: Partial<ReturnType<typeof buyerSummary>["items"][number]> = {},
 ) => ({
@@ -56,12 +54,20 @@ const maria = buyerSummary({ id: "b-maria", name: "Maria Sílva" });
 async function renderBuyers(
   buyers: ReturnType<typeof buyerSummary>[],
   role: "owner" | "seller" = "owner",
+  search = "",
 ) {
   stubAdminApi({
     "/me": meResponse(role),
     "/stores/store-1/buyers": { items: buyers },
   });
+  const onUrlUpdate = vi.fn();
+  const Nuqs = withNuqsTestingAdapter({
+    searchParams: search,
+    onUrlUpdate,
+    hasMemory: true,
+  });
   renderPage(<Nuqs>{await BuyersPage()}</Nuqs>);
+  return () => new URLSearchParams(onUrlUpdate.mock.lastCall?.[0].queryString);
 }
 
 const NAMES = ["Álvaro", "Ana", "bruno", "Maria Sílva"];
@@ -71,16 +77,30 @@ const names = () =>
     .slice(1)
     .map((row) => NAMES.find((name) => row.textContent?.startsWith(name)));
 
+/** Matches the element whose whole text, screen-reader-only parts included, is `full`. */
+const text = (full: string) => (_: string, element: Element | null) =>
+  element?.textContent === full;
+
+const sortSelect = () => screen.getByRole("combobox", { name: /^Ordenar:/ });
+
+async function pick(trigger: HTMLElement, option: string) {
+  trigger.focus();
+  fireEvent.keyDown(trigger, { key: "Enter" });
+  fireEvent.keyDown(await screen.findByRole("option", { name: option }), {
+    key: "Enter",
+  });
+  await waitFor(() => expect(screen.queryByRole("listbox")).toBeNull());
+}
+
 describe("buyers page", () => {
-  it("links a buyer with a phone to their WhatsApp chat", async () => {
+  it("links a buyer's number to their WhatsApp chat", async () => {
     await renderBuyers([ana]);
-    expect(screen.getByRole("link", { name: "Ana" })).toHaveAttribute(
-      "href",
-      "https://wa.me/5511911112222",
-    );
+    expect(
+      screen.getByRole("link", { name: /^WhatsApp de Ana/ }),
+    ).toHaveAttribute("href", "https://wa.me/5511911112222");
   });
 
-  it("shows each item's availability, agreed price and payment, and counts the unpriced ones", async () => {
+  it("shows each item's availability, agreed price and payment, and what the buyer owes", async () => {
     await renderBuyers([ana]);
     const row = screen.getByRole("row", { name: /Ana/ });
     expect(within(row).getByRole("link", { name: "Sofá" })).toHaveAttribute(
@@ -88,17 +108,39 @@ describe("buyers page", () => {
       "/admin/listings/l-1",
     );
     expect(within(row).getByText("Vendido")).toBeInTheDocument();
-    expect(within(row).getAllByText("R$ 100,00")).toHaveLength(2);
+    expect(
+      within(row).getByText(text("R$ 100,00, Não pago")),
+    ).toBeInTheDocument();
     expect(within(row).getByText("Reservado")).toBeInTheDocument();
-    expect(within(row).getAllByText("Não pago")).toHaveLength(2);
-    expect(within(row).getByText("1 sem preço")).toBeInTheDocument();
+    expect(
+      within(row).getByText(text("Sem preço, Não pago")),
+    ).toBeInTheDocument();
+    expect(
+      within(row).getByText(text("R$ 100,00 a receber")),
+    ).toBeInTheDocument();
+    expect(within(row).getByText("+ 1 item sem preço")).toBeInTheDocument();
   });
 
-  it("marks a settled item as paid", async () => {
+  it("marks a settled item as paid and the buyer as settled", async () => {
     await renderBuyers([alvaro]);
     const row = screen.getByRole("row", { name: /Álvaro/ });
-    expect(within(row).getByText("Pago")).toBeInTheDocument();
-    expect(within(row).queryByText("Não pago")).toBeNull();
+    expect(within(row).getByText(text("R$ 100,00, Pago"))).toBeInTheDocument();
+    expect(within(row).queryByText(/Não pago/)).toBeNull();
+    expect(within(row).getByText("Quitado")).toBeInTheDocument();
+  });
+
+  it("counts the unpriced items of a buyer who owes no known amount", async () => {
+    await renderBuyers([
+      buyerSummary({
+        id: "b-caio",
+        name: "Caio",
+        items: [item({ agreedPriceCents: null })],
+        owedCents: 0,
+        unpricedCount: 1,
+      }),
+    ]);
+    expect(screen.getByText("1 item sem preço")).toBeInTheDocument();
+    expect(screen.queryByText("Quitado")).toBeNull();
   });
 
   it("totals what the shown buyers owe", async () => {
@@ -134,18 +176,37 @@ describe("buyers page", () => {
     expect(names()).toEqual(["Ana", "bruno", "Álvaro", "Maria Sílva"]);
   });
 
-  it("sorts by name ignoring case and accents, and reverses on a second click", async () => {
-    await renderBuyers([maria, bruno, alvaro, ana]);
-    const byName = screen.getByRole("button", { name: /Comprador/ });
-    fireEvent.click(byName);
+  it("sorts by name ignoring case and accents from the Ordenar select, and back by amount", async () => {
+    const url = await renderBuyers([maria, bruno, alvaro, ana]);
+    expect(sortSelect()).toHaveAccessibleName("Ordenar: Maior valor a receber");
+
+    await pick(sortSelect(), "Nome");
     await waitFor(() =>
       expect(names()).toEqual(["Álvaro", "Ana", "bruno", "Maria Sílva"]),
     );
+    expect(url().get("buyers-sort")).toBe("name-asc");
+    expect(sortSelect()).toHaveAccessibleName("Ordenar: Nome");
 
-    fireEvent.click(byName);
+    await pick(sortSelect(), "Maior valor a receber");
     await waitFor(() =>
-      expect(names()).toEqual(["Maria Sílva", "bruno", "Ana", "Álvaro"]),
+      expect(names()).toEqual(["Ana", "bruno", "Álvaro", "Maria Sílva"]),
     );
+  });
+
+  it.each([
+    [
+      "by name",
+      "?buyers-sort=name-asc",
+      ["Álvaro", "Ana", "bruno", "Maria Sílva"],
+    ],
+    [
+      "by amount for any other order",
+      "?buyers-sort=name-desc",
+      ["Ana", "bruno", "Álvaro", "Maria Sílva"],
+    ],
+  ])("reads the sort from the URL, %s", async (_name, search, order) => {
+    await renderBuyers([maria, bruno, alvaro, ana], "owner", search);
+    expect(names()).toEqual(order);
   });
 
   it("says there are no buyers yet", async () => {

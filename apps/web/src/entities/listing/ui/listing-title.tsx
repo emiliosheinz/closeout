@@ -19,15 +19,15 @@ export function ListingTitle({
     unreachableSellerIds.includes(seller.id),
   );
   return (
-    <div className="flex items-center gap-4">
-      <div className="size-16 shrink-0 overflow-hidden rounded-md bg-paper">
+    <div className="flex items-start gap-3.5">
+      <div className="size-14 shrink-0 overflow-hidden rounded-lg bg-paper">
         {listing.coverUrl ? (
           // biome-ignore lint/performance/noImgElement: small pre-sized variant.
           <img
             src={listing.coverUrl}
             alt=""
-            width={64}
-            height={64}
+            width={56}
+            height={56}
             className="size-full object-cover"
           />
         ) : (
@@ -42,11 +42,11 @@ export function ListingTitle({
       <div className="min-w-0">
         <Link
           href={`/admin/listings/${listing.id}`}
-          className="font-semibold hover:underline"
+          className="font-semibold text-ink hover:underline max-lg:block max-lg:pr-9"
         >
           {listing.title}
         </Link>
-        <p className="mt-0.5 text-sm text-muted">
+        <p className="mt-0.5 text-sm leading-snug text-muted max-lg:line-clamp-1">
           {listing.category.name}, por{" "}
           {joinNames(listing.sellers.map((seller) => seller.displayName))}
         </p>
@@ -56,7 +56,7 @@ export function ListingTitle({
           unreachable && (
             <Link
               href="/admin/team"
-              className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-stamp/10 px-2.5 py-1 text-xs font-semibold text-stamp hover:bg-stamp/15"
+              className="mt-1 inline-flex items-center gap-1.5 text-xs font-medium text-stamp hover:underline"
               title="Este item aparece na loja sem botão de contato."
             >
               <PhoneOff className="size-3.5" aria-hidden="true" />

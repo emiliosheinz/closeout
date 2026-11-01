@@ -1,8 +1,10 @@
 "use client";
 
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { Check } from "lucide-react";
 import Link from "next/link";
 import { BuyerContact, type BuyerSummary, buyerReads } from "@/entities/buyer";
+import { StatusDot } from "@/entities/listing";
 import { BuyerActions } from "@/features/buyer-actions";
 import { readQuery } from "@/shared/api";
 import {
@@ -16,13 +18,19 @@ import {
 } from "@/shared/lib/table-url-state";
 import { compareText, matchesSearch } from "@/shared/lib/text";
 import { cn } from "@/shared/lib/utils";
-import { displayNumber } from "@/shared/lib/whatsapp";
 import {
   DataTable,
   type DataTableColumns,
   useDataTable,
 } from "@/shared/ui/data-table/data-table";
 import { SearchInput } from "@/shared/ui/search-input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/ui/select";
 
 const urlState = createTableUrlState({
   prefix: "buyers-",
@@ -30,13 +38,24 @@ const urlState = createTableUrlState({
   defaultSort: { column: "owed", direction: "desc" },
 });
 
-// The actions menu is the last column and takes only its button's width. On
-// phones the first column takes all the room left and wraps its content there
-// instead of widening the table (max-w-0 lets a cell shrink below its content).
-const columnWidths =
-  "[&_tr>*:last-child]:w-px [&_tr>*:last-child]:text-right [&_th:nth-child(2)]:text-right [&_td:nth-child(2)]:text-right max-sm:[&_td:first-child]:w-full max-sm:[&_td:first-child]:max-w-0";
+// One column per buyer, plus the actions menu at the end, which takes only its
+// button's width. The amount owed is shown in the buyer's cell, on the name's
+// line, so it lines up with the item prices; its column only sorts (through
+// the sort select), so its cells are hidden and the headers are left to
+// screen readers. On phones the menu sits
+// in the corner. This depends on the order of `columns`.
+const layout = cn(
+  "[&_thead]:sr-only [&_tr>*:nth-child(2)]:hidden [&_td]:align-top sm:[&_tr>*:last-child]:w-px [&_td:last-child]:py-1.5",
+  "max-sm:[&_tr]:relative max-sm:[&_td:first-child]:pr-12 max-sm:[&_td:last-child]:absolute max-sm:[&_td:last-child]:top-1 max-sm:[&_td:last-child]:right-0",
+);
 
-const pill = "shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold";
+const SORTS = {
+  owed: {
+    label: "Maior valor a receber",
+    sort: { column: "owed", direction: "desc" },
+  },
+  name: { label: "Nome", sort: { column: "name", direction: "asc" } },
+} as const;
 
 type BuyerRow = { buyer: BuyerSummary; storeId: string; seller: boolean };
 
@@ -44,31 +63,38 @@ function focusHeading() {
   document.getElementById("buyers-heading")?.focus();
 }
 
+// Each item is one line: the title and its status, then the agreed price on
+// the right, next to what the buyer owes. A paid price is muted with a check,
+// so what is still owed stands out.
 function ItemLine({ item }: { item: BuyerSummary["items"][number] }) {
   return (
-    <li className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
-      <Link
-        href={`/admin/listings/${item.listingId}`}
-        title={item.title}
-        className="min-w-0 max-w-full truncate font-medium hover:underline"
-      >
-        {item.title}
-      </Link>
-      <span className={cn(pill, "bg-ink/5 text-ink-soft")}>
-        {AVAILABILITY_LABELS[item.availability]}
-      </span>
-      <span className="text-ink-soft">
-        {item.agreedPriceCents === null
-          ? "Sem preço"
-          : formatMoney(item.agreedPriceCents)}
+    <li className="flex items-baseline gap-3 py-1 text-sm">
+      <span className="flex min-w-0 flex-1 flex-col sm:flex-row sm:items-baseline sm:gap-x-3">
+        <Link
+          href={`/admin/listings/${item.listingId}`}
+          title={item.title}
+          className="min-w-0 max-w-full text-ink-soft hover:text-ink hover:underline sm:truncate"
+        >
+          {item.title}
+        </Link>
+        <span className="inline-flex shrink-0 items-center gap-1.5 text-xs text-muted">
+          <StatusDot status={item.availability} />
+          {AVAILABILITY_LABELS[item.availability]}
+        </span>
       </span>
       <span
         className={cn(
-          pill,
-          item.paid ? "bg-ink/5 text-ink-soft" : "bg-stamp/10 text-stamp",
+          "inline-flex shrink-0 items-center gap-1 tabular-nums",
+          item.paid ? "text-muted" : "text-ink-soft",
         )}
       >
-        {item.paid ? PAYMENT_LABELS.paid : PAYMENT_LABELS.unpaid}
+        {item.paid && <Check className="size-3.5 text-go" aria-hidden="true" />}
+        {item.agreedPriceCents === null
+          ? "Sem preço"
+          : formatMoney(item.agreedPriceCents)}
+        <span className="sr-only">
+          , {item.paid ? PAYMENT_LABELS.paid : PAYMENT_LABELS.unpaid}
+        </span>
       </span>
     </li>
   );
@@ -82,17 +108,13 @@ function BuyerCell({
   seller: boolean;
 }) {
   return (
-    <div className="min-w-0 py-1">
-      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
+    <div className="min-w-0">
+      <div className="flex flex-col gap-x-4 gap-y-0.5 sm:flex-row sm:items-baseline sm:justify-between">
         <BuyerContact buyer={buyer} />
-        {buyer.whatsappNumber && (
-          <span className="text-sm text-muted">
-            {displayNumber(buyer.whatsappNumber)}
-          </span>
-        )}
+        <OwedAmount buyer={buyer} className="sm:text-right" />
       </div>
       {buyer.items.length > 0 ? (
-        <ul className="mt-2 flex flex-col gap-1.5">
+        <ul className="mt-1.5">
           {buyer.items.map((item) => (
             <ItemLine key={item.listingId} item={item} />
           ))}
@@ -106,15 +128,40 @@ function BuyerCell({
   );
 }
 
-function OwedCell({ buyer }: { buyer: BuyerSummary }) {
-  return (
-    <div className="whitespace-nowrap">
-      <p className="font-semibold tabular-nums">
-        {formatMoney(buyer.owedCents)}
+const unpricedLabel = (count: number) =>
+  `${count} ${count === 1 ? "item" : "itens"} sem preço`;
+
+/**
+ * What the buyer owes: the amount, plus the unpaid items that have no agreed
+ * price yet (owed too, of an unknown amount), or "Quitado" when nothing is.
+ */
+function OwedAmount({
+  buyer,
+  className,
+}: {
+  buyer: BuyerSummary;
+  className?: string;
+}) {
+  const { owedCents, unpricedCount } = buyer;
+  if (owedCents === 0 && unpricedCount === 0) {
+    return <p className={cn("text-sm text-muted", className)}>Quitado</p>;
+  }
+  if (owedCents === 0) {
+    return (
+      <p className={cn("text-sm whitespace-nowrap text-muted", className)}>
+        {unpricedLabel(unpricedCount)}
       </p>
-      {buyer.unpricedCount > 0 && (
+    );
+  }
+  return (
+    <div className={cn("whitespace-nowrap", className)}>
+      <p className="font-semibold tabular-nums">
+        {formatMoney(owedCents)}
+        <span className="font-normal text-muted"> a receber</span>
+      </p>
+      {unpricedCount > 0 && (
         <p className="mt-0.5 text-xs text-muted">
-          {buyer.unpricedCount} sem preço
+          + {unpricedLabel(unpricedCount)}
         </p>
       )}
     </div>
@@ -139,7 +186,7 @@ const columns: DataTableColumns<BuyerRow> = [
     header: "A receber",
     accessorFn: (row) => row.buyer.owedCents,
     sortFn: (a, b) => a.original.buyer.owedCents - b.original.buyer.owedCents,
-    cell: ({ row }) => <OwedCell buyer={row.original.buyer} />,
+    cell: () => null,
   },
   {
     id: "acoes",
@@ -170,6 +217,9 @@ export function BuyersView({
 }) {
   const { data } = useSuspenseQuery(readQuery(buyerReads.list(storeId)));
   const [{ query, sort, page }, set] = useTableUrlState(urlState);
+  // Any other order in the URL (an old link) falls back to the default.
+  const sortKey: keyof typeof SORTS =
+    sort?.column === "name" && sort.direction === "asc" ? "name" : "owed";
   const shown = data.items
     .filter((buyer) => !query || matchesSearch(buyer.name, query))
     .sort((a, b) => compareText(a.name, b.name));
@@ -179,7 +229,7 @@ export function BuyersView({
     data: rows,
     columns,
     getRowId: (row) => row.buyer.id,
-    sort,
+    sort: SORTS[sortKey].sort,
     onSortChange: (next) => set({ sort: next }),
     page,
     onPageChange: (next) => set({ page: next }),
@@ -196,20 +246,42 @@ export function BuyersView({
         </p>
       ) : (
         <>
-          <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
-            <SearchInput
-              id="buyers-search"
-              label="Buscar compradores"
-              value={query}
-              onChange={(value) => set({ query: value })}
-              className="w-full sm:w-auto sm:flex-1"
-            />
-            <p className="rounded-xl border border-line bg-surface px-4 py-2 text-right">
-              <span className="block text-xs font-semibold text-muted">
-                Total a receber
-              </span>
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <SearchInput
+                id="buyers-search"
+                label="Buscar compradores"
+                value={query}
+                onChange={(value) => set({ query: value })}
+                className="w-full sm:w-72"
+              />
+              <Select
+                value={sortKey}
+                onValueChange={(key) =>
+                  set({ sort: SORTS[key as keyof typeof SORTS].sort })
+                }
+              >
+                {/* A combobox takes no name from its content. */}
+                <SelectTrigger
+                  aria-label={`Ordenar: ${SORTS[sortKey].label}`}
+                  className="h-11 w-full justify-start gap-2 rounded-full border-line bg-surface px-4 text-sm text-ink-soft shadow-none sm:w-auto [&>svg]:ml-auto"
+                >
+                  <span className="text-muted">Ordenar:</span>
+                  <SelectValue className="flex-none" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(SORTS).map(([key, { label }]) => (
+                    <SelectItem key={key} value={key}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <p className="flex items-baseline gap-2 sm:justify-end sm:pr-20">
+              <span className="text-sm text-muted">Total a receber</span>
               <span
-                className="text-xl font-extrabold tabular-nums"
+                className="text-lg font-semibold tabular-nums"
                 data-testid="buyers-total"
               >
                 {formatMoney(total)}
@@ -218,7 +290,7 @@ export function BuyersView({
           </div>
           <DataTable
             table={table}
-            className={columnWidths}
+            className={layout}
             empty={
               <p className="px-4 py-8 text-center text-ink-soft">{`Nenhum comprador com "${query}".`}</p>
             }

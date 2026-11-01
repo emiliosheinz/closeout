@@ -1,5 +1,11 @@
 import { expect, type Page, test } from "@playwright/test";
-import { findInAdmin, hydrated, listingRows, signIn } from "./helpers";
+import {
+  findInAdmin,
+  hydrated,
+  listingMenu,
+  listingRows,
+  signIn,
+} from "./helpers";
 
 const RUN = Date.now();
 const RITA = `Rita ${RUN}`;
@@ -20,10 +26,9 @@ async function reserveFirstAvailable(
   await hydrated(page);
   const row = listingRows(page).filter({ hasText: "Disponível" }).first();
   const title = (await row.getByRole("link").first().textContent()) ?? "";
-  await row
-    .getByRole("combobox", { name: `Disponibilidade de ${title}` })
+  await (await listingMenu(page, title))
+    .getByRole("menuitemradio", { name: "Reservado" })
     .click();
-  await page.getByRole("option", { name: "Reservado" }).click();
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel("Nome do comprador").fill(buyer);
   if (phone) await dialog.getByLabel("WhatsApp (opcional)").fill(phone);
@@ -62,10 +67,9 @@ test.describe
 
       await openBuyers(page);
       const row = buyerRow(page, RITA);
-      await expect(row.getByRole("link", { name: RITA })).toHaveAttribute(
-        "href",
-        "https://wa.me/5511988881111",
-      );
+      await expect(
+        row.getByRole("link", { name: `WhatsApp de ${RITA}:` }),
+      ).toHaveAttribute("href", "https://wa.me/5511988881111");
       await expect(row).toContainText(firstTitle);
       await expect(row).toContainText("Não pago");
       await expect(row).toContainText("R$ 100,00");
@@ -73,18 +77,14 @@ test.describe
       await page.goto("/admin");
       await findInAdmin(page, firstTitle);
       const board = listingRows(page).filter({ hasText: firstTitle });
-      await board
-        .getByRole("button", { name: `Comprador de ${firstTitle}` })
+      await (await listingMenu(page, firstTitle))
+        .getByRole("menuitem", { name: "Dados da venda" })
         .click();
       const dialog = page.getByRole("dialog");
       await dialog.getByLabel("Valor combinado (R$)").fill("60,00");
       await dialog.getByRole("button", { name: "Salvar" }).click();
       await expect(dialog).toBeHidden();
-      await expect(
-        board.getByRole("combobox", {
-          name: `Disponibilidade de ${firstTitle}`,
-        }),
-      ).toHaveText("Reservado");
+      await expect(board).toContainText("Reservado");
 
       await openBuyers(page);
       await expect(buyerRow(page, RITA)).toContainText("R$ 60,00");
@@ -122,15 +122,15 @@ test.describe
       await signIn(page);
       for (const title of [firstTitle, secondTitle]) {
         await findInAdmin(page, title);
-        const availability = page.getByRole("combobox", {
-          name: `Disponibilidade de ${title}`,
-        });
-        await availability.click();
-        await page.getByRole("option", { name: "Disponível" }).click();
+        await (await listingMenu(page, title))
+          .getByRole("menuitemradio", { name: "Disponível" })
+          .click();
         await page
           .getByRole("button", { name: "Voltar para disponível" })
           .click();
-        await expect(availability).toHaveText("Disponível");
+        await expect(
+          listingRows(page).filter({ hasText: title }),
+        ).toContainText("Disponível");
       }
 
       await openBuyers(page);

@@ -14,7 +14,7 @@ import {
 import {
   ListingBuyerLine,
   ListingRowActions,
-  ListingStatusControls,
+  ListingStatusSummary,
   useListings,
 } from "@/features/listing-actions";
 import { readQuery } from "@/shared/api";
@@ -78,7 +78,7 @@ const columns: DataTableColumns<Row> = [
     sortUndefined: "last",
     sortFn: (a, b, id) => a.getValue<number>(id) - b.getValue<number>(id),
     cell: ({ row }) => (
-      <span className="font-semibold whitespace-nowrap text-ink-soft">
+      <span className="font-semibold whitespace-nowrap text-ink tabular-nums">
         {formatPrice(row.original.listing.priceCents)}
       </span>
     ),
@@ -99,23 +99,18 @@ const columns: DataTableColumns<Row> = [
     id: "situacao",
     header: "Situação",
     enableSorting: false,
-    cell: ({ row }) => (
-      <ListingStatusControls
-        storeId={row.original.storeId}
-        listing={row.original.listing}
-        onStatusChange={row.original.onStatusChange}
-      />
-    ),
+    cell: ({ row }) => <ListingStatusSummary listing={row.original.listing} />,
   },
   {
     id: "acoes",
-    header: "Ações",
+    header: () => <span className="sr-only">Ações</span>,
     enableSorting: false,
     cell: ({ row }) => (
       <ListingRowActions
         storeId={row.original.storeId}
         storeSlug={row.original.storeSlug}
         listing={row.original.listing}
+        onStatusChange={row.original.onStatusChange}
       />
     ),
   },
@@ -129,17 +124,23 @@ const tab = (active: boolean) =>
       : "border border-line bg-surface text-ink-soft hover:border-ink/40",
   );
 
-// Below lg the table reflows into one card per row: the sort headers wrap
-// into a row of buttons and each row's cells stack, so nothing scrolls sideways.
-// The 2nd and 3rd cells (price, last update) share a line, so this depends on
+// The actions menu takes only its button's width, prices line up on the right
+// and every cell reads on the title's first line. Below lg the table reflows
+// into one card per row: the sort headers wrap into a row of buttons, the
+// title takes the first line, the price and status share the next one under
+// the title's text (the last update only orders the list, so its date and
+// sort button go), and the menu sits in the card's corner, so this depends on
 // the order of `columns`.
 const reflow = cn(
+  "[&_td]:align-top lg:[&_tr>*:last-child]:w-px lg:[&_tr>*:nth-child(2)]:text-right",
+  "lg:[&_td:last-child]:pt-1",
   "max-lg:[&_table]:block max-lg:[&_thead]:block max-lg:[&_tbody]:block",
-  "max-lg:[&_thead_tr]:flex max-lg:[&_thead_tr]:flex-wrap max-lg:[&_th:not([aria-sort])]:hidden",
-  "max-lg:[&_tbody_tr]:grid max-lg:[&_tbody_tr]:grid-cols-2 max-lg:[&_tbody_tr]:gap-x-4 max-lg:[&_tbody_tr]:py-2",
-  "max-lg:[&_td]:col-span-2 max-lg:[&_td:nth-child(2)]:col-span-1 max-lg:[&_td:nth-child(3)]:col-span-1",
+  "max-lg:[&_thead_tr]:flex max-lg:[&_thead_tr]:flex-wrap max-lg:[&_th:not([aria-sort])]:hidden max-lg:[&_th:nth-child(3)]:hidden",
+  "max-lg:[&_tbody_tr]:relative max-lg:[&_tbody_tr]:grid max-lg:[&_tbody_tr]:grid-cols-[auto_1fr] max-lg:[&_tbody_tr]:items-baseline max-lg:[&_tbody_tr]:gap-x-3 max-lg:[&_tbody_tr]:gap-y-1.5 max-lg:[&_tbody_tr]:py-3",
+  "max-lg:[&_td]:p-0 max-lg:[&_td:first-child]:col-span-2 max-lg:[&_td:nth-child(4)]:min-w-0 max-lg:[&_td:nth-child(2)]:pl-[4.375rem] max-lg:[&_td:nth-child(3)]:hidden",
+  "max-lg:[&_td:last-child]:absolute max-lg:[&_td:last-child]:top-1.5 max-lg:[&_td:last-child]:right-1",
   // Rows are boxes here, so the row takes the card inset instead of its edge cells.
-  "max-lg:[&_tr]:px-2 max-lg:[&_tr>*:first-child]:pl-2 max-lg:[&_tr>*:last-child]:pr-2 max-lg:[&_th]:content-center",
+  "max-lg:[&_tr]:px-4 max-lg:[&_tr>*:first-child]:pl-0 max-lg:[&_tr>*:last-child]:pr-0 max-lg:[&_th]:content-center",
 );
 
 const NO_PINS = new Map<string, AdminListingSummary>();

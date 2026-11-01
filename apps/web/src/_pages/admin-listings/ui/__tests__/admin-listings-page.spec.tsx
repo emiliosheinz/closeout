@@ -68,6 +68,22 @@ const header = (name: RegExp) => screen.getByRole("columnheader", { name });
 const sortBy = (name: RegExp) =>
   fireEvent.click(within(header(name)).getByRole("button"));
 
+async function openMenu(title: string) {
+  const trigger = screen.getByRole("button", { name: `Ações para ${title}` });
+  trigger.focus();
+  fireEvent.keyDown(trigger, { key: "ArrowDown" });
+  return screen.findByRole("menu");
+}
+
+/** Picks a status of a row from its actions menu. */
+const choose = async (title: string, name: string) =>
+  fireEvent.click(
+    within(await openMenu(title)).getByRole("menuitemradio", { name }),
+  );
+
+const rowOf = (title: string) =>
+  screen.getByRole("link", { name: title }).closest("tr") as HTMLElement;
+
 describe("admin listings page", () => {
   it("loads the listings and sellers and shows every listing", async () => {
     const calls = stubAdminApi({
@@ -171,24 +187,13 @@ describe("admin listings page", () => {
       "fetch",
       vi.fn(() => new Promise<Response>(() => {})),
     );
-    const trigger = screen.getByRole("combobox", {
-      name: "Disponibilidade de Cadeira",
-    });
-    trigger.focus();
-    fireEvent.keyDown(trigger, { key: "Enter" });
-    fireEvent.keyDown(
-      await screen.findByRole("option", { name: "Disponível" }),
-      {
-        key: "Enter",
-      },
-    );
+    await choose("Cadeira", "Disponível");
 
     await waitFor(() =>
       expect(screen.getByTestId("count-sold")).toHaveTextContent("0"),
     );
     expect(screen.getByTestId("count-available")).toHaveTextContent("2");
-    expect(screen.getByText("Cadeira")).toBeInTheDocument();
-    expect(trigger).toHaveTextContent("Disponível");
+    expect(rowOf("Cadeira")).toHaveTextContent("Disponível");
   });
 
   async function changeCadeiraToAvailable(patch: Promise<Response>) {
@@ -196,16 +201,7 @@ describe("admin listings page", () => {
       "fetch",
       vi.fn(() => patch),
     );
-    const trigger = screen.getByRole("combobox", {
-      name: "Disponibilidade de Cadeira",
-    });
-    trigger.focus();
-    fireEvent.keyDown(trigger, { key: "Enter" });
-    fireEvent.keyDown(
-      await screen.findByRole("option", { name: "Disponível" }),
-      { key: "Enter" },
-    );
-    return trigger;
+    await choose("Cadeira", "Disponível");
   }
 
   it("drops the kept row once the filter or the search changes", async () => {
@@ -282,7 +278,11 @@ describe("admin listings page", () => {
     const all = tab(/Todos/);
     expect(all).toHaveTextContent("3");
 
-    fireEvent.click(screen.getByRole("button", { name: "Excluir Sofá azul" }));
+    fireEvent.click(
+      within(await openMenu("Sofá azul")).getByRole("menuitem", {
+        name: "Excluir",
+      }),
+    );
     fireEvent.click(
       await screen.findByRole("button", { name: "Excluir anúncio" }),
     );
@@ -543,33 +543,43 @@ describe("rows", () => {
       "fetch",
       vi.fn(() => new Promise<Response>(() => {})),
     );
-    const copies = (options: { hidden?: boolean } = {}) =>
-      screen
-        .getAllByRole("button", { name: "Duplicar Mesa", ...options })
-        .map((button) => (button as HTMLButtonElement).disabled);
-    expect(copies()).toEqual([false, false]);
+    // Whether each row's Duplicar is disabled, in row order. The confirmation
+    // stays open while the copy is pending, so the table is hidden.
+    const copies = async () => {
+      const disabled: boolean[] = [];
+      for (const trigger of screen.getAllByRole("button", {
+        name: "Ações para Mesa",
+        hidden: true,
+      })) {
+        trigger.focus();
+        fireEvent.keyDown(trigger, { key: "ArrowDown" });
+        const copy = await screen.findByRole("menuitem", { name: "Duplicar" });
+        disabled.push(copy.getAttribute("aria-disabled") === "true");
+        fireEvent.keyDown(copy, { key: "Escape" });
+        await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
+      }
+      return disabled;
+    };
+    expect(await copies()).toEqual([false, false]);
 
-    fireEvent.click(
-      screen.getAllByRole("button", {
-        name: "Duplicar Mesa",
-      })[1] as HTMLElement,
-    );
+    const second = screen.getAllByRole("button", {
+      name: "Ações para Mesa",
+    })[1] as HTMLElement;
+    second.focus();
+    fireEvent.keyDown(second, { key: "ArrowDown" });
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Duplicar" }));
     fireEvent.click(
       await screen.findByRole("button", { name: "Duplicar anúncio" }),
     );
-    await waitFor(() =>
-      expect(copies({ hidden: true })).toEqual([false, true]),
-    );
-    // The confirmation stays open while the copy is pending; closing it
-    // leaves the request running.
-    fireEvent.keyDown(screen.getByRole("alertdialog"), { key: "Escape" });
-    await waitFor(() =>
-      expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument(),
+    await waitFor(async () => expect(await copies()).toEqual([false, true]));
+
+    fireEvent.click(
+      within(
+        screen.getByRole("columnheader", { name: /Preço/, hidden: true }),
+      ).getByRole("button", { hidden: true }),
     );
 
-    sortBy(/Preço/);
-
-    expect(copies()).toEqual([true, false]);
+    expect(await copies()).toEqual([true, false]);
   });
 });
 
@@ -641,15 +651,7 @@ describe("a row whose status changed under a filter", () => {
     );
     expect(titles()).toEqual(["Abajur", "Cadeira"]);
 
-    const trigger = screen.getByRole("combobox", {
-      name: "Disponibilidade de Cadeira",
-    });
-    trigger.focus();
-    fireEvent.keyDown(trigger, { key: "Enter" });
-    fireEvent.keyDown(
-      await screen.findByRole("option", { name: "Disponível" }),
-      { key: "Enter" },
-    );
+    await choose("Cadeira", "Disponível");
     await waitFor(() => expect(listFetches).toBe(1));
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 20));
@@ -661,9 +663,7 @@ describe("a row whose status changed under a filter", () => {
         "20/10/2026",
       ),
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole("combobox", { name: "Disponibilidade de Cadeira" }),
-    ).toHaveTextContent("Disponível");
+    expect(rowOf("Cadeira")).toHaveTextContent("Disponível");
     expect(screen.getByTestId("count-sold")).toHaveTextContent("1");
 
     server = [sold[0]];
@@ -706,27 +706,17 @@ describe("a row changed twice under a filter", () => {
         return new Response(null, { status: 204 });
       }),
     );
-    const change = async (option: string) => {
-      const trigger = screen.getByRole("combobox", {
-        name: "Disponibilidade de Cadeira",
-      });
-      trigger.focus();
-      fireEvent.keyDown(trigger, { key: "Enter" });
-      fireEvent.keyDown(await screen.findByRole("option", { name: option }), {
-        key: "Enter",
-      });
-    };
     const settle = () =>
       act(async () => {
         await new Promise((resolve) => setTimeout(resolve, 20));
       });
 
-    await change("Disponível");
+    await choose("Cadeira", "Disponível");
     await waitFor(() => expect(listFetches).toBe(1));
     await settle();
     expect(titles()).toEqual(["Abajur", "Cadeira"]);
 
-    await change("Reservado");
+    await choose("Cadeira", "Reservado");
     const dialog = await screen.findByRole("dialog");
     fireEvent.change(
       within(dialog).getByRole("combobox", { name: "Nome do comprador" }),
@@ -753,15 +743,7 @@ describe("pinned rows and the view", () => {
       "fetch",
       vi.fn(() => new Promise<Response>(() => {})),
     );
-    const trigger = screen.getByRole("combobox", {
-      name: "Disponibilidade de Cadeira",
-    });
-    trigger.focus();
-    fireEvent.keyDown(trigger, { key: "Enter" });
-    fireEvent.keyDown(
-      await screen.findByRole("option", { name: "Disponível" }),
-      { key: "Enter" },
-    );
+    await choose("Cadeira", "Disponível");
     await waitFor(() =>
       expect(screen.getByTestId("count-sold")).toHaveTextContent("1"),
     );
@@ -803,19 +785,11 @@ describe("pinned rows and the view", () => {
     );
     serve(soldMany);
     await show("?status=sold&sort=title-asc");
-    const first = screen.getByRole("combobox", {
-      name: "Disponibilidade de Vendido 00",
-    });
     vi.stubGlobal(
       "fetch",
       vi.fn(() => new Promise<Response>(() => {})),
     );
-    first.focus();
-    fireEvent.keyDown(first, { key: "Enter" });
-    fireEvent.keyDown(
-      await screen.findByRole("option", { name: "Disponível" }),
-      { key: "Enter" },
-    );
+    await choose("Vendido 00", "Disponível");
     await waitFor(() =>
       expect(screen.getByTestId("count-sold")).toHaveTextContent("21"),
     );

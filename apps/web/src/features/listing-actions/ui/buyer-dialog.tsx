@@ -94,7 +94,7 @@ export function BuyerDialog({
   const title = availability
     ? `${availability === "sold" ? "Vender" : "Reservar"} "${listing.title}"`
     : sale
-      ? `Comprador de "${listing.title}"`
+      ? `Dados da venda de "${listing.title}"`
       : `Adicionar comprador a "${listing.title}"`;
   const submitLabel = availability
     ? `Marcar como ${AVAILABILITY_LABELS[availability].toLowerCase()}`

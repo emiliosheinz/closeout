@@ -45,11 +45,22 @@ export async function signIn(
  */
 export function listingRows(page: Page) {
   return page.getByRole("row", { includeHidden: true }).filter({
-    has: page.getByRole("combobox", {
-      name: /^Publicação de /,
+    has: page.getByRole("button", {
+      name: /^Ações para /,
       includeHidden: true,
     }),
   });
+}
+
+/**
+ * Opens the actions menu of the admin listing titled `title`, where its
+ * status, sale, copy and deletion change, and returns the menu.
+ */
+export async function listingMenu(page: Page, title: string) {
+  await page
+    .getByRole("button", { name: `Ações para ${title}`, exact: true })
+    .click();
+  return page.getByRole("menu");
 }
 
 /** Search the admin listing table and wait for the filtered, interactive page. */

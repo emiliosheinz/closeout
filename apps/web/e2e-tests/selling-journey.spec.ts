@@ -3,6 +3,7 @@ import {
   ADMIN_WHATSAPP,
   findInAdmin,
   hydrated,
+  listingMenu,
   listingRows,
   STORE,
   samplePhoto,
@@ -99,11 +100,11 @@ test.describe
       await signIn(page);
       await findInAdmin(page, TITLE);
       const row = listingRows(page).filter({ hasText: TITLE });
-      const availability = row.getByRole("combobox", {
-        name: `Disponibilidade de ${TITLE}`,
-      });
-      await availability.click();
-      await page.getByRole("option", { name: "Reservado" }).click();
+      const choose = async (
+        role: "menuitemradio" | "menuitemcheckbox",
+        name: string,
+      ) => (await listingMenu(page, TITLE)).getByRole(role, { name }).click();
+      await choose("menuitemradio", "Reservado");
       const dialog = page.getByRole("dialog");
       await expect(dialog.getByLabel("Valor combinado (R$)")).toHaveValue(
         "1234,50",
@@ -113,20 +114,23 @@ test.describe
         .getByRole("button", { name: "Marcar como reservado" })
         .click();
       await expect(dialog).toBeHidden();
-      await expect(availability).toHaveText("Reservado");
+      await expect(row).toContainText("Reservado");
       await expect(row).toContainText(BUYER);
       await expect(row).toContainText("Não pago");
 
-      await row.getByRole("checkbox", { name: `Pago — ${TITLE}` }).click();
-      await expect(
-        row.getByRole("checkbox", { name: `Pago — ${TITLE}` }),
-      ).toBeChecked();
+      await choose("menuitemcheckbox", "Pago");
+      await expect(row).toContainText("Pago");
       await expect(row).not.toContainText("Não pago");
       await page.reload();
       await hydrated(page);
+      await expect(row).toContainText("Pago");
+      await expect(row).not.toContainText("Não pago");
       await expect(
-        row.getByRole("checkbox", { name: `Pago — ${TITLE}` }),
+        (await listingMenu(page, TITLE)).getByRole("menuitemcheckbox", {
+          name: "Pago",
+        }),
       ).toBeChecked();
+      await page.keyboard.press("Escape");
 
       const visitor = await browser.newPage();
       await visitor.goto(`${STORE}?availability=reserved`);
@@ -134,12 +138,11 @@ test.describe
         visitor.getByRole("article").filter({ hasText: TITLE }),
       ).toContainText("Reservado");
 
-      await availability.click();
-      await page.getByRole("option", { name: "Vendido" }).click();
+      await choose("menuitemradio", "Vendido");
       await expect(dialog.getByLabel("Nome do comprador")).toHaveValue(BUYER);
       await dialog.getByRole("button", { name: "Marcar como vendido" }).click();
       await expect(dialog).toBeHidden();
-      await expect(availability).toHaveText("Vendido");
+      await expect(row).toContainText("Vendido");
 
       await visitor.goto(STORE);
       await expect(
@@ -158,12 +161,11 @@ test.describe
       ).toBeVisible();
       await visitor.close();
 
-      await availability.click();
-      await page.getByRole("option", { name: "Disponível" }).click();
+      await choose("menuitemradio", "Disponível");
       await page
         .getByRole("button", { name: "Voltar para disponível" })
         .click();
-      await expect(availability).toHaveText("Disponível");
+      await expect(row).toContainText("Disponível");
       await expect(row).not.toContainText(BUYER);
     });
 
@@ -174,7 +176,9 @@ test.describe
 
       await test.step("duplicating opens a draft copy", async () => {
         await findInAdmin(page, TITLE);
-        await page.getByRole("button", { name: `Duplicar ${TITLE}` }).click();
+        await (await listingMenu(page, TITLE))
+          .getByRole("menuitem", { name: "Duplicar" })
+          .click();
         await page.getByRole("button", { name: "Duplicar anúncio" }).click();
         await expect(page).toHaveURL(/notice=copied/);
         await expect(page.getByRole("heading", { level: 1 })).toHaveText(
@@ -191,8 +195,8 @@ test.describe
         const rows = listingRows(page);
         await expect(rows).toHaveCount(2);
 
-        await page
-          .getByRole("button", { name: `Excluir ${TITLE}`, exact: true })
+        await (await listingMenu(page, TITLE))
+          .getByRole("menuitem", { name: "Excluir" })
           .click();
         const dialog = page.getByRole("alertdialog");
         await expect(dialog).toContainText(

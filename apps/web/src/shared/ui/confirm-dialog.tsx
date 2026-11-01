@@ -12,19 +12,28 @@ import {
 } from "@/shared/ui/alert-dialog";
 import { buttonVariants } from "@/shared/ui/button";
 
-/** Opened from a menu item, focus belongs back on the menu's trigger. */
+/**
+ * Opened from a menu item, focus belongs back on the menu's trigger; from a
+ * submenu, on the trigger of the menu it opened from.
+ */
 function returnTarget(active: Element | null): Element | null {
-  const menuId = active
-    ?.closest("[role=menu]")
-    ?.getAttribute("aria-labelledby");
-  return (menuId && document.getElementById(menuId)) || active;
+  let target = active;
+  for (;;) {
+    const menuId = target
+      ?.closest("[role=menu]")
+      ?.getAttribute("aria-labelledby");
+    const trigger = menuId && document.getElementById(menuId);
+    if (!trigger) return target;
+    target = trigger;
+  }
 }
 
 /**
  * Explicit confirmation before an action. The dialog stays open when
  * the action rejects; reporting the failure is the action's job (a mutation's
  * error toast). After it succeeds, `onSuccess` places focus where the user
- * continues (the trigger may be gone by then).
+ * continues (the trigger may be gone by then); without it, focus goes back to
+ * the trigger. It cannot be dismissed while the action runs.
  */
 export function ConfirmDialog({
   trigger,
@@ -80,16 +89,19 @@ export function ConfirmDialog({
         setOpener(returnTarget(document.activeElement));
         setOpen(true);
       })}
-      <AlertDialog open={open} onOpenChange={setOpen}>
+      <AlertDialog
+        open={open}
+        onOpenChange={(next) => (next || !pending) && setOpen(next)}
+      >
         <AlertDialogContent
+          onEscapeKeyDown={(event) => pending && event.preventDefault()}
           onCloseAutoFocus={(event) => {
             event.preventDefault();
-            if (!succeeded.current) {
-              if (opener instanceof HTMLElement) opener.focus();
-              return;
-            }
+            const focusOpener = () =>
+              opener instanceof HTMLElement && opener.focus();
+            if (!succeeded.current) return focusOpener();
             succeeded.current = false;
-            onSuccess?.();
+            (onSuccess ?? focusOpener)();
           }}
         >
           <AlertDialogTitle>{title}</AlertDialogTitle>
@@ -97,7 +109,7 @@ export function ConfirmDialog({
             {description}
           </AlertDialogDescription>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel disabled={pending}>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               className={buttonVariants({
                 variant: destructive ? "destructive" : "default",
