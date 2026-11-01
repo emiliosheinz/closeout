@@ -1,12 +1,5 @@
 import { expect, test } from "@playwright/test";
-import {
-  ADMIN_EMAIL,
-  ADMIN_WHATSAPP,
-  hydrated,
-  STORE,
-  samplePhoto,
-  signIn,
-} from "./helpers";
+import { ADMIN_EMAIL, hydrated, STORE, samplePhoto, signIn } from "./helpers";
 
 const NEW_NUMBER = "5521977771234";
 /** A seeded published listing sold only by the admin. */
@@ -47,7 +40,7 @@ test("a member's new WhatsApp number and photo reach their public listings", asy
       const src = await image.getAttribute("src");
       if (!src) throw new Error("The uploaded photo has no URL");
       await saveNumber("+55 21 97777-1234");
-      await expect(row).toContainText("+5521977771234");
+      await expect(row).toContainText("+55 21 97777-1234");
       return new URL(src, page.url()).pathname;
     });
 
@@ -67,6 +60,6 @@ test("a member's new WhatsApp number and photo reach their public listings", asy
     await hydrated(page);
     await openEdit();
     await saveNumber("+55 11 98888-7777");
-    await expect(row).toContainText(`+${ADMIN_WHATSAPP}`);
+    await expect(row).toContainText("+55 11 98888-7777");
   });
 });

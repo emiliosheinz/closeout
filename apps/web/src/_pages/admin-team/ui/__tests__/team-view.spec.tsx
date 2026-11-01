@@ -155,7 +155,7 @@ describe("TeamView for a manager", () => {
   it("shows the WhatsApp number of reachable members and flags the others", () => {
     renderManager();
     expect(
-      within(rowOf("Ana")).getByText("+5511988887777"),
+      within(rowOf("Ana")).getByText("+55 11 98888-7777"),
     ).toBeInTheDocument();
     expect(within(rowOf("Ana")).queryByText("Sem WhatsApp")).toBeNull();
     expect(within(rowOf("Caio")).getByText("Sem WhatsApp")).toBeInTheDocument();
@@ -377,7 +377,7 @@ describe("TeamView for a seller", () => {
     const dialog = await screen.findByRole("dialog", { name: /Caio/ });
     expect(within(dialog).getByLabelText("Nome na loja")).toHaveValue("Caio");
     expect(within(dialog).getByLabelText("WhatsApp")).toHaveValue(
-      "+5511988887777",
+      "+55 11 98888-7777",
     );
     expect(within(dialog).queryByRole("radiogroup")).toBeNull();
   });

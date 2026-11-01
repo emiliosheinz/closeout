@@ -128,7 +128,7 @@ describe("buyer dialog match state", () => {
     await buyersLoaded();
     typeName("ana");
     expect(screen.getByText("Comprador existente")).toBeInTheDocument();
-    expect(screen.getByText("+5511988887777")).toBeInTheDocument();
+    expect(screen.getByText("+55 11 98888-7777")).toBeInTheDocument();
     expect(screen.queryByLabelText("WhatsApp (opcional)")).toBeNull();
   });
 

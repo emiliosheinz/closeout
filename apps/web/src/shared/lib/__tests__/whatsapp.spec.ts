@@ -1,4 +1,9 @@
-import { chatUrl, listingContactUrl, sellerContactUrl } from "../whatsapp";
+import {
+  chatUrl,
+  displayNumber,
+  listingContactUrl,
+  sellerContactUrl,
+} from "../whatsapp";
 
 describe("listingContactUrl", () => {
   it("links to the seller's number with the encoded message", () => {
@@ -76,5 +81,16 @@ describe("chatUrl", () => {
     expect(chatUrl(null)).toBeNull();
     expect(chatUrl("+5511911112222")).toBeNull();
     expect(chatUrl("abc")).toBeNull();
+  });
+});
+
+describe("displayNumber", () => {
+  it.each([
+    ["5511988887777", "+55 11 98888-7777"],
+    ["551133334444", "+55 11 3333-4444"],
+    ["14155550123", "+14155550123"],
+    [null, ""],
+  ])("shows %j as %j", (stored, shown) => {
+    expect(displayNumber(stored)).toBe(shown);
   });
 });

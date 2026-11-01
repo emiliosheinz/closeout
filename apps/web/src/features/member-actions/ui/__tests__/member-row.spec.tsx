@@ -256,7 +256,7 @@ describe("Member edit dialog", () => {
     await openEditDialog();
 
     expect(screen.getByLabelText("Nome na loja")).toHaveValue("Ana");
-    expect(screen.getByLabelText("WhatsApp")).toHaveValue("+5511999998888");
+    expect(screen.getByLabelText("WhatsApp")).toHaveValue("+55 11 99999-8888");
   });
 
   it("requires a name and sends nothing without one", async () => {
@@ -363,7 +363,7 @@ describe("Member edit dialog", () => {
     });
     expect(JSON.parse(apiCalls()[0]?.body as string)).toEqual({
       displayName: "Aninha",
-      whatsappNumber: "+5511999998888",
+      whatsappNumber: "+55 11 99999-8888",
     });
     await waitFor(() => {
       expect(

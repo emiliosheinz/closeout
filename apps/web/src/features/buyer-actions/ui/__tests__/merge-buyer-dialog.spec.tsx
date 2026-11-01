@@ -82,7 +82,7 @@ describe("MergeBuyerDialog", () => {
     await pick(input, "bru", "Bruno");
     expect(
       screen.getByText(
-        "2 itens de Ana passam para Bruno. Bruno recebe o WhatsApp +5511911112222 de Ana. Ana deixa de existir.",
+        "2 itens de Ana passam para Bruno. Bruno recebe o WhatsApp +55 11 91111-2222 de Ana. Ana deixa de existir.",
       ),
     ).toBeInTheDocument();
   });
@@ -92,7 +92,7 @@ describe("MergeBuyerDialog", () => {
     await pick(input, "bia", "Bia");
     expect(
       screen.getByText(
-        "2 itens de Ana passam para Bia. Bia mantém o WhatsApp +5521933334444. Ana deixa de existir.",
+        "2 itens de Ana passam para Bia. Bia mantém o WhatsApp +55 21 93333-4444. Ana deixa de existir.",
       ),
     ).toBeInTheDocument();
   });
