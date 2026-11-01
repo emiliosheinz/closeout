@@ -9,10 +9,12 @@ import {
 import { useMutation } from "@tanstack/react-query";
 import {
   Banknote,
+  CircleDashed,
   Copy,
   Eye,
   Globe,
   Pencil,
+  Tag,
   Trash2,
   UserPlus,
   UserRound,
@@ -39,7 +41,6 @@ import { itemPath } from "@/shared/lib/site";
 import { useMediaQuery } from "@/shared/lib/use-media-query";
 import {
   ActionsMenu,
-  ActionsMenuCheckboxItem,
   ActionsMenuItem,
   ActionsMenuLabel,
   ActionsMenuRadioGroup,
@@ -104,35 +105,38 @@ function StatusChoices<Status extends Publication | Availability>({
 
 /**
  * With a mouse and room beside the menu, it stays short: groups are only
- * separated and the rarely changed publication waits in a submenu. On touch
- * screens a submenu is awkward, so groups get headings and publication's
- * choices are listed in place.
+ * separated and each status's choices wait in a submenu. On touch screens a
+ * submenu is awkward, so groups get headings and the choices are listed in
+ * place.
  */
 const COMPACT_MENU =
   "(min-width: 640px) and (hover: hover) and (pointer: fine)";
 
-function PublicationChoices({
+function StatusMenu<Status extends Publication | Availability>({
   compact,
+  icon,
+  separated = false,
   ...props
 }: {
   compact: boolean;
-  value: Publication;
+  icon: React.ReactNode;
+  /** Whether a group comes before it in the inline (touch) layout. */
+  separated?: boolean;
+  label: string;
+  value: Status;
+  options: readonly Status[];
+  labels: Record<Status, string>;
   disabled: boolean;
-  onChoose: (publication: Publication) => void;
+  onChoose: (status: Status) => void;
 }) {
-  const choices = (
-    <StatusChoices
-      label="Publicação"
-      options={PUBLICATIONS}
-      labels={PUBLICATION_LABELS}
-      {...props}
-    />
-  );
+  const choices = <StatusChoices {...props} />;
   if (!compact) {
     return (
       <>
-        <ActionsMenuSeparator />
-        <ActionsMenuLabel className={menuHeading}>Publicação</ActionsMenuLabel>
+        {separated && <ActionsMenuSeparator />}
+        <ActionsMenuLabel className={menuHeading}>
+          {props.label}
+        </ActionsMenuLabel>
         {choices}
       </>
     );
@@ -140,10 +144,10 @@ function PublicationChoices({
   return (
     <ActionsMenuSub>
       <ActionsMenuSubTrigger>
-        <Globe aria-hidden="true" />
-        Publicação
+        {icon}
+        {props.label}
         <span className="ml-auto pl-4 text-muted">
-          {PUBLICATION_LABELS[props.value]}
+          {props.labels[props.value]}
         </span>
       </ActionsMenuSubTrigger>
       <ActionsMenuSubContent>{choices}</ActionsMenuSubContent>
@@ -335,12 +339,9 @@ export function ListingRowActions({
     confirmDelete: () => void,
   ) => (
     <ActionsMenu label={`Ações para ${listing.title}`} triggerRef={triggerRef}>
-      {!compact && (
-        <ActionsMenuLabel className={menuHeading}>
-          Disponibilidade
-        </ActionsMenuLabel>
-      )}
-      <StatusChoices
+      <StatusMenu
+        compact={compact}
+        icon={<Tag aria-hidden="true" />}
         label="Disponibilidade"
         value={listing.availability}
         options={AVAILABILITIES}
@@ -348,33 +349,45 @@ export function ListingRowActions({
         disabled={changing}
         onChoose={(a) => chooseAvailability(a, confirmRelease)}
       />
+      <StatusMenu
+        compact={compact}
+        icon={<Globe aria-hidden="true" />}
+        separated
+        label="Publicação"
+        value={listing.publication}
+        options={PUBLICATIONS}
+        labels={PUBLICATION_LABELS}
+        disabled={changing}
+        onChoose={choosePublication}
+      />
       {listing.availability !== "available" && (
         <>
           <ActionsMenuSeparator />
           {!compact && (
             <ActionsMenuLabel className={menuHeading}>Venda</ActionsMenuLabel>
           )}
-        </>
-      )}
-      {sale && (
-        <ActionsMenuCheckboxItem
-          checked={sale.paid}
-          disabled={changing}
-          onCheckedChange={togglePaid}
-        >
-          <Banknote aria-hidden="true" />
-          {PAYMENT_LABELS.paid}
-        </ActionsMenuCheckboxItem>
-      )}
-      {listing.availability !== "available" && (
-        <ActionsMenuItem disabled={changing} onSelect={() => setBuyerFor(null)}>
-          {sale ? (
-            <UserRound aria-hidden="true" />
-          ) : (
-            <UserPlus aria-hidden="true" />
+          {sale && (
+            <ActionsMenuItem disabled={changing} onSelect={togglePaid}>
+              {sale.paid ? (
+                <CircleDashed aria-hidden="true" />
+              ) : (
+                <Banknote aria-hidden="true" />
+              )}
+              {sale.paid ? "Marcar como não pago" : "Marcar como pago"}
+            </ActionsMenuItem>
           )}
-          {sale ? "Dados da venda" : "Adicionar comprador"}
-        </ActionsMenuItem>
+          <ActionsMenuItem
+            disabled={changing}
+            onSelect={() => setBuyerFor(null)}
+          >
+            {sale ? (
+              <UserRound aria-hidden="true" />
+            ) : (
+              <UserPlus aria-hidden="true" />
+            )}
+            {sale ? "Dados da venda" : "Adicionar comprador"}
+          </ActionsMenuItem>
+        </>
       )}
       <ActionsMenuSeparator />
       <ActionsMenuItem asChild>
@@ -404,12 +417,6 @@ export function ListingRowActions({
         <Copy aria-hidden="true" />
         Duplicar
       </ActionsMenuItem>
-      <PublicationChoices
-        compact={compact}
-        value={listing.publication}
-        disabled={changing}
-        onChoose={choosePublication}
-      />
       <ActionsMenuSeparator />
       <ActionsMenuItem
         onSelect={confirmDelete}

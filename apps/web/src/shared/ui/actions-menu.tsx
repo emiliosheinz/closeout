@@ -30,24 +30,6 @@ export {
 const choiceClass =
   "relative flex cursor-default select-none items-center gap-2 rounded-sm py-1.5 pr-8 pl-2 text-sm outline-none pointer-coarse:py-2.5 focus:bg-accent data-[disabled]:pointer-events-none data-[disabled]:opacity-50";
 
-/** An on/off item of the menu, checked on the right. */
-export const ActionsMenuCheckboxItem = forwardRef<
-  React.ElementRef<typeof DropdownMenuPrimitive.CheckboxItem>,
-  React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.CheckboxItem>
->(({ className, children, ...props }, ref) => (
-  <DropdownMenuPrimitive.CheckboxItem
-    ref={ref}
-    className={cn(choiceClass, "[&>svg]:size-4 [&>svg]:shrink-0", className)}
-    {...props}
-  >
-    {children}
-    <DropdownMenuPrimitive.ItemIndicator className="absolute right-2 flex">
-      <Check className="size-4" aria-hidden="true" />
-    </DropdownMenuPrimitive.ItemIndicator>
-  </DropdownMenuPrimitive.CheckboxItem>
-));
-ActionsMenuCheckboxItem.displayName = "ActionsMenuCheckboxItem";
-
 /** A choice in a radio group of the menu, checked on the right. */
 export const ActionsMenuRadioItem = forwardRef<
   React.ElementRef<typeof DropdownMenuPrimitive.RadioItem>,

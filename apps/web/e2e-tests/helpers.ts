@@ -63,6 +63,21 @@ export async function listingMenu(page: Page, title: string) {
   return page.getByRole("menu");
 }
 
+/**
+ * Changes the availability of the admin listing titled `title`. Desktop runs
+ * with a fine pointer, where the choices wait in the "Disponibilidade" submenu.
+ */
+export async function chooseAvailability(
+  page: Page,
+  title: string,
+  availability: "Disponível" | "Reservado" | "Vendido",
+) {
+  await (await listingMenu(page, title))
+    .getByRole("menuitem", { name: /^Disponibilidade/ })
+    .click();
+  await page.getByRole("menuitemradio", { name: availability }).click();
+}
+
 /** Search the admin listing table and wait for the filtered, interactive page. */
 export async function findInAdmin(page: Page, title: string): Promise<void> {
   await page

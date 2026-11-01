@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import {
   ADMIN_WHATSAPP,
+  chooseAvailability,
   findInAdmin,
   hydrated,
   listingMenu,
@@ -100,11 +101,7 @@ test.describe
       await signIn(page);
       await findInAdmin(page, TITLE);
       const row = listingRows(page).filter({ hasText: TITLE });
-      const choose = async (
-        role: "menuitemradio" | "menuitemcheckbox",
-        name: string,
-      ) => (await listingMenu(page, TITLE)).getByRole(role, { name }).click();
-      await choose("menuitemradio", "Reservado");
+      await chooseAvailability(page, TITLE, "Reservado");
       const dialog = page.getByRole("dialog");
       await expect(dialog.getByLabel("Valor combinado (R$)")).toHaveValue(
         "1234,50",
@@ -118,7 +115,9 @@ test.describe
       await expect(row).toContainText(BUYER);
       await expect(row).toContainText("Não pago");
 
-      await choose("menuitemcheckbox", "Pago");
+      await (await listingMenu(page, TITLE))
+        .getByRole("menuitem", { name: "Marcar como pago" })
+        .click();
       await expect(row).toContainText("Pago");
       await expect(row).not.toContainText("Não pago");
       await page.reload();
@@ -126,10 +125,10 @@ test.describe
       await expect(row).toContainText("Pago");
       await expect(row).not.toContainText("Não pago");
       await expect(
-        (await listingMenu(page, TITLE)).getByRole("menuitemcheckbox", {
-          name: "Pago",
+        (await listingMenu(page, TITLE)).getByRole("menuitem", {
+          name: "Marcar como não pago",
         }),
-      ).toBeChecked();
+      ).toBeVisible();
       await page.keyboard.press("Escape");
 
       const visitor = await browser.newPage();
@@ -138,7 +137,7 @@ test.describe
         visitor.getByRole("article").filter({ hasText: TITLE }),
       ).toContainText("Reservado");
 
-      await choose("menuitemradio", "Vendido");
+      await chooseAvailability(page, TITLE, "Vendido");
       await expect(dialog.getByLabel("Nome do comprador")).toHaveValue(BUYER);
       await dialog.getByRole("button", { name: "Marcar como vendido" }).click();
       await expect(dialog).toBeHidden();
@@ -161,7 +160,7 @@ test.describe
       ).toBeVisible();
       await visitor.close();
 
-      await choose("menuitemradio", "Disponível");
+      await chooseAvailability(page, TITLE, "Disponível");
       await page
         .getByRole("button", { name: "Voltar para disponível" })
         .click();

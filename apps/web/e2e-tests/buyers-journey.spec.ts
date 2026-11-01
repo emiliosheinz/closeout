@@ -1,5 +1,6 @@
 import { expect, type Page, test } from "@playwright/test";
 import {
+  chooseAvailability,
   findInAdmin,
   hydrated,
   listingMenu,
@@ -26,9 +27,7 @@ async function reserveFirstAvailable(
   await hydrated(page);
   const row = listingRows(page).filter({ hasText: "Disponível" }).first();
   const title = (await row.getByRole("link").first().textContent()) ?? "";
-  await (await listingMenu(page, title))
-    .getByRole("menuitemradio", { name: "Reservado" })
-    .click();
+  await chooseAvailability(page, title, "Reservado");
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel("Nome do comprador").fill(buyer);
   if (phone) await dialog.getByLabel("WhatsApp (opcional)").fill(phone);
@@ -122,9 +121,7 @@ test.describe
       await signIn(page);
       for (const title of [firstTitle, secondTitle]) {
         await findInAdmin(page, title);
-        await (await listingMenu(page, title))
-          .getByRole("menuitemradio", { name: "Disponível" })
-          .click();
+        await chooseAvailability(page, title, "Disponível");
         await page
           .getByRole("button", { name: "Voltar para disponível" })
           .click();

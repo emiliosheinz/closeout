@@ -154,7 +154,7 @@ async function openMenu(title: string) {
   return screen.findByRole("menu");
 }
 
-type MenuRole = "menuitem" | "menuitemradio" | "menuitemcheckbox";
+type MenuRole = "menuitem" | "menuitemradio";
 
 async function choose(title: string, role: MenuRole, name: string) {
   const menu = await openMenu(title);
@@ -250,20 +250,67 @@ describe("listing row cells", () => {
     ]);
   });
 
-  it("keeps the publication in a submenu with a fine pointer and room", async () => {
-    const { matchMedia } = window;
-    vi.stubGlobal("matchMedia", (query: string) => ({
-      ...matchMedia(query),
-      matches: true,
-    }));
-    renderRows([row("a")]);
+  it("lists the sale actions of a sold item between the statuses and the rest", async () => {
+    renderRows([row("a", { availability: "sold", sale: ana() })]);
     const menu = await openMenu("Item a");
     expect(
-      within(menu).queryByRole("group", { name: "Publicação" }),
-    ).toBeNull();
-    expect(
-      within(menu).getByRole("menuitem", { name: /^Publicação/ }),
-    ).toHaveAttribute("aria-haspopup", "menu");
+      within(menu)
+        .getAllByRole("menuitem")
+        .map((item) => item.textContent),
+    ).toEqual([
+      "Marcar como pago",
+      "Dados da venda",
+      "Editar anúncio",
+      "Ver na loja",
+      "Duplicar",
+      "Excluir",
+    ]);
+  });
+
+  describe("with a fine pointer and room", () => {
+    beforeEach(() => {
+      const { matchMedia } = window;
+      vi.stubGlobal("matchMedia", (query: string) => ({
+        ...matchMedia(query),
+        matches: true,
+      }));
+    });
+
+    it("keeps each status in a submenu that shows its current value", async () => {
+      renderRows([
+        row("a", { availability: "reserved", publication: "draft" }),
+      ]);
+      const menu = await openMenu("Item a");
+      expect(within(menu).queryByRole("group")).toBeNull();
+      const subTriggers = within(menu)
+        .getAllByRole("menuitem")
+        .filter((item) => item.getAttribute("aria-haspopup") === "menu");
+      expect(subTriggers.map((item) => item.textContent)).toEqual([
+        "DisponibilidadeReservado",
+        "PublicaçãoRascunho",
+      ]);
+    });
+
+    it("chooses the availability from its submenu", async () => {
+      renderRows([row("a")]);
+      const menu = await openMenu("Item a");
+      const sub = within(menu).getByRole("menuitem", {
+        name: /^Disponibilidade/,
+      });
+      sub.focus();
+      fireEvent.keyDown(sub, { key: "ArrowRight" });
+      const choices = await screen.findByRole("group", {
+        name: "Disponibilidade",
+      });
+      fireEvent.click(
+        within(choices).getByRole("menuitemradio", { name: "Reservado" }),
+      );
+
+      expect(
+        await screen.findByRole("dialog", { name: 'Reservar "Item a"' }),
+      ).toBeInTheDocument();
+      expect(writes("PATCH")).toEqual([]);
+    });
   });
 
   it("asks for the buyer before reserving and sends nothing yet", async () => {
@@ -504,7 +551,7 @@ describe("listing row cells", () => {
         ).toHaveAttribute("aria-disabled", "true");
       }
       expect(
-        within(menu).getByRole("menuitemcheckbox", { name: "Pago" }),
+        within(menu).getByRole("menuitem", { name: "Marcar como pago" }),
       ).toHaveAttribute("aria-disabled", "true");
       expect(
         within(menu).getByRole("menuitem", { name: "Dados da venda" }),
@@ -811,7 +858,9 @@ describe("buyer on the board", () => {
     renderRows([row("a", { availability: "sold" })]);
     expect(screen.getByText("Sem comprador")).toBeInTheDocument();
     const menu = await openMenu("Item a");
-    expect(within(menu).queryByRole("menuitemcheckbox")).toBeNull();
+    expect(
+      within(menu).queryByRole("menuitem", { name: /^Marcar como/ }),
+    ).toBeNull();
     fireEvent.click(
       within(menu).getByRole("menuitem", { name: "Adicionar comprador" }),
     );
@@ -826,9 +875,10 @@ describe("buyer on the board", () => {
     renderRows([row("a")]);
     expect(screen.queryByText("Sem comprador")).toBeNull();
     const menu = await openMenu("Item a");
-    expect(within(menu).queryByRole("menuitemcheckbox")).toBeNull();
     expect(
-      within(menu).queryByRole("menuitem", { name: /comprador|venda/ }),
+      within(menu).queryByRole("menuitem", {
+        name: /^Marcar como|comprador|venda/,
+      }),
     ).toBeNull();
   });
 
@@ -854,7 +904,7 @@ describe("buyer on the board", () => {
   });
 
   describe("paid toggle", () => {
-    it("sends paid and shows Pago when ticked", async () => {
+    it("sends paid, shows Pago and then offers to undo it", async () => {
       renderRows([row("a", { availability: "sold", sale: ana() })]);
       handler = () => {
         serverRows = [
@@ -862,25 +912,30 @@ describe("buyer on the board", () => {
         ];
         return new Response(null, { status: 204 });
       };
-      const menu = await openMenu("Item a");
-      const paid = within(menu).getByRole("menuitemcheckbox", { name: "Pago" });
-      expect(paid).toHaveAttribute("aria-checked", "false");
-      fireEvent.click(paid);
+      await choose("Item a", "menuitem", "Marcar como pago");
       await waitFor(() => expect(writes("PATCH")).toHaveLength(1));
       expect(writes("PATCH")[0]).toEqual({
         url: "/stores/store/listings/a/sale",
         body: JSON.stringify({ paid: true }),
       });
       expect(situation("Item a")).toHaveTextContent(/^VendidoPago$/);
+
+      await waitFor(() => expect(listFetches()).toBe(1));
+      await choose("Item a", "menuitem", "Marcar como não pago");
+      await waitFor(() => expect(writes("PATCH")).toHaveLength(2));
+      expect(writes("PATCH")[1]).toEqual({
+        url: "/stores/store/listings/a/sale",
+        body: JSON.stringify({ paid: false }),
+      });
     });
 
-    it("returns to unticked with an error toast when the save fails", async () => {
+    it("returns to unpaid with an error toast when the save fails", async () => {
       handler = (method) =>
         method === "PATCH"
           ? problemResponse(500, "Servidor indisponível.")
           : new Response(null, { status: 204 });
       renderRows([row("a", { availability: "sold", sale: ana() })]);
-      await choose("Item a", "menuitemcheckbox", "Pago");
+      await choose("Item a", "menuitem", "Marcar como pago");
       expect(await screen.findByRole("alert")).toHaveTextContent(
         "Servidor indisponível.",
       );
@@ -889,8 +944,8 @@ describe("buyer on the board", () => {
       );
       const menu = await openMenu("Item a");
       expect(
-        within(menu).getByRole("menuitemcheckbox", { name: "Pago" }),
-      ).toHaveAttribute("aria-checked", "false");
+        within(menu).getByRole("menuitem", { name: "Marcar como pago" }),
+      ).toBeInTheDocument();
     });
   });
 
