@@ -77,9 +77,14 @@ test.describe
       ).toBeVisible();
       publicPath = new URL(page.url()).pathname;
       await expect(page.getByText("R$ 1.234,50").first()).toBeVisible();
-      const image = await page
-        .locator('meta[property="og:image"]')
-        .getAttribute("content");
+      // After the client navigation the catalog's preview image can linger a
+      // moment beside the item's; the item's is the one with its title as alt.
+      const ogImage = page.locator('meta[property="og:image"]');
+      await expect(
+        page.locator('meta[property="og:image:alt"]'),
+      ).toHaveAttribute("content", TITLE);
+      await expect(ogImage).toHaveCount(1);
+      const image = await ogImage.getAttribute("content");
       expect(
         (await page.request.get(image ?? "")).headers()["content-type"],
       ).toBe("image/jpeg");
