@@ -128,6 +128,13 @@ function pickFiles(container: HTMLElement, files: File[]) {
 }
 
 describe("PhotoManager", () => {
+  it("shows an empty state that does not ask for a photo to publish", () => {
+    server = [];
+    renderManager();
+    expect(screen.getByText("Sem fotos ainda.")).toBeVisible();
+    expect(screen.queryByText(/precisa/)).toBeNull();
+  });
+
   it("makes the same upload call and one toast for a drop as for the picker", async () => {
     const { container } = renderManager();
     const files = [file("1.jpg"), file("2.png", "image/png")];

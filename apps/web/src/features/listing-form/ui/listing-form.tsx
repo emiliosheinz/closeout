@@ -582,15 +582,10 @@ function ListingFormBody({
           <Button
             type="button"
             onClick={handleSubmit((values) => submit(values, true))}
-            disabled={save.isPending || (!editing && files.length === 0)}
+            disabled={save.isPending}
           >
             {publishing ? (progress ?? "Publicando...") : "Salvar e publicar"}
           </Button>
-        )}
-        {!editing && files.length === 0 && (
-          <span className="text-sm text-muted">
-            Adicione fotos para poder publicar.
-          </span>
         )}
       </div>
     </form>

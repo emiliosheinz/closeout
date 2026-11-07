@@ -127,7 +127,7 @@ export function PhotoManager({
       </div>
       {images.length === 0 ? (
         <p className="mt-2 rounded-xl border border-dashed border-line bg-surface px-6 py-10 text-center text-ink-soft">
-          Sem fotos ainda. Anúncios publicados precisam de pelo menos uma.
+          Sem fotos ainda.
         </p>
       ) : (
         <ul className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">

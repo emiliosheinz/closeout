@@ -491,6 +491,28 @@ describe("ListingForm", () => {
       expect(toast.getToasts()).toHaveLength(0);
     });
 
+    it("publishes a new listing without photos and opens it with the published notice", async () => {
+      renderNew();
+      expect(
+        screen.queryByText("Adicione fotos para poder publicar."),
+      ).toBeNull();
+      fireEvent.change(title(), { target: { value: "Mesa" } });
+      fireEvent.click(
+        screen.getByRole("button", { name: "Salvar e publicar" }),
+      );
+
+      await waitFor(() =>
+        expect(push).toHaveBeenCalledWith(
+          "/admin/listings/new-listing?notice=published",
+        ),
+      );
+      expect(apiCalls().map((c) => `${c.method} ${c.path}`)).toEqual([
+        "POST /stores/store/listings",
+        "PATCH /stores/store/listings/new-listing/status",
+      ]);
+      expect(apiCalls()[1]?.body).toEqual({ publication: "published" });
+    });
+
     it("creates exactly one listing and toasts the saved message once when the answer is unreadable", async () => {
       fetchMock.mockImplementation(async (_url: string, init?: RequestInit) =>
         init?.method === "POST"
