@@ -225,8 +225,6 @@ export class ListingsService {
   ): Promise<AdminListingDetail> {
     const { storeId } = actor;
     return this.dataSource.transaction(async (manager) => {
-      // Same row lock photo removal takes, so a concurrent delete of the last
-      // photo cannot slip in between the photo check and the publish.
       await lockListing(manager, storeId, id);
       const listing = await this.findWithRelations(manager, storeId, id);
       const current = listing.sellers.map((row) => row.sellerId);

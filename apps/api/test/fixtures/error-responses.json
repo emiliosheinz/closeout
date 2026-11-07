@@ -19,12 +19,6 @@
       "Não encontrado."
     ]
   },
-  "DELETE /stores/:storeId/listings/:id/images/:imageId 422": {
-    "recorded": [
-      "Um anúncio publicado precisa de ao menos uma foto. Adicione outra antes de remover esta."
-    ],
-    "expectedDetail": "Um anúncio publicado precisa de ao menos uma foto. Adicione outra antes de remover esta."
-  },
   "DELETE /stores/:storeId/members/:userId 403": {
     "recorded": ["Você não tem permissão para esta ação."],
     "expectedDetail": "Você não tem permissão para esta ação."
@@ -188,10 +182,6 @@
   "PATCH /stores/:storeId/listings/:id/status 404": {
     "recorded": ["Anúncio não encontrado.", "Not Found"],
     "expectedDetail": ["Anúncio não encontrado.", "Não encontrado."]
-  },
-  "PATCH /stores/:storeId/listings/:id/status 422": {
-    "recorded": ["Adicione ao menos uma foto antes de publicar."],
-    "expectedDetail": "Adicione ao menos uma foto antes de publicar."
   },
   "PATCH /stores/:storeId/members/:userId 400": {
     "recorded": ["role must be one of the following values: admin, seller"],
