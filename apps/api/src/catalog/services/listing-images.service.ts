@@ -8,7 +8,6 @@ import { AppException } from "@/problem/app-exception";
 import { toAdminImage } from "../admin-mappers";
 import { Listing } from "../entities/listing.entity";
 import { ListingImage } from "../entities/listing-image.entity";
-import { canRemovePhoto, PUBLISHED_KEEPS_A_PHOTO } from "../listing-rules";
 import { listingNotFound, lockListing } from "./listings.service";
 
 const TOO_MANY_IMAGES = `Cada anúncio pode ter até ${MAX_IMAGES_PER_LISTING} fotos.`;
@@ -116,7 +115,7 @@ export class ListingImagesService {
   ): Promise<AdminImage[]> {
     const { key, images } = await this.dataSource.transaction(
       async (manager) => {
-        const listing = await lockListing(manager, storeId, listingId);
+        await lockListing(manager, storeId, listingId);
         const repo = manager.getRepository(ListingImage);
         const remaining = await repo.find({
           where: { listingId },
@@ -125,12 +124,6 @@ export class ListingImagesService {
         const target = remaining.find((image) => image.id === imageId);
         if (!target) {
           throw new AppException(HttpStatus.NOT_FOUND, PHOTO_NOT_FOUND);
-        }
-        if (!canRemovePhoto(listing, remaining.length)) {
-          throw new AppException(
-            HttpStatus.UNPROCESSABLE_ENTITY,
-            PUBLISHED_KEEPS_A_PHOTO,
-          );
         }
         await repo.delete({ id: target.id });
         const rest = remaining.filter((image) => image.id !== target.id);

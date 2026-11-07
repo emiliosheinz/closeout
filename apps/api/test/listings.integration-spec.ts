@@ -98,15 +98,25 @@ describe("listing administration", () => {
       expect(updated.body.priceCents).toBeNull();
     });
 
-    it("refuses to publish a listing without photos", async () => {
+    it("publishes a listing without photos and lists it with no cover", async () => {
       const listing = await createListing();
-      const res = await client()
+      await client()
         .patch(`${base()}/${listing.id}/status`)
         .send({ publication: "published" })
-        .expect(422);
-      expect(res.body.detail).toBe(
-        "Adicione ao menos uma foto antes de publicar.",
-      );
+        .expect(200);
+      const detail = await client().get(`${base()}/${listing.id}`).expect(200);
+      expect(detail.body.publication).toBe("published");
+      const page = await request(ctx.app.getHttpServer())
+        .get(`/public/stores/loja-a/listings/${listing.slug}`)
+        .expect(200);
+      expect(page.body).toMatchObject({ images: [], cover: null });
+      expect(page.body.publishedAt).not.toBeNull();
+      const catalog = await request(ctx.app.getHttpServer())
+        .get("/public/stores/loja-a/listings")
+        .expect(200);
+      expect(catalog.body.items).toEqual([
+        expect.objectContaining({ slug: listing.slug, cover: null }),
+      ]);
     });
 
     it("publishes, archives and changes availability independently", async () => {
@@ -758,21 +768,19 @@ describe("listing administration", () => {
       await request(ctx.app.getHttpServer()).get(first.urls.lg).expect(404);
     });
 
-    it("refuses to delete the last photo of a published listing", async () => {
+    it("deletes the last photo of a published listing and keeps it published", async () => {
       const listing = await createListing();
       const res = await upload(listing.id, [await photo()]).expect(201);
       await client()
         .patch(`${base()}/${listing.id}/status`)
         .send({ publication: "published" })
         .expect(200);
-      const refused = await client()
+      await client()
         .delete(`${base()}/${listing.id}/images/${res.body.items[0].id}`)
-        .expect(422);
-      expect(refused.body.detail).toBe(
-        "Um anúncio publicado precisa de ao menos uma foto. Adicione outra antes de remover esta.",
-      );
+        .expect(200);
       const detail = await client().get(`${base()}/${listing.id}`).expect(200);
-      expect(detail.body.imageCount).toBe(1);
+      expect(detail.body.publication).toBe("published");
+      expect(detail.body.imageCount).toBe(0);
     });
 
     it("keeps the immutable cache header on media and no-store on admin JSON", async () => {

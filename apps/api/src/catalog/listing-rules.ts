@@ -26,24 +26,6 @@ export function canContact(
   );
 }
 
-export const PUBLISH_REQUIRES_PHOTO =
-  "Adicione ao menos uma foto antes de publicar.";
-
-export function canPublish(imageCount: number): boolean {
-  return imageCount > 0;
-}
-
-export const PUBLISHED_KEEPS_A_PHOTO =
-  "Um anúncio publicado precisa de ao menos uma foto. Adicione outra antes de remover esta.";
-
-/** A published listing must never be left without photos. */
-export function canRemovePhoto(
-  listing: { publication: Publication },
-  imageCount: number,
-): boolean {
-  return !isPubliclyVisible(listing) || imageCount > 1;
-}
-
 interface ListingActor {
   role: StoreRole;
   /** The actor's own contact profile. */

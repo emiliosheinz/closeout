@@ -36,10 +36,8 @@ import { ListingSeller } from "../entities/listing-seller.entity";
 import { visibleListings } from "../listing-queries";
 import {
   canEditSale,
-  canPublish,
   canSetSellers,
   changesAvailability,
-  PUBLISH_REQUIRES_PHOTO,
   SALE_CHANGED,
   type SaleTransition,
   saleTransition,
@@ -405,19 +403,13 @@ export class ListingsService {
   }
 }
 
-/** The columns a publication change touches; a published listing needs a photo. */
+/** The columns a publication change touches. */
 function publishPatch(
-  listing: Pick<Listing, "images" | "publishedAt">,
+  listing: Pick<Listing, "publishedAt">,
   publication: Publication | undefined,
 ): Partial<Pick<Listing, "publication" | "publishedAt">> {
   if (publication === undefined) return {};
   if (publication !== "published") return { publication };
-  if (!canPublish(listing.images.length)) {
-    throw new AppException(
-      HttpStatus.UNPROCESSABLE_ENTITY,
-      PUBLISH_REQUIRES_PHOTO,
-    );
-  }
   return { publication, publishedAt: listing.publishedAt ?? new Date() };
 }
 
