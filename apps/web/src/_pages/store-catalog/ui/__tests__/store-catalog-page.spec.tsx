@@ -9,6 +9,7 @@ vi.mock("@/entities/listing/index.server", () => ({
   getStore: vi.fn(),
 }));
 vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn() }),
   notFound: () => {
     throw new Error("not-found");
   },

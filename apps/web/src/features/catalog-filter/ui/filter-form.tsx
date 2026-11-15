@@ -1,5 +1,9 @@
+"use client";
+
 import { CONDITIONS } from "@closeout/contracts/enums";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { type FormEvent, useOptimistic, useTransition } from "react";
 import type { CatalogFilters } from "@/entities/listing";
 import {
   AVAILABILITY_FILTER_LABELS,
@@ -11,6 +15,8 @@ import {
   AVAILABILITY_FILTERS,
   CATALOG_SORTS,
   catalogEntries,
+  catalogHref,
+  parseCatalogParams,
 } from "../model/params";
 
 function Choice({
@@ -30,7 +36,8 @@ function Choice({
         type="radio"
         name={name}
         value={value}
-        defaultChecked={checked}
+        checked={checked}
+        onChange={(event) => event.currentTarget.form?.requestSubmit()}
         className="sr-only"
       />
       {label}
@@ -40,19 +47,38 @@ function Choice({
 
 /**
  * Plain GET form: it works without JavaScript and produces the same shareable
- * URL as every other catalog control.
+ * URL as every other catalog control. With JavaScript, a choice applies at once.
  */
 export function FilterForm({
   storeSlug,
-  filters,
+  filters: applied,
 }: {
   storeSlug: string;
   filters: CatalogFilters;
 }) {
+  const router = useRouter();
+  const [, startTransition] = useTransition();
+  const [filters, setFilters] = useOptimistic(applied);
+
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    const raw: Record<string, string[]> = {};
+    for (const key of new Set(data.keys())) {
+      raw[key] = data.getAll(key).filter((value) => typeof value === "string");
+    }
+    const next = parseCatalogParams(raw);
+    startTransition(() => {
+      setFilters(next);
+      router.push(catalogHref(storeSlug, next), { scroll: false });
+    });
+  }
+
   return (
     <form
       action={storePath(storeSlug)}
       method="get"
+      onSubmit={submit}
       className="flex flex-col gap-6"
     >
       {catalogEntries(filters, [
@@ -114,7 +140,8 @@ export function FilterForm({
               min={0}
               step={1}
               placeholder="Mínimo"
-              defaultValue={filters.minPrice ?? ""}
+              key={applied.minPrice}
+              defaultValue={applied.minPrice ?? ""}
               className="h-11 w-full rounded-md border border-line-strong bg-surface px-3 text-base placeholder:text-muted"
             />
           </label>
@@ -130,7 +157,8 @@ export function FilterForm({
               min={0}
               step={1}
               placeholder="Máximo"
-              defaultValue={filters.maxPrice ?? ""}
+              key={applied.maxPrice}
+              defaultValue={applied.maxPrice ?? ""}
               className="h-11 w-full rounded-md border border-line-strong bg-surface px-3 text-base placeholder:text-muted"
             />
           </label>

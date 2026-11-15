@@ -1,9 +1,14 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { activeFilterChips, parseCatalogParams } from "../../model/params";
 import { ActiveFilters } from "../active-filters";
 import { CategoryChips } from "../category-chips";
 import { FilterForm } from "../filter-form";
 import { SearchForm } from "../search-form";
+
+const push = vi.fn();
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
+
+beforeEach(() => push.mockClear());
 
 const categories = [
   { slug: "moveis", name: "Móveis", count: 2 },
@@ -121,5 +126,49 @@ describe("catalog controls", () => {
     expect(
       screen.getByRole("radio", { name: "Mais recentes" }),
     ).not.toBeChecked();
+  });
+
+  it("applies a chosen option at once, keeping the search and category", () => {
+    render(
+      <FilterForm
+        storeSlug="loja"
+        filters={parseCatalogParams({
+          q: "mesa",
+          category: "moveis",
+          page: "3",
+        })}
+      />,
+    );
+    fireEvent.click(screen.getByRole("radio", { name: "Vendidos" }));
+    expect(push).toHaveBeenCalledWith(
+      "/store/loja?q=mesa&category=moveis&availability=sold",
+      { scroll: false },
+    );
+  });
+
+  it("applies the price range to the clean URL", () => {
+    render(<FilterForm storeSlug="loja" filters={parseCatalogParams({})} />);
+    fireEvent.change(screen.getByPlaceholderText("Mínimo"), {
+      target: { value: "50" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Aplicar filtros" }));
+    expect(push).toHaveBeenCalledWith("/store/loja?min=50", { scroll: false });
+  });
+
+  it("shows the new view's options when the view changes elsewhere", () => {
+    const { rerender } = render(
+      <FilterForm
+        storeSlug="loja"
+        filters={parseCatalogParams({ availability: "sold", min: "10" })}
+      />,
+    );
+    expect(screen.getByRole("radio", { name: "Vendidos" })).toBeChecked();
+
+    // e.g. the visitor removed both active-filter chips
+    rerender(<FilterForm storeSlug="loja" filters={parseCatalogParams({})} />);
+
+    expect(screen.getByRole("radio", { name: "À venda" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "Vendidos" })).not.toBeChecked();
+    expect(screen.getByPlaceholderText("Mínimo")).toHaveValue(null);
   });
 });
