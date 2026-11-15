@@ -77,13 +77,15 @@ test.describe
       ).toBeVisible();
       publicPath = new URL(page.url()).pathname;
       await expect(page.getByText("R$ 1.234,50").first()).toBeVisible();
-      // After the client navigation the catalog's preview image can linger a
-      // moment beside the item's; the item's is the one with its title as alt.
+      // Link previews are read from the server-rendered head, and after a
+      // client navigation the catalog's og:image can linger beside the item's,
+      // so check the tags on a full load like a crawler would.
+      await page.goto(publicPath);
       const ogImage = page.locator('meta[property="og:image"]');
+      await expect(ogImage).toHaveCount(1);
       await expect(
         page.locator('meta[property="og:image:alt"]'),
       ).toHaveAttribute("content", TITLE);
-      await expect(ogImage).toHaveCount(1);
       const image = await ogImage.getAttribute("content");
       expect(
         (await page.request.get(image ?? "")).headers()["content-type"],
