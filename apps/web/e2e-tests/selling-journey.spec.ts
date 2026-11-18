@@ -62,12 +62,15 @@ test.describe
         ).toBeVisible();
       });
 
-      await test.step("the search finds it", async () => {
-        await page
-          .getByRole("searchbox", { name: "Buscar itens" })
-          .fill("luminaria de teste");
-        await page.keyboard.press("Enter");
+      await test.step("the search finds it as the visitor types", async () => {
+        const search = page.getByRole("searchbox", { name: "Buscar itens" });
+        await search.fill("luminaria");
+        // Keep typing while the first search is still loading.
+        await page.waitForTimeout(450);
+        await search.pressSequentially(" de teste", { delay: 40 });
         await expect(page).toHaveURL(/q=luminaria\+de\+teste/);
+        await expect(search).toBeFocused();
+        await expect(search).toHaveValue("luminaria de teste");
         await expect(page.getByTestId("results-count")).toHaveText("1 item");
       });
 

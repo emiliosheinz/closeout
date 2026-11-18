@@ -15,6 +15,7 @@ vi.mock("next/navigation", () => ({
   redirect: (url: string) => {
     throw new Error(`redirect:${url}`);
   },
+  useRouter: () => ({ push: vi.fn() }),
 }));
 
 const store = {

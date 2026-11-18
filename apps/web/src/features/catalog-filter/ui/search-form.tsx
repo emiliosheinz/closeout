@@ -1,9 +1,15 @@
+"use client";
+
 import { Search } from "lucide-react";
 import type { CatalogFilters } from "@/entities/listing";
 import { storePath } from "@/shared/lib/site";
+import { useLiveCatalogForm } from "../model/live-form";
 import { catalogEntries } from "../model/params";
 
-/** GET search that keeps the other active filters. */
+/**
+ * Search that applies as the visitor types and keeps the other active
+ * filters. Without JavaScript it is a plain GET form submitted with Enter.
+ */
 export function SearchForm({
   storeSlug,
   filters,
@@ -11,9 +17,10 @@ export function SearchForm({
   storeSlug: string;
   filters: CatalogFilters;
 }) {
+  const live = useLiveCatalogForm(storeSlug, filters);
   return (
     <search className="relative min-w-0 flex-1">
-      <form action={storePath(storeSlug)} method="get">
+      <form action={storePath(storeSlug)} method="get" {...live}>
         <label htmlFor="catalog-search" className="sr-only">
           Buscar itens
         </label>
