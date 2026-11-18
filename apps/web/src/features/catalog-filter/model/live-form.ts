@@ -12,12 +12,12 @@ export const LIVE_DELAY_MS = 400;
 const TYPED_INPUTS = new Set(["search", "text", "number"]);
 
 /*
- * The queries the live forms asked for, newest last. The search box and the
- * sidebar are separate forms, and the page re-renders their hidden fields only
- * once a navigation lands, so the next edit builds on the newest request
- * instead: a price typed right after a search keeps that search.
+ * The query the live forms last asked for. The search box and the sidebar are
+ * separate forms, and the page re-renders their hidden fields only once a
+ * navigation lands, so the next edit builds on this request instead: a price
+ * typed right after a search keeps that search.
  */
-let requested: string[] = [];
+let requested: string | null = null;
 
 function isTyped(element: EventTarget | null): element is HTMLInputElement {
   return element instanceof HTMLInputElement && TYPED_INPUTS.has(element.type);
@@ -73,8 +73,8 @@ export function useLiveCatalogForm(storeSlug: string, filters: CatalogFilters) {
   useEffect(() => {
     // A URL the forms did not ask for came from elsewhere (a chip, "Limpar
     // tudo", the back button): show it, and stop building on old requests.
-    if (current === requested.at(-1)) return;
-    requested = [];
+    if (current === requested) return;
+    requested = null;
     if (formRef.current) syncControls(formRef.current, current);
   }, [current]);
 
@@ -84,10 +84,10 @@ export function useLiveCatalogForm(storeSlug: string, filters: CatalogFilters) {
     clearTimeout(timer.current);
     const form = formRef.current;
     if (!form) return;
-    const base = requested.at(-1) ?? current;
+    const base = requested ?? current;
     const query = nextQuery(form, base);
     if (query === base) return;
-    requested = [...requested.slice(-9), query];
+    requested = query;
     const path = storePath(storeSlug);
     router.push(query ? `${path}?${query}` : path, { scroll: false });
   };
