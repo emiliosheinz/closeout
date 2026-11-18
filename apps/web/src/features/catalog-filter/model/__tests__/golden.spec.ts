@@ -19,14 +19,7 @@ describe("storefront URL behavior", () => {
     expect(catalogHref("nosso-desapego", filters)).toBe(row.href);
     expect(catalogEntries(filters, ["q", "page"])).toEqual(row.searchHidden);
     expect(
-      catalogEntries(filters, [
-        "condition",
-        "availability",
-        "min",
-        "max",
-        "sort",
-        "page",
-      ]),
+      catalogEntries(filters, ["condition", "min", "max", "sort", "page"]),
     ).toEqual(row.filterHidden);
     expect(
       catalogHref("nosso-desapego", withFilters(filters, { category: null })),

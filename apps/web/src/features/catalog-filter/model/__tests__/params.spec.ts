@@ -25,7 +25,6 @@ describe("catalog URL parameters", () => {
       q: "sofá",
       category: "moveis",
       condition: "like_new",
-      availability: "sold",
       minPrice: 100,
       maxPrice: 500,
       sort: "price_asc",
@@ -48,7 +47,6 @@ describe("catalog URL parameters", () => {
       q: "",
       category: null,
       condition: null,
-      availability: "listed",
       minPrice: null,
       maxPrice: null,
       sort: "recent",
@@ -67,14 +65,13 @@ describe("catalog URL parameters", () => {
         ...DEFAULT_FILTERS,
         category: "cozinha",
         condition: "like_new",
-        availability: "sold",
         minPrice: 10,
         maxPrice: 50,
         sort: "price_desc",
         page: 2,
       }),
     ).toBe(
-      "/store/s?category=cozinha&condition=like_new&availability=sold&min=10&max=50&sort=price_desc&page=2",
+      "/store/s?category=cozinha&condition=like_new&min=10&max=50&sort=price_desc&page=2",
     );
   });
 
@@ -154,23 +151,19 @@ describe("catalog URL edge cases", () => {
     ).toEqual([
       {
         label: "“mesa”",
-        href: "/store/nosso-desapego?category=moveis&condition=like_new&availability=sold&max=500&sort=price_asc",
+        href: "/store/nosso-desapego?category=moveis&condition=like_new&max=500&sort=price_asc",
       },
       {
         label: "Móveis",
-        href: "/store/nosso-desapego?q=mesa&condition=like_new&availability=sold&max=500&sort=price_asc",
+        href: "/store/nosso-desapego?q=mesa&condition=like_new&max=500&sort=price_asc",
       },
       {
         label: "Como novo",
-        href: "/store/nosso-desapego?q=mesa&category=moveis&availability=sold&max=500&sort=price_asc",
-      },
-      {
-        label: "Vendidos",
-        href: "/store/nosso-desapego?q=mesa&category=moveis&condition=like_new&max=500&sort=price_asc",
+        href: "/store/nosso-desapego?q=mesa&category=moveis&max=500&sort=price_asc",
       },
       {
         label: "Até R$ 500",
-        href: "/store/nosso-desapego?q=mesa&category=moveis&condition=like_new&availability=sold&sort=price_asc",
+        href: "/store/nosso-desapego?q=mesa&category=moveis&condition=like_new&sort=price_asc",
       },
     ]);
   });
@@ -199,6 +192,13 @@ describe("clean catalog query", () => {
     expect(clean("condition=good&availability=&min=&max=&sort=price_asc")).toBe(
       "condition=good&sort=price_asc",
     );
+  });
+
+  it("drops the availability filter the store no longer offers", () => {
+    for (const value of ["reserved", "sold", "all", "listed", "talvez"]) {
+      expect(clean(`q=mesa&availability=${value}`)).toBe("q=mesa");
+    }
+    expect(clean("availability=sold")).toBe("");
   });
 
   it("drops keys the catalog does not read", () => {

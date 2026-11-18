@@ -66,7 +66,7 @@ describe("catalog fetch caching", () => {
       "http://api:3000/public/stores/loja-da-bia/listings/abajur",
     );
     expect(urlOf(2)).toBe(
-      "http://api:3000/public/stores/loja-da-bia/listings?sort=recent&page=1&pageSize=24&availability=listed",
+      "http://api:3000/public/stores/loja-da-bia/listings?sort=recent&page=1&pageSize=24",
     );
   });
 
@@ -98,9 +98,8 @@ describe("catalog fetch caching", () => {
   it("skips the cache for searches, filters and deep pages", async () => {
     await getListings("loja", { ...DEFAULT_FILTERS, q: "abajur" });
     await getListings("loja", { ...DEFAULT_FILTERS, maxPrice: 50 });
-    await getListings("loja", { ...DEFAULT_FILTERS, availability: "sold" });
     await getListings("loja", { ...DEFAULT_FILTERS, page: 2 });
-    for (const call of [0, 1, 2, 3]) {
+    for (const call of [0, 1, 2]) {
       expect(initOf(call)).toEqual({ cache: "no-store" });
     }
   });

@@ -57,12 +57,14 @@ export function getStore(slug: string): Promise<StoreInfo | null> {
   return getPublic(storeApiPath(slug), publicStoreSchema);
 }
 
+/** Available listings of store `slug`; `all` adds reserved and sold ones. */
 export async function getListings(
   slug: string,
   filters: CatalogFilters,
   pageSize = PAGE_SIZE,
+  availability?: "all",
 ): Promise<ListingPage> {
-  const path = `${storeApiPath(slug)}/listings?${toApiQuery(filters, pageSize)}`;
+  const path = `${storeApiPath(slug)}/listings?${toApiQuery(filters, pageSize, availability)}`;
   const page = await getPublic(
     path,
     publicListingPageSchema,

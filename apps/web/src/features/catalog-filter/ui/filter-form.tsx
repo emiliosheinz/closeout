@@ -1,17 +1,9 @@
 import { CONDITIONS } from "@closeout/contracts/enums";
 import Link from "next/link";
 import type { CatalogFilters } from "@/entities/listing";
-import {
-  AVAILABILITY_FILTER_LABELS,
-  CONDITION_LABELS,
-  SORT_LABELS,
-} from "@/shared/lib/format";
+import { CONDITION_LABELS, SORT_LABELS } from "@/shared/lib/format";
 import { storePath } from "@/shared/lib/site";
-import {
-  AVAILABILITY_FILTERS,
-  CATALOG_SORTS,
-  catalogEntries,
-} from "../model/params";
+import { CATALOG_SORTS, catalogEntries } from "../model/params";
 
 function Choice({
   name,
@@ -55,16 +47,11 @@ export function FilterForm({
       method="get"
       className="flex flex-col gap-6"
     >
-      {catalogEntries(filters, [
-        "condition",
-        "availability",
-        "min",
-        "max",
-        "sort",
-        "page",
-      ]).map(([name, value]) => (
-        <input key={name} type="hidden" name={name} value={value} />
-      ))}
+      {catalogEntries(filters, ["condition", "min", "max", "sort", "page"]).map(
+        ([name, value]) => (
+          <input key={name} type="hidden" name={name} value={value} />
+        ),
+      )}
 
       <fieldset>
         <legend className="mb-2 text-sm font-semibold">Estado</legend>
@@ -82,21 +69,6 @@ export function FilterForm({
               value={condition}
               label={CONDITION_LABELS[condition]}
               checked={filters.condition === condition}
-            />
-          ))}
-        </div>
-      </fieldset>
-
-      <fieldset>
-        <legend className="mb-2 text-sm font-semibold">Disponibilidade</legend>
-        <div className="flex flex-wrap gap-2">
-          {AVAILABILITY_FILTERS.map((option) => (
-            <Choice
-              key={option}
-              name="availability"
-              value={option === "listed" ? "" : option}
-              label={AVAILABILITY_FILTER_LABELS[option]}
-              checked={filters.availability === option}
             />
           ))}
         </div>

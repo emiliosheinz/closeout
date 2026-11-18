@@ -139,10 +139,12 @@ test.describe
       await page.keyboard.press("Escape");
 
       const visitor = await browser.newPage();
-      await visitor.goto(`${STORE}?availability=reserved`);
+      await visitor.goto(STORE);
       await expect(
-        visitor.getByRole("article").filter({ hasText: TITLE }),
-      ).toContainText("Reservado");
+        visitor.getByRole("link", { name: TITLE, exact: true }),
+      ).toHaveCount(0);
+      await visitor.goto(publicPath);
+      await expect(visitor.getByText("Reservado").first()).toBeVisible();
 
       await chooseAvailability(page, TITLE, "Vendido");
       await expect(dialog.getByLabel("Nome do comprador")).toHaveValue(BUYER);
@@ -154,8 +156,7 @@ test.describe
       await expect(
         visitor.getByRole("link", { name: TITLE, exact: true }),
       ).toHaveCount(0);
-      await visitor.goto(`${STORE}?availability=sold`);
-      await visitor.getByRole("link", { name: TITLE, exact: true }).click();
+      await visitor.goto(publicPath);
       await expect(
         visitor.getByText("Este item já foi vendido.").first(),
       ).toBeVisible();
