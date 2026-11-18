@@ -32,7 +32,7 @@ export function Toaster(props: ToasterProps) {
   return (
     <Sonner
       theme="light"
-      position="bottom-center"
+      position="top-center"
       duration={5000}
       closeButton
       containerAriaLabel="Notificações"

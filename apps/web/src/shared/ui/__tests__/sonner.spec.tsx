@@ -30,6 +30,14 @@ describe("Toaster", () => {
     expect(screen.getByRole("alert")).toHaveTextContent("Sem conexão.");
   });
 
+  it("shows toasts at the top center of the screen", async () => {
+    act(() => void notify.success("Convite enviado."));
+    await screen.findByText("Convite enviado.");
+    const toast = document.querySelector("[data-sonner-toast]");
+    expect(toast).toHaveAttribute("data-y-position", "top");
+    expect(toast).toHaveAttribute("data-x-position", "center");
+  });
+
   it("can be dismissed", async () => {
     act(() => void notify.success("Foto removida."));
     await screen.findByText("Foto removida.");
