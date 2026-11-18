@@ -70,6 +70,13 @@ describe("catalog fetch caching", () => {
     );
   });
 
+  it("asks for reserved and sold listings too only when told to", async () => {
+    await getListings("loja", DEFAULT_FILTERS, 100, "all");
+    expect(urlOf(0)).toBe(
+      "http://api:3000/public/stores/loja/listings?sort=recent&page=1&pageSize=100&availability=all",
+    );
+  });
+
   it("lists every store slug without caching", async () => {
     fetchMock.mockImplementation(async () =>
       Response.json({
