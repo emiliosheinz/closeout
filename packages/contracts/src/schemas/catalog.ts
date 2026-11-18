@@ -74,7 +74,7 @@ export type PublicStoreIndex = z.infer<typeof publicStoreIndexSchema>;
 export const CATALOG_SORTS = ["recent", "price_asc", "price_desc"] as const;
 export type CatalogSort = (typeof CATALOG_SORTS)[number];
 
-/** `listed`, the default, means available or reserved. */
+/** `available` is the default; `listed` means available or reserved. */
 export const AVAILABILITY_FILTERS = [
   "listed",
   "available",

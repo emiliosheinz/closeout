@@ -190,11 +190,15 @@ describe("public catalog", () => {
     expect(await titles("")).toEqual(["Sem preço", "Caro", "Barato", "Médio"]);
   });
 
-  it("hides sold listings by default and filters by availability on request", async () => {
+  it("lists only available listings by default and filters by availability on request", async () => {
     await publish({ title: "Livre", availability: "available" });
     await publish({ title: "Reservado", availability: "reserved" });
     await publish({ title: "Vendido", availability: "sold" });
-    expect((await titles("")).sort()).toEqual(["Livre", "Reservado"]);
+    expect(await titles("")).toEqual(["Livre"]);
+    expect((await titles("?availability=listed")).sort()).toEqual([
+      "Livre",
+      "Reservado",
+    ]);
     expect(await titles("?availability=sold")).toEqual(["Vendido"]);
     expect(await titles("?availability=reserved")).toEqual(["Reservado"]);
     expect((await titles("?availability=all")).sort()).toEqual([
@@ -334,6 +338,25 @@ describe("public catalog", () => {
     ]);
   });
 
+  it("suggests only available listings as related items", async () => {
+    const listing = await publish({ title: "Mesa", category: "moveis" });
+    await publish({ title: "Cadeira", category: "moveis" });
+    await publish({
+      title: "Sofá reservado",
+      category: "moveis",
+      availability: "reserved",
+    });
+    await publish({
+      title: "Estante vendida",
+      category: "moveis",
+      availability: "sold",
+    });
+    const res = await get(`/listings/${listing.slug}`).expect(200);
+    expect(res.body.related.map((r: { title: string }) => r.title)).toEqual([
+      "Cadeira",
+    ]);
+  });
+
   it("never suggests drafts or archived listings as related items", async () => {
     const listing = await publish({ title: "Mesa", category: "moveis" });
     await publish({ title: "Cadeira", category: "moveis" });
@@ -467,6 +490,6 @@ describe("public catalog", () => {
         c.count,
       ]),
     );
-    expect(counts).toMatchObject({ moveis: 2, cozinha: 1, eletronicos: 0 });
+    expect(counts).toMatchObject({ moveis: 1, cozinha: 1, eletronicos: 0 });
   });
 });
