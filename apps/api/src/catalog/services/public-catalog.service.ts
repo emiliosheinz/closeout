@@ -101,7 +101,7 @@ export class PublicCatalogService {
       .leftJoin(
         Listing,
         "l",
-        `l.category_id = c.id AND l.publication = 'published' AND l.availability <> 'sold'`,
+        `l.category_id = c.id AND l.publication = 'published' AND l.availability = 'available'`,
       )
       .select("c.slug", "slug")
       .addSelect("c.name", "name")
@@ -197,7 +197,7 @@ export class PublicCatalogService {
     return toPublicDetail(listing, await this.related(listing));
   }
 
-  /** Other listed items, same category first, newest first. */
+  /** Other available items, same category first, newest first. */
   private async related(listing: Listing): Promise<PublicListingSummary[]> {
     const rows = await this.listings
       .createQueryBuilder("l")
@@ -205,7 +205,7 @@ export class PublicCatalogService {
       .select(SUMMARY_COLUMNS)
       .where("l.store_id = :storeId", { storeId: listing.storeId })
       .andWhere("l.publication = 'published'")
-      .andWhere("l.availability <> 'sold'")
+      .andWhere("l.availability = 'available'")
       .andWhere("l.id <> :id", { id: listing.id })
       .orderBy("CASE WHEN l.category_id = :categoryId THEN 0 ELSE 1 END", "ASC")
       .addOrderBy("l.published_at", "DESC")
@@ -243,7 +243,7 @@ function applyFilters(
   builder: SelectQueryBuilder<Listing>,
   query: CatalogQuery,
 ): void {
-  const availability = query.availability ?? "listed";
+  const availability = query.availability ?? "available";
   if (availability === "listed") {
     builder.andWhere("l.availability <> 'sold'");
   } else if (availability !== "all") {

@@ -22,8 +22,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     for (let page = 1; ; page++) {
       const result = await getListings(
         slug,
-        { ...DEFAULT_FILTERS, availability: "all", page },
+        { ...DEFAULT_FILTERS, page },
         SITEMAP_PAGE_SIZE,
+        "all",
       );
       for (const listing of result.items) {
         entries.push({

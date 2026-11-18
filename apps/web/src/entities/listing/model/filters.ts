@@ -1,19 +1,11 @@
 import type { Condition } from "@closeout/contracts/enums";
 
-export type AvailabilityFilter =
-  | "listed"
-  | "available"
-  | "reserved"
-  | "sold"
-  | "all";
-
 export type CatalogSort = "recent" | "price_asc" | "price_desc";
 
 export interface CatalogFilters {
   q: string;
   category: string | null;
   condition: Condition | null;
-  availability: AvailabilityFilter;
   /** Whole reais. */
   minPrice: number | null;
   /** Whole reais. */
@@ -26,24 +18,27 @@ export const DEFAULT_FILTERS: CatalogFilters = {
   q: "",
   category: null,
   condition: null,
-  availability: "listed",
   minPrice: null,
   maxPrice: null,
   sort: "recent",
   page: 1,
 };
 
-/** Query for the public listings endpoint, with prices converted to cents. */
+/**
+ * Query for the public listings endpoint, with prices converted to cents.
+ * The endpoint lists available items unless `all` asks for every published one.
+ */
 export function toApiQuery(
   filters: CatalogFilters,
   pageSize: number,
+  availability?: "all",
 ): URLSearchParams {
   const params = new URLSearchParams({
     sort: filters.sort,
     page: String(filters.page),
     pageSize: String(pageSize),
-    availability: filters.availability,
   });
+  if (availability) params.set("availability", availability);
   if (filters.q) params.set("q", filters.q);
   if (filters.category) params.set("category", filters.category);
   if (filters.condition) params.set("condition", filters.condition);
@@ -61,7 +56,6 @@ export function activeFilterCount(filters: CatalogFilters): number {
   return [
     filters.category !== null,
     filters.condition !== null,
-    filters.availability !== "listed",
     filters.minPrice !== null || filters.maxPrice !== null,
   ].filter(Boolean).length;
 }

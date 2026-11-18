@@ -82,14 +82,6 @@ export const BUYER_MATCH_LABELS = {
 
 export const PAYMENT_LABELS = { paid: "Pago", unpaid: "Não pago" } as const;
 
-export const AVAILABILITY_FILTER_LABELS = {
-  listed: "À venda",
-  available: "Disponíveis",
-  reserved: "Reservados",
-  sold: "Vendidos",
-  all: "Todos",
-} as const;
-
 export const SORT_LABELS = {
   recent: "Mais recentes",
   price_asc: "Menor preço",

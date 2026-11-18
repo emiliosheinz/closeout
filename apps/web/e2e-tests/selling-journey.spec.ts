@@ -62,12 +62,15 @@ test.describe
         ).toBeVisible();
       });
 
-      await test.step("the search finds it", async () => {
-        await page
-          .getByRole("searchbox", { name: "Buscar itens" })
-          .fill("luminaria de teste");
-        await page.keyboard.press("Enter");
+      await test.step("the search finds it as the visitor types", async () => {
+        const search = page.getByRole("searchbox", { name: "Buscar itens" });
+        await search.fill("luminaria");
+        // Keep typing while the first search is still loading.
+        await page.waitForTimeout(450);
+        await search.pressSequentially(" de teste", { delay: 40 });
         await expect(page).toHaveURL(/q=luminaria\+de\+teste/);
+        await expect(search).toBeFocused();
+        await expect(search).toHaveValue("luminaria de teste");
         await expect(page.getByTestId("results-count")).toHaveText("1 item");
       });
 
@@ -139,10 +142,12 @@ test.describe
       await page.keyboard.press("Escape");
 
       const visitor = await browser.newPage();
-      await visitor.goto(`${STORE}?availability=reserved`);
+      await visitor.goto(STORE);
       await expect(
-        visitor.getByRole("article").filter({ hasText: TITLE }),
-      ).toContainText("Reservado");
+        visitor.getByRole("link", { name: TITLE, exact: true }),
+      ).toHaveCount(0);
+      await visitor.goto(publicPath);
+      await expect(visitor.getByText("Reservado").first()).toBeVisible();
 
       await chooseAvailability(page, TITLE, "Vendido");
       await expect(dialog.getByLabel("Nome do comprador")).toHaveValue(BUYER);
@@ -154,8 +159,7 @@ test.describe
       await expect(
         visitor.getByRole("link", { name: TITLE, exact: true }),
       ).toHaveCount(0);
-      await visitor.goto(`${STORE}?availability=sold`);
-      await visitor.getByRole("link", { name: TITLE, exact: true }).click();
+      await visitor.goto(publicPath);
       await expect(
         visitor.getByText("Este item já foi vendido.").first(),
       ).toBeVisible();

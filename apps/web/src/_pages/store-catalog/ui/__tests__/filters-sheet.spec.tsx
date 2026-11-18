@@ -3,6 +3,10 @@ import { FilterForm } from "@/features/catalog-filter";
 import { parseCatalogParams } from "@/features/catalog-filter/model/params";
 import { FiltersSheet } from "../filters-sheet";
 
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn() }),
+}));
+
 const renderSheet = (activeCount = 0) =>
   render(
     <FiltersSheet activeCount={activeCount}>

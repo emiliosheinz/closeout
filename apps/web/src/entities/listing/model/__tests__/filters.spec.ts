@@ -13,7 +13,13 @@ describe("catalog filters", () => {
     );
     expect(query.get("minPrice")).toBe("5000");
     expect(query.get("maxPrice")).toBe("120000");
-    expect(query.get("availability")).toBe("listed");
+  });
+
+  it("leaves availability to the API unless every listing is asked for", () => {
+    expect(toApiQuery(DEFAULT_FILTERS, 24).has("availability")).toBe(false);
+    expect(toApiQuery(DEFAULT_FILTERS, 100, "all").get("availability")).toBe(
+      "all",
+    );
   });
 
   it("counts active filters for the filter button badge", () => {

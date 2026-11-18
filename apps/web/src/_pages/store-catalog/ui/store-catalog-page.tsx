@@ -139,7 +139,7 @@ export async function CatalogPage({ params, searchParams }: PageProps) {
         <div className="mt-6 lg:grid lg:grid-cols-[16rem_1fr] lg:gap-10">
           <aside className="hidden lg:block" aria-label="Filtros">
             <div className="sticky top-36">
-              <FilterForm storeSlug={slug} filters={filters} />
+              <FilterForm storeSlug={slug} filters={filters} live />
             </div>
           </aside>
 

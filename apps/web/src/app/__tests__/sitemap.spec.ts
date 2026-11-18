@@ -54,8 +54,8 @@ describe("sitemap", () => {
       ["nosso-desapego", 2],
       ["loja-da-bia", 1],
     ]);
-    for (const [, filters, size] of calls) {
-      expect(filters.availability).toBe("all");
+    for (const [, , size, availability] of calls) {
+      expect(availability).toBe("all");
       expect(size).toBe(100);
     }
   });

@@ -5,6 +5,10 @@ import { CategoryChips } from "../category-chips";
 import { FilterForm } from "../filter-form";
 import { SearchForm } from "../search-form";
 
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn() }),
+}));
+
 const categories = [
   { slug: "moveis", name: "Móveis", count: 2 },
   { slug: "cozinha", name: "Cozinha", count: 1 },
